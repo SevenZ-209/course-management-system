@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <title>Quản lý bài đã giao</title>
+    <th:block th:replace="~{base :: css}"></th:block>
+</head>
+
+<body>
+
+<div th:replace="~{base :: header}"></div>
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1">Quản lý bài đã giao</h3>
+            <span class="text-muted">
+                Tổng cộng:
+                <strong th:text="${totalRecords}">0</strong>
+                bài
+            </span>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#releaseCurrentModal">
+                Phát bài lộ trình
+            </button>
+
+            <button class="btn btn-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#manualAssignmentModal">
+                Giao bài thủ công
+            </button>
+        </div>
+    </div>
+
+    <div th:if="${successMessage}"
+         class="alert alert-success"
+         th:text="${successMessage}">
+    </div>
+
+    <div th:if="${errorMessage}"
+         class="alert alert-danger"
+         th:text="${errorMessage}">
+    </div>
+
+    <!-- FILTER -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+
+            <form method="get"
+                  th:action="@{/admin/assigned-assignments}">
+
+                <div class="row g-3">
+
+                    <div class="col-md-3">
+                        <input type="text"
+                               class="form-control"
+                               name="kw"
+                               th:value="${kw}"
+                               placeholder="Học viên hoặc bài tập">
+                    </div>
+
+                    <div class="col-md-2">
+                        <select class="form-select" name="courseId">
+                            <option value="">Tất cả khóa học</option>
+
+                            <option th:each="course : ${courses}"
+                                    th:value="${course.id}"
+                                    th:text="${course.name}"
+                                    th:selected="${courseId == course.id.toString()}">
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <select class="form-select" name="learningPathId">
+                            <option value="">Tất cả lộ trình</option>
+
+                            <option th:each="path : ${learningPaths}"
+                                    th:value="${path.id}"
+                                    th:text="${path.name}"
+                                    th:selected="${learningPathId == path.id.toString()}">
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <select class="form-select" name="status">
+                            <option value="">Tất cả trạng thái</option>
+
+                            <option value="LOCKED"
+                                    th:selected="${status == 'LOCKED'}">
+                                Đang khóa
+                            </option>
+
+                            <option value="AVAILABLE"
+                                    th:selected="${status == 'AVAILABLE'}">
+                                Đã mở
+                            </option>
+
+                            <option value="COMPLETED"
+                                    th:selected="${status == 'COMPLETED'}">
+                                Hoàn thành
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-1">
+                        <input type="date"
+                               class="form-control"
+                               name="date"
+                               th:value="${date}">
+                    </div>
+
+                    <div class="col-md-2">
+                        <button class="btn btn-primary" type="submit">
+                            Tìm
+                        </button>
+
+                        <a th:href="@{/admin/assigned-assignments}"
+                           class="btn btn-outline-secondary">
+                            Làm mới
+                        </a>
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Học viên</th>
+                        <th>Bài tập</th>
+                        <th>Nguồn</th>
+                        <th>Người giao</th>
+                        <th>Ngày giao</th>
+                        <th>Mở lúc</th>
+                        <th>Hạn nộp</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    <tr th:each="assigned : ${assignedAssignments}">
+
+                        <td th:text="${assigned.id}"></td>
+
+                        <td>
+                            <div class="fw-semibold"
+                                 th:text="${assigned.student.fullName}">
+                            </div>
+
+                            <small class="text-muted">
+                                @<span th:text="${assigned.student.username}"></span>
+                            </small>
+                        </td>
+
+                        <td>
+                            <div class="fw-semibold"
+                                 th:text="${assigned.assignment.name}">
+                            </div>
+
+                            <small class="text-muted"
+                                   th:text="${assigned.assignment.course.name}">
+                            </small>
+                        </td>
+
+                        <td>
+                            <div th:if="${assigned.learningPathDetail != null}">
+                                <span class="badge text-bg-primary">
+                                    Lộ trình
+                                </span>
+
+                                <small class="d-block text-muted mt-1"
+                                       th:text="${assigned.learningPathDetail.learningPath.name
+                                            + ' #' + assigned.learningPathDetail.orderNumber}">
+                                </small>
+                            </div>
+
+                            <span th:unless="${assigned.learningPathDetail != null}"
+                                  class="badge text-bg-info">
+                                Giao thêm
+                            </span>
+                        </td>
+
+                        <td>
+                            <span th:if="${assigned.assignedBy != null}"
+                                  th:text="${assigned.assignedBy.fullName}">
+                            </span>
+
+                            <span th:unless="${assigned.assignedBy != null}"
+                                  class="text-muted">
+                                Hệ thống
+                            </span>
+                        </td>
+
+                        <td>
+                            <span th:if="${assigned.assignedAt != null}"
+                                  th:text="${#temporals.format(
+                                      assigned.assignedAt,
+                                      'dd/MM/yyyy HH:mm'
+                                  )}">
+                            </span>
+                        </td>
+
+                        <td>
+                            <span th:if="${assigned.availableAt != null}"
+                                  th:text="${#temporals.format(
+                                      assigned.availableAt,
+                                      'dd/MM/yyyy HH:mm'
+                                  )}">
+                            </span>
+
+                            <span th:unless="${assigned.availableAt != null}"
+                                  class="text-muted">-</span>
+                        </td>
+
+                        <td>
+                            <span th:if="${assigned.dueAt != null}"
+                                  th:text="${#temporals.format(
+                                      assigned.dueAt,
+                                      'dd/MM/yyyy HH:mm'
+                                  )}">
+                            </span>
+
+                            <span th:unless="${assigned.dueAt != null}"
+                                  class="text-muted">
+                                Không giới hạn
+                            </span>
+                        </td>
+
+                        <td>
+                            <span th:if="${assigned.status.name() == 'LOCKED'}"
+                                  class="badge text-bg-secondary">
+                                Đang khóa
+                            </span>
+
+                            <span th:if="${assigned.status.name() == 'AVAILABLE'}"
+                                  class="badge text-bg-success">
+                                Đã mở
+                            </span>
+
+                            <span th:if="${assigned.status.name() == 'COMPLETED'}"
+                                  class="badge text-bg-primary">
+                                Hoàn thành
+                            </span>
+                        </td>
+
+                        <td>
+                            <form method="post"
+                                  th:if="${assigned.status.name() != 'COMPLETED'}"
+                                  th:action="@{/admin/assigned-assignments/update-status}"
+                                  class="d-flex gap-2">
+
+                                <input type="hidden"
+                                       name="id"
+                                       th:value="${assigned.id}">
+
+                                <select class="form-select form-select-sm"
+                                        name="status">
+
+                                    <option value="LOCKED"
+                                            th:selected="${assigned.status.name() == 'LOCKED'}">
+                                        Khóa
+                                    </option>
+
+                                    <option value="AVAILABLE"
+                                            th:selected="${assigned.status.name() == 'AVAILABLE'}">
+                                        Mở
+                                    </option>
+
+                                </select>
+
+                                <button type="submit"
+                                        class="btn btn-sm btn-outline-primary">
+                                    Lưu
+                                </button>
+                            </form>
+
+                            <span th:if="${assigned.status.name() == 'COMPLETED'}"
+                                  class="text-muted">
+                                -
+                            </span>
+                        </td>
+
+                    </tr>
+
+                    <tr th:if="${#lists.isEmpty(assignedAssignments)}">
+                        <td colspan="10"
+                            class="text-center text-muted py-5">
+                            Chưa có bài nào được giao.
+                        </td>
+                    </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- PAGINATION -->
+    <nav class="mt-4" th:if="${totalPages > 1}">
+        <ul class="pagination justify-content-center">
+
+            <li class="page-item"
+                th:classappend="${currentPage == 1} ? 'disabled'">
+
+                <a class="page-link"
+                   th:href="@{/admin/assigned-assignments(
+                        page=${currentPage - 1},
+                        kw=${kw},
+                        courseId=${courseId},
+                        learningPathId=${learningPathId},
+                        status=${status},
+                        date=${date}
+                   )}">
+                    Trước
+                </a>
+            </li>
+
+            <li class="page-item"
+                th:each="pageNumber : ${#numbers.sequence(1, totalPages)}"
+                th:classappend="${pageNumber == currentPage} ? 'active'">
+
+                <a class="page-link"
+                   th:text="${pageNumber}"
+                   th:href="@{/admin/assigned-assignments(
+                        page=${pageNumber},
+                        kw=${kw},
+                        courseId=${courseId},
+                        learningPathId=${learningPathId},
+                        status=${status},
+                        date=${date}
+                   )}">
+                </a>
+            </li>
+
+            <li class="page-item"
+                th:classappend="${currentPage == totalPages} ? 'disabled'">
+
+                <a class="page-link"
+                   th:href="@{/admin/assigned-assignments(
+                        page=${currentPage + 1},
+                        kw=${kw},
+                        courseId=${courseId},
+                        learningPathId=${learningPathId},
+                        status=${status},
+                        date=${date}
+                   )}">
+                    Sau
+                </a>
+            </li>
+
+        </ul>
+    </nav>
+
+</div>
+
+
+<!-- RELEASE CURRENT DETAIL -->
+<div class="modal fade"
+     id="releaseCurrentModal"
+     tabindex="-1">
+
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <form method="post"
+                  th:action="@{/admin/assigned-assignments/release-current}">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        Phát bài hiện tại theo lộ trình
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal">
+                    </button>
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Học viên / bài hiện tại
+                        </label>
+
+                        <select class="form-select"
+                                name="studentLearningPathId"
+                                required>
+
+                            <option value="">
+                                Chọn học viên
+                            </option>
+
+                            <option th:each="progress : ${progresses}"
+                                    th:value="${progress.id}"
+                                    th:text="${progress.student.fullName
+                                        + ' - '
+                                        + progress.learningPath.name
+                                        + ' - #' + progress.currentDetail.orderNumber
+                                        + ' '
+                                        + progress.currentDetail.assignment.name}">
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="row">
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Mở bài lúc
+                            </label>
+
+                            <input type="datetime-local"
+                                   class="form-control"
+                                   name="availableAt">
+
+                            <small class="text-muted">
+                                Để trống để mở ngay.
+                            </small>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Hạn nộp
+                            </label>
+
+                            <input type="datetime-local"
+                                   class="form-control"
+                                   name="dueAt">
+
+                            <small class="text-muted">
+                                Có thể để trống.
+                            </small>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">
+                        Hủy
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-primary">
+                        Phát bài
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- MANUAL ASSIGNMENT -->
+<div class="modal fade"
+     id="manualAssignmentModal"
+     tabindex="-1">
+
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <form method="post"
+                  th:action="@{/admin/assigned-assignments/manual}">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        Giao bài thủ công
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal">
+                    </button>
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Học viên
+                        </label>
+
+                        <select class="form-select"
+                                id="manualStudent"
+                                name="studentId"
+                                required>
+
+                            <option value="">
+                                Chọn học viên
+                            </option>
+
+                            <option th:each="student : ${students}"
+                                    th:value="${student.id}"
+                                    th:text="${student.fullName + ' - @' + student.username}">
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Bài tập
+                        </label>
+
+                        <select class="form-select"
+                                id="manualAssignment"
+                                name="assignmentId"
+                                disabled
+                                required>
+
+                            <option value="">
+                                Vui lòng chọn học viên trước
+                            </option>
+
+                        </select>
+
+                        <small class="text-muted">
+                            Chỉ hiện bài thuộc khóa mà học viên đang tham gia.
+                        </small>
+                    </div>
+
+                    <div class="row">
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Mở bài lúc
+                            </label>
+
+                            <input type="datetime-local"
+                                   class="form-control"
+                                   name="availableAt">
+
+                            <small class="text-muted">
+                                Để trống để mở ngay.
+                            </small>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Hạn nộp
+                            </label>
+
+                            <input type="datetime-local"
+                                   class="form-control"
+                                   name="dueAt">
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">
+                        Hủy
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-primary">
+                        Giao bài
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+<div th:replace="~{base :: footer}"></div>
+
+
+<script>
+    const studentSelect = document.getElementById("manualStudent");
+    const assignmentSelect = document.getElementById("manualAssignment");
+
+    studentSelect.addEventListener("change", async function () {
+        const studentId = this.value;
+
+        assignmentSelect.disabled = true;
+        assignmentSelect.innerHTML = "";
+
+        if (!studentId) {
+            assignmentSelect.innerHTML =
+                '<option value="">Vui lòng chọn học viên trước</option>';
+            return;
+        }
+
+        assignmentSelect.innerHTML =
+            '<option value="">Đang tải bài tập...</option>';
+
+        try {
+            const response = await fetch(
+                `/admin/assigned-assignments/available-assignments?studentId=${studentId}`
+            );
+
+            const assignments = await response.json();
+
+            assignmentSelect.innerHTML =
+                '<option value="">Chọn bài tập</option>';
+
+            if (assignments.length === 0) {
+                assignmentSelect.innerHTML =
+                    '<option value="">Không có bài tập phù hợp</option>';
+                return;
+            }
+
+            assignments.forEach(assignment => {
+                const option = document.createElement("option");
+
+                option.value = assignment.id;
+                option.textContent =
+                    `${assignment.courseName} - ${assignment.name}`;
+
+                assignmentSelect.appendChild(option);
+            });
+
+            assignmentSelect.disabled = false;
+
+        } catch (error) {
+            assignmentSelect.innerHTML =
+                '<option value="">Không thể tải bài tập</option>';
+        }
+    });
+</script>
+
+</body>
+</html>

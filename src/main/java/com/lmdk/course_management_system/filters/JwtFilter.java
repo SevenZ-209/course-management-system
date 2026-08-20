@@ -30,41 +30,42 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String header = request.getHeader("Authorization");
 
-        /*
-         * Không có JWT:
-         * Cho request đi tiếp.
-         *
-         * SecurityFilterChain sẽ tự quyết định
-         * endpoint đó có cần đăng nhập hay không.
-         */
-        if (header == null || !header.startsWith("Bearer ")) {
+        if(header == null || !header.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String token = header.substring(7);
+        String token = header.substring(7).trim();
+
+        if(token.isBlank()) {
+            unauthorized(response);
+            return;
+        }
 
         try {
-
             String email =
                     jwtUtils.validateTokenAndGetEmail(token);
 
-            /*
-             * Chỉ tạo Authentication khi:
-             * - Token hợp lệ
-             * - Chưa có Authentication trước đó
-             */
-            if (email != null
-                    && SecurityContextHolder
+            if(email == null || email.isBlank()) {
+                unauthorized(response);
+                return;
+            }
+
+            if(SecurityContextHolder
                     .getContext()
                     .getAuthentication() == null) {
 
                 String role =
                         jwtUtils.getRoleFromToken(token);
 
+                if(role == null || role.isBlank()) {
+                    unauthorized(response);
+                    return;
+                }
+
                 SimpleGrantedAuthority authority =
                         new SimpleGrantedAuthority(
-                                "ROLE_" + role
+                                "ROLE_" + role.trim().toUpperCase()
                         );
 
                 UsernamePasswordAuthenticationToken authentication =
@@ -79,18 +80,25 @@ public class JwtFilter extends OncePerRequestFilter {
                         .setAuthentication(authentication);
             }
 
-        } catch (Exception e) {
+            filterChain.doFilter(request, response);
 
+        } catch(Exception e) {
             SecurityContextHolder.clearContext();
-
-            response.sendError(
-                    HttpServletResponse.SC_UNAUTHORIZED,
-                    "Token không hợp lệ hoặc đã hết hạn"
-            );
-
-            return;
+            unauthorized(response);
         }
+    }
 
-        filterChain.doFilter(request, response);
+    private void unauthorized(
+            HttpServletResponse response
+    ) throws IOException {
+        response.setStatus(
+                HttpServletResponse.SC_UNAUTHORIZED
+        );
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        response.getWriter().write(
+                "{\"message\":\"Token không hợp lệ hoặc đã hết hạn!\"}"
+        );
     }
 }

@@ -1,0 +1,178 @@
+package com.lmdk.course_management_system.repository.impl;
+
+import com.lmdk.course_management_system.pojo.OnlineSession;
+import com.lmdk.course_management_system.repository.OnlineSessionRepository;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.TypedQuery;
+import jakarta.persistence.criteria.*;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+@Repository
+@Transactional
+public class OnlineSessionRepositoryImpl implements OnlineSessionRepository {
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    @Value("${online-sessions.page-size:10}")
+    private int pageSize;
+
+    @Override
+    public OnlineSession getSessionById(Integer id) {
+        return entityManager.find(OnlineSession.class, id);
+    }
+
+    @Override
+    public OnlineSession addSession(OnlineSession onlineSession) {
+        entityManager.persist(onlineSession);
+        return onlineSession;
+    }
+
+    @Override
+    public void updateSession(OnlineSession onlineSession) {
+        entityManager.merge(onlineSession);
+    }
+
+    @Override
+    public List<OnlineSession> getSessions(Map<String, String> params) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<OnlineSession> cq = cb.createQuery(OnlineSession.class);
+        Root<OnlineSession> root = cq.from(OnlineSession.class);
+
+        root.fetch("courseClass", JoinType.LEFT)
+                .fetch("course", JoinType.LEFT);
+        root.fetch("teacher", JoinType.LEFT);
+
+        List<Predicate> predicates = createPredicates(cb, root, params);
+
+        cq.select(root)
+                .distinct(true)
+                .where(predicates.toArray(new Predicate[0]))
+                .orderBy(cb.desc(root.get("startTime")));
+
+        TypedQuery<OnlineSession> query = entityManager.createQuery(cq);
+        int page = parsePage(params.get("page"));
+
+        query.setFirstResult((page - 1) * pageSize);
+        query.setMaxResults(pageSize);
+
+        return query.getResultList();
+    }
+
+    @Override
+    public List<OnlineSession> getSessionsByClass(Integer classId) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<OnlineSession> cq = cb.createQuery(OnlineSession.class);
+        Root<OnlineSession> root = cq.from(OnlineSession.class);
+
+        root.fetch("teacher", JoinType.LEFT);
+
+        cq.select(root)
+                .where(cb.equal(root.get("courseClass").get("id"), classId))
+                .orderBy(cb.asc(root.get("startTime")));
+
+        return entityManager.createQuery(cq).getResultList();
+    }
+
+    @Override
+    public long countSessions(Map<String, String> params) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Long> cq = cb.createQuery(Long.class);
+        Root<OnlineSession> root = cq.from(OnlineSession.class);
+
+        List<Predicate> predicates = createPredicates(cb, root, params);
+
+        cq.select(cb.count(root))
+                .where(predicates.toArray(new Predicate[0]));
+
+        return entityManager.createQuery(cq).getSingleResult();
+    }
+
+    @Override
+    public List<OnlineSession> getAllSessions() {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<OnlineSession> cq = cb.createQuery(OnlineSession.class);
+        Root<OnlineSession> root = cq.from(OnlineSession.class);
+
+        root.fetch("courseClass", JoinType.LEFT);
+
+        cq.select(root)
+                .orderBy(cb.desc(root.get("startTime")));
+
+        return entityManager.createQuery(cq).getResultList();
+    }
+
+    private List<Predicate> createPredicates(CriteriaBuilder cb, Root<OnlineSession> root,
+                                             Map<String, String> params) {
+        List<Predicate> predicates = new ArrayList<>();
+
+        String kw = params.get("kw");
+        String classId = params.get("classId");
+        String teacherId = params.get("teacherId");
+        String date = params.get("date");
+
+        if (kw != null && !kw.isBlank()) {
+            String value = "%" + kw.trim().toLowerCase() + "%";
+
+            predicates.add(cb.or(
+                    cb.like(cb.lower(root.get("title")), value),
+                    cb.like(cb.lower(root.get("meetingUrl")), value)
+            ));
+        }
+
+        if (classId != null && !classId.isBlank()) {
+            try {
+                predicates.add(cb.equal(
+                        root.get("courseClass").get("id"),
+                        Integer.parseInt(classId)
+                ));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        if (teacherId != null && !teacherId.isBlank()) {
+            try {
+                predicates.add(cb.equal(
+                        root.get("teacher").get("id"),
+                        Integer.parseInt(teacherId)
+                ));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        if (date != null && !date.isBlank()) {
+            try {
+                LocalDate selectedDate = LocalDate.parse(date);
+                LocalDateTime start = selectedDate.atStartOfDay();
+                LocalDateTime end = selectedDate.plusDays(1).atStartOfDay();
+
+                predicates.add(cb.and(
+                        cb.greaterThanOrEqualTo(root.get("startTime"), start),
+                        cb.lessThan(root.get("startTime"), end)
+                ));
+            } catch (Exception ignored) {
+            }
+        }
+
+        return predicates;
+    }
+
+    private int parsePage(String page) {
+        try {
+            return Math.max(Integer.parseInt(page), 1);
+        } catch (Exception ex) {
+            return 1;
+        }
+    }
+}

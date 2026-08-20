@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <title>Quản lý bài học</title>
+    <th:block th:replace="~{base :: css}"></th:block>
+</head>
+
+<body>
+
+<div th:replace="~{base :: header}"></div>
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1">Quản lý bài học</h3>
+            <span class="text-muted">
+                Tổng cộng:
+                <strong th:text="${totalRecords}">0</strong>
+                bài học
+            </span>
+        </div>
+
+        <button class="btn btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#addLessonModal">
+            Thêm bài học
+        </button>
+    </div>
+
+    <div th:if="${successMessage}"
+         class="alert alert-success"
+         th:text="${successMessage}">
+    </div>
+
+    <div th:if="${errorMessage}"
+         class="alert alert-danger"
+         th:text="${errorMessage}">
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+
+            <form method="get" th:action="@{/admin/lessons}">
+                <div class="row g-3">
+
+                    <div class="col-md-4">
+                        <input type="text"
+                               class="form-control"
+                               name="kw"
+                               th:value="${kw}"
+                               placeholder="Tìm tên bài học">
+                    </div>
+
+                    <div class="col-md-3">
+                        <select class="form-select" name="courseId">
+                            <option value="">Tất cả khóa học</option>
+
+                            <option th:each="course : ${courses}"
+                                    th:value="${course.id}"
+                                    th:text="${course.name}"
+                                    th:selected="${courseId == course.id.toString()}">
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <select class="form-select" name="moduleId">
+                            <option value="">Tất cả module</option>
+
+                            <option th:each="module : ${modules}"
+                                    th:value="${module.id}"
+                                    th:text="${module.course.name + ' - ' + module.name}"
+                                    th:selected="${moduleId == module.id.toString()}">
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary">
+                            Tìm kiếm
+                        </button>
+
+                        <a th:href="@{/admin/lessons}"
+                           class="btn btn-outline-secondary">
+                            Làm mới
+                        </a>
+                    </div>
+
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Bài học</th>
+                        <th>Module</th>
+                        <th>Khóa học</th>
+                        <th>Thứ tự</th>
+                        <th>Tài liệu PDF</th>
+                        <th style="width: 120px;">Thao tác</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    <tr th:each="lesson : ${lessons}">
+
+                        <td th:text="${lesson.id}"></td>
+
+                        <td>
+                            <div class="fw-semibold"
+                                 th:text="${lesson.name}">
+                            </div>
+                        </td>
+
+                        <td>
+                            <span class="badge text-bg-light border"
+                                  th:text="${lesson.courseModule.name}">
+                            </span>
+                        </td>
+
+                        <td th:text="${lesson.courseModule.course.name}"></td>
+
+                        <td>
+                            <span class="badge text-bg-primary"
+                                  th:text="${lesson.orderNumber}">
+                            </span>
+                        </td>
+
+                        <td>
+                            <a th:if="${lesson.fileUrl != null}"
+                               th:href="${lesson.fileUrl}"
+                               target="_blank"
+                               class="btn btn-sm btn-outline-secondary">
+                                Xem PDF
+                            </a>
+
+                            <span th:if="${lesson.fileUrl == null}"
+                                  class="text-muted">
+                                Chưa có file
+                            </span>
+
+                            <div th:if="${lesson.fileName != null}"
+                                 class="small text-muted mt-1"
+                                 th:text="${lesson.fileName}">
+                            </div>
+                        </td>
+
+                        <td>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-primary"
+                                    data-bs-toggle="modal"
+                                    th:data-bs-target="'#editLessonModal' + ${lesson.id}">
+                                Chỉnh sửa
+                            </button>
+                        </td>
+
+                    </tr>
+
+                    <tr th:if="${#lists.isEmpty(lessons)}">
+                        <td colspan="7"
+                            class="text-center text-muted py-5">
+                            Không tìm thấy bài học.
+                        </td>
+                    </tr>
+
+                    </tbody>
+
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+    <nav class="mt-4" th:if="${totalPages > 1}">
+        <ul class="pagination justify-content-center">
+
+            <li class="page-item"
+                th:classappend="${currentPage == 1} ? 'disabled'">
+
+                <a class="page-link"
+                   th:href="@{/admin/lessons(
+                        page=${currentPage - 1},
+                        kw=${kw},
+                        courseId=${courseId},
+                        moduleId=${moduleId}
+                   )}">
+                    Trước
+                </a>
+            </li>
+
+            <li class="page-item"
+                th:each="pageNumber : ${#numbers.sequence(1, totalPages)}"
+                th:classappend="${pageNumber == currentPage} ? 'active'">
+
+                <a class="page-link"
+                   th:text="${pageNumber}"
+                   th:href="@{/admin/lessons(
+                        page=${pageNumber},
+                        kw=${kw},
+                        courseId=${courseId},
+                        moduleId=${moduleId}
+                   )}">
+                </a>
+            </li>
+
+            <li class="page-item"
+                th:classappend="${currentPage == totalPages} ? 'disabled'">
+
+                <a class="page-link"
+                   th:href="@{/admin/lessons(
+                        page=${currentPage + 1},
+                        kw=${kw},
+                        courseId=${courseId},
+                        moduleId=${moduleId}
+                   )}">
+                    Sau
+                </a>
+            </li>
+
+        </ul>
+    </nav>
+
+</div>
+
+
+<div class="modal fade" id="addLessonModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <form method="post"
+                  th:action="@{/admin/lessons/add}"
+                  enctype="multipart/form-data">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">Thêm bài học</h5>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal">
+                    </button>
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label class="form-label">Tên bài học</label>
+
+                        <input type="text"
+                               class="form-control"
+                               name="name"
+                               required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Module</label>
+
+                        <select class="form-select"
+                                name="moduleId"
+                                required>
+
+                            <option value="">Chọn module</option>
+
+                            <option th:each="module : ${modules}"
+                                    th:value="${module.id}"
+                                    th:text="${module.course.name + ' - ' + module.name}">
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Thứ tự</label>
+
+                        <input type="number"
+                               class="form-control"
+                               name="orderNumber"
+                               min="1"
+                               value="1"
+                               required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            File bài học PDF
+                        </label>
+
+                        <input type="file"
+                               class="form-control"
+                               name="file"
+                               accept=".pdf,application/pdf"
+                               required>
+
+                        <div class="form-text">
+                            Chỉ chấp nhận file PDF.
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">
+                        Hủy
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-primary">
+                        Thêm
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- EDIT -->
+<th:block th:each="lesson : ${lessons}">
+
+    <div class="modal fade"
+         th:id="'editLessonModal' + ${lesson.id}"
+         tabindex="-1">
+
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+
+                <form method="post"
+                      th:action="@{/admin/lessons/update}"
+                      enctype="multipart/form-data">
+
+                    <input type="hidden"
+                           name="lessonId"
+                           th:value="${lesson.id}">
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">Chỉnh sửa bài học</h5>
+
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal">
+                        </button>
+                    </div>
+
+                    <div class="modal-body">
+
+                        <div class="mb-3">
+                            <label class="form-label">Tên bài học</label>
+
+                            <input type="text"
+                                   class="form-control"
+                                   name="name"
+                                   th:value="${lesson.name}"
+                                   required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Module</label>
+
+                            <select class="form-select"
+                                    name="moduleId"
+                                    required>
+
+                                <option th:each="module : ${modules}"
+                                        th:value="${module.id}"
+                                        th:text="${module.course.name + ' - ' + module.name}"
+                                        th:selected="${module.id == lesson.courseModule.id}">
+                                </option>
+
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Thứ tự</label>
+
+                            <input type="number"
+                                   class="form-control"
+                                   name="orderNumber"
+                                   min="1"
+                                   th:value="${lesson.orderNumber}"
+                                   required>
+                        </div>
+
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Tài liệu hiện tại
+                            </label>
+
+                            <div th:if="${lesson.fileUrl != null}"
+                                 class="mb-2">
+
+                                <a th:href="${lesson.fileUrl}"
+                                   target="_blank"
+                                   class="btn btn-sm btn-outline-secondary">
+                                    Xem PDF hiện tại
+                                </a>
+
+                                <span class="ms-2 text-muted"
+                                      th:if="${lesson.fileName != null}"
+                                      th:text="${lesson.fileName}">
+        </span>
+
+                            </div>
+
+                            <div th:if="${lesson.fileUrl == null}"
+                                 class="text-muted mb-2">
+                                Chưa có tài liệu PDF.
+                            </div>
+
+                            <label class="form-label mt-2">
+                                Thay file PDF
+                            </label>
+
+                            <input type="file"
+                                   class="form-control"
+                                   name="file"
+                                   accept=".pdf,application/pdf">
+
+                            <div class="form-text">
+                                Không chọn file nếu muốn giữ tài liệu hiện tại.
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">
+                            Hủy
+                        </button>
+
+                        <button type="submit"
+                                class="btn btn-primary">
+                            Lưu thay đổi
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+</th:block>
+
+<div th:replace="~{base :: footer}"></div>
+
+</body>
+</html>

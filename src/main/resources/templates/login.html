@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Đăng nhập</title>
+    <th:block th:replace="~{base :: css}"></th:block>
+</head>
+
+<body>
+
+<div th:replace="~{base :: header}"></div>
+
+<section class="container mt-5" style="max-width: 500px;">
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+
+            <h3 class="text-center mb-4">Đăng nhập quản trị</h3>
+
+            <div th:if="${param.error}" class="alert alert-danger">
+                Tên đăng nhập hoặc mật khẩu không chính xác.
+            </div>
+
+            <div th:if="${param.logout}" class="alert alert-success">
+                Đăng xuất thành công.
+            </div>
+
+            <form method="post" th:action="@{/login}">
+
+                <div class="form-floating mb-3">
+                    <input type="text"
+                           class="form-control"
+                           id="username"
+                           name="username"
+                           placeholder="Tên đăng nhập"
+                           required
+                           autofocus>
+
+                    <label for="username">Tên đăng nhập</label>
+                </div>
+
+                <div class="form-floating mb-3">
+                    <input type="password"
+                           class="form-control"
+                           id="password"
+                           name="password"
+                           placeholder="Mật khẩu"
+                           required>
+
+                    <label for="password">Mật khẩu</label>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">
+                    Đăng nhập
+                </button>
+
+            </form>
+
+        </div>
+    </div>
+
+</section>
+
+<div th:replace="~{base :: footer}"></div>
+
+</body>
+</html>

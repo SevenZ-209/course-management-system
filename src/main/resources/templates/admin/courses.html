@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <title>Quản lý khóa học</title>
+    <th:block th:replace="~{base :: css}"></th:block>
+</head>
+
+<body>
+
+<div th:replace="~{base :: header}"></div>
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1">Quản lý khóa học</h3>
+            <span class="text-muted">
+                Tổng cộng:
+                <strong th:text="${totalRecords}">0</strong>
+                khóa học
+            </span>
+        </div>
+
+        <button class="btn btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#addCourseModal">
+            Thêm khóa học
+        </button>
+    </div>
+
+    <div th:if="${successMessage}"
+         class="alert alert-success"
+         th:text="${successMessage}">
+    </div>
+
+    <div th:if="${errorMessage}"
+         class="alert alert-danger"
+         th:text="${errorMessage}">
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+
+            <form method="get" th:action="@{/admin/courses}">
+                <div class="row g-3">
+
+                    <div class="col-md-4">
+                        <input type="text"
+                               class="form-control"
+                               name="kw"
+                               th:value="${kw}"
+                               placeholder="Tìm tên hoặc mô tả khóa học">
+                    </div>
+
+                    <div class="col-md-3">
+                        <select class="form-select" name="categoryId">
+                            <option value="">Tất cả danh mục</option>
+
+                            <option th:each="category : ${categories}"
+                                    th:value="${category.id}"
+                                    th:text="${category.name}"
+                                    th:selected="${categoryId == category.id.toString()}">
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <select class="form-select" name="status">
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="ACTIVE" th:selected="${status == 'ACTIVE'}">Hoạt động</option>
+                            <option value="INACTIVE" th:selected="${status == 'INACTIVE'}">Ngừng hoạt động</option>
+                            <option value="HIDDEN" th:selected="${status == 'HIDDEN'}">Ẩn</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary">
+                            Tìm kiếm
+                        </button>
+
+                        <a th:href="@{/admin/courses}"
+                           class="btn btn-outline-secondary">
+                            Làm mới
+                        </a>
+                    </div>
+
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Khóa học</th>
+                        <th>Danh mục</th>
+                        <th>Học phí</th>
+                        <th>Trạng thái</th>
+                        <th>Chỉnh sửa</th>
+                        <th style="width: 220px;">Đổi trạng thái</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    <tr th:each="course : ${courses}">
+
+                        <td th:text="${course.id}"></td>
+
+                        <td>
+                            <div class="fw-semibold"
+                                 th:text="${course.name}">
+                            </div>
+
+                            <small class="text-muted"
+                                   th:if="${course.description != null}"
+                                   th:text="${course.description}">
+                            </small>
+                        </td>
+
+                        <td>
+                            <span class="badge text-bg-light border"
+                                  th:text="${course.category.name}">
+                            </span>
+                        </td>
+
+                        <td>
+                            <span th:text="${#numbers.formatDecimal(course.tuitionFee, 0, 'POINT', 0, 'COMMA')}"></span>
+                            VNĐ
+                        </td>
+
+                        <td>
+                            <span th:if="${course.status.name() == 'ACTIVE'}"
+                                  class="badge text-bg-success">
+                                Hoạt động
+                            </span>
+
+                            <span th:if="${course.status.name() == 'INACTIVE'}"
+                                  class="badge text-bg-secondary">
+                                Ngừng hoạt động
+                            </span>
+
+                            <span th:if="${course.status.name() == 'HIDDEN'}"
+                                  class="badge text-bg-warning">
+                                Đã ẩn
+                            </span>
+                        </td>
+
+                        <td>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-primary"
+                                    data-bs-toggle="modal"
+                                    th:data-bs-target="'#editCourseModal' + ${course.id}">
+                                Chỉnh sửa
+                            </button>
+                        </td>
+
+                        <td>
+                            <form method="post"
+                                  th:action="@{/admin/courses/update-status}"
+                                  class="d-flex gap-2">
+
+                                <input type="hidden"
+                                       name="courseId"
+                                       th:value="${course.id}">
+
+                                <select class="form-select form-select-sm"
+                                        name="status">
+
+                                    <option value="ACTIVE"
+                                            th:selected="${course.status.name() == 'ACTIVE'}">
+                                        Hoạt động
+                                    </option>
+
+                                    <option value="INACTIVE"
+                                            th:selected="${course.status.name() == 'INACTIVE'}">
+                                        Ngừng hoạt động
+                                    </option>
+
+                                    <option value="HIDDEN"
+                                            th:selected="${course.status.name() == 'HIDDEN'}">
+                                        Ẩn
+                                    </option>
+
+                                </select>
+
+                                <button type="submit"
+                                        class="btn btn-sm btn-outline-dark">
+                                    Lưu
+                                </button>
+
+                            </form>
+                        </td>
+
+                    </tr>
+
+                    <tr th:if="${#lists.isEmpty(courses)}">
+                        <td colspan="7"
+                            class="text-center text-muted py-5">
+                            Không tìm thấy khóa học.
+                        </td>
+                    </tr>
+
+                    </tbody>
+
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+    <nav class="mt-4" th:if="${totalPages > 1}">
+        <ul class="pagination justify-content-center">
+
+            <li class="page-item"
+                th:classappend="${currentPage == 1} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/admin/courses(
+                        page=${currentPage - 1},
+                        kw=${kw},
+                        categoryId=${categoryId},
+                        status=${status}
+                   )}">
+                    Trước
+                </a>
+            </li>
+
+            <li class="page-item"
+                th:each="pageNumber : ${#numbers.sequence(1, totalPages)}"
+                th:classappend="${pageNumber == currentPage} ? 'active'">
+
+                <a class="page-link"
+                   th:text="${pageNumber}"
+                   th:href="@{/admin/courses(
+                        page=${pageNumber},
+                        kw=${kw},
+                        categoryId=${categoryId},
+                        status=${status}
+                   )}">
+                </a>
+            </li>
+
+            <li class="page-item"
+                th:classappend="${currentPage == totalPages} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/admin/courses(
+                        page=${currentPage + 1},
+                        kw=${kw},
+                        categoryId=${categoryId},
+                        status=${status}
+                   )}">
+                    Sau
+                </a>
+            </li>
+
+        </ul>
+    </nav>
+
+</div>
+
+
+<!-- ADD -->
+<div class="modal fade" id="addCourseModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <form method="post"
+                  th:action="@{/admin/courses/add}">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">Thêm khóa học</h5>
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal">
+                    </button>
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label class="form-label">Tên khóa học</label>
+
+                        <input type="text"
+                               class="form-control"
+                               name="name"
+                               required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Danh mục</label>
+
+                        <select class="form-select"
+                                name="categoryId"
+                                required>
+
+                            <option value="">Chọn danh mục</option>
+
+                            <option th:each="category : ${categories}"
+                                    th:value="${category.id}"
+                                    th:text="${category.name}">
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Học phí</label>
+
+                        <input type="number"
+                               class="form-control"
+                               name="tuitionFee"
+                               min="0"
+                               step="1000"
+                               required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Mô tả</label>
+
+                        <textarea class="form-control"
+                                  name="description"
+                                  rows="4"></textarea>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">
+                        Hủy
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-primary">
+                        Thêm
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- EDIT -->
+<th:block th:each="course : ${courses}">
+
+    <div class="modal fade"
+         th:id="'editCourseModal' + ${course.id}"
+         tabindex="-1">
+
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+
+                <form method="post"
+                      th:action="@{/admin/courses/update}">
+
+                    <input type="hidden"
+                           name="courseId"
+                           th:value="${course.id}">
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">Chỉnh sửa khóa học</h5>
+
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal">
+                        </button>
+                    </div>
+
+                    <div class="modal-body">
+
+                        <div class="mb-3">
+                            <label class="form-label">Tên khóa học</label>
+
+                            <input type="text"
+                                   class="form-control"
+                                   name="name"
+                                   th:value="${course.name}"
+                                   required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Danh mục</label>
+
+                            <select class="form-select"
+                                    name="categoryId"
+                                    required>
+
+                                <option th:each="category : ${categories}"
+                                        th:value="${category.id}"
+                                        th:text="${category.name}"
+                                        th:selected="${category.id == course.category.id}">
+                                </option>
+
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Học phí</label>
+
+                            <input type="number"
+                                   class="form-control"
+                                   name="tuitionFee"
+                                   min="0"
+                                   step="1000"
+                                   th:value="${course.tuitionFee}"
+                                   required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Mô tả</label>
+
+                            <textarea class="form-control"
+                                      name="description"
+                                      rows="4"
+                                      th:text="${course.description}">
+                            </textarea>
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">
+                            Hủy
+                        </button>
+
+                        <button type="submit"
+                                class="btn btn-primary">
+                            Lưu thay đổi
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+</th:block>
+
+<div th:replace="~{base :: footer}"></div>
+
+</body>
+</html>

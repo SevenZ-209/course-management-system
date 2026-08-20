@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <title>Quản lý đáp án</title>
+    <th:block th:replace="~{base :: css}"></th:block>
+</head>
+
+<body>
+
+<div th:replace="~{base :: header}"></div>
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1">Quản lý đáp án</h3>
+            <span class="text-muted">
+                Tổng cộng:
+                <strong th:text="${totalRecords}">0</strong>
+                đáp án
+            </span>
+        </div>
+
+        <button class="btn btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#addAnswerModal">
+            Thêm đáp án
+        </button>
+    </div>
+
+    <div th:if="${successMessage}"
+         class="alert alert-success"
+         th:text="${successMessage}">
+    </div>
+
+    <div th:if="${errorMessage}"
+         class="alert alert-danger"
+         th:text="${errorMessage}">
+    </div>
+
+    <!-- FILTER -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+
+            <form method="get"
+                  th:action="@{/admin/answers}">
+
+                <div class="row g-3">
+
+                    <div class="col-md-3">
+                        <input type="text"
+                               class="form-control"
+                               name="kw"
+                               th:value="${kw}"
+                               placeholder="Tìm nội dung đáp án">
+                    </div>
+
+                    <div class="col-md-3">
+                        <select class="form-select"
+                                name="courseId">
+
+                            <option value="">
+                                Tất cả khóa học
+                            </option>
+
+                            <option th:each="course : ${courses}"
+                                    th:value="${course.id}"
+                                    th:text="${course.name}"
+                                    th:selected="${courseId == course.id.toString()}">
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <select class="form-select"
+                                name="assignmentId">
+
+                            <option value="">
+                                Tất cả bài tập
+                            </option>
+
+                            <option th:each="assignment : ${assignments}"
+                                    th:value="${assignment.id}"
+                                    th:text="${assignment.name}"
+                                    th:selected="${assignmentId == assignment.id.toString()}">
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <select class="form-select"
+                                name="type">
+
+                            <option value="">
+                                Tất cả loại
+                            </option>
+
+                            <option value="CHOICE"
+                                    th:selected="${type == 'CHOICE'}">
+                                Lựa chọn
+                            </option>
+
+                            <option value="SHORT_ANSWER"
+                                    th:selected="${type == 'SHORT_ANSWER'}">
+                                Trả lời ngắn
+                            </option>
+
+                            <option value="REFERENCE_ANSWER"
+                                    th:selected="${type == 'REFERENCE_ANSWER'}">
+                                Tham khảo
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <button class="btn btn-primary"
+                                type="submit">
+                            Tìm
+                        </button>
+
+                        <a th:href="@{/admin/answers}"
+                           class="btn btn-outline-secondary">
+                            Làm mới
+                        </a>
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Bài tập</th>
+                        <th>Câu hỏi</th>
+                        <th>Thứ tự</th>
+                        <th>Đáp án</th>
+                        <th>Loại</th>
+                        <th>Đúng</th>
+                        <th>Chỉnh sửa</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    <tr th:each="answer : ${answers}">
+
+                        <td th:text="${answer.id}"></td>
+
+                        <td>
+                            <div class="fw-semibold"
+                                 th:text="${answer.question.assignment.name}">
+                            </div>
+
+                            <small class="text-muted"
+                                   th:text="${answer.question.assignment.course.name}">
+                            </small>
+                        </td>
+
+                        <td style="max-width: 300px;">
+                            <div>
+                                <span class="badge text-bg-light border me-1"
+                                      th:text="${'#' + answer.question.orderNumber}">
+                                </span>
+
+                                <span th:text="${answer.question.content}">
+                                </span>
+                            </div>
+                        </td>
+
+                        <td>
+                            <span class="badge text-bg-primary"
+                                  th:text="${'#' + answer.orderNumber}">
+                            </span>
+                        </td>
+
+                        <td style="max-width: 350px;"
+                            th:text="${answer.content}">
+                        </td>
+
+                        <td>
+                            <span th:if="${answer.type.name() == 'CHOICE'}"
+                                  class="badge text-bg-info">
+                                Lựa chọn
+                            </span>
+
+                            <span th:if="${answer.type.name() == 'SHORT_ANSWER'}"
+                                  class="badge text-bg-warning">
+                                Trả lời ngắn
+                            </span>
+
+                            <span th:if="${answer.type.name() == 'REFERENCE_ANSWER'}"
+                                  class="badge text-bg-secondary">
+                                Tham khảo
+                            </span>
+                        </td>
+
+                        <td>
+                            <span th:if="${answer.correct}"
+                                  class="badge text-bg-success">
+                                Đúng
+                            </span>
+
+                            <span th:unless="${answer.correct}"
+                                  class="text-muted">
+                                -
+                            </span>
+                        </td>
+
+                        <td>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-primary"
+                                    data-bs-toggle="modal"
+                                    th:data-bs-target="'#editAnswerModal' + ${answer.id}">
+                                Chỉnh sửa
+                            </button>
+                        </td>
+
+                    </tr>
+
+                    <tr th:if="${#lists.isEmpty(answers)}">
+                        <td colspan="8"
+                            class="text-center text-muted py-5">
+                            Chưa có đáp án.
+                        </td>
+                    </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- PAGINATION -->
+    <nav class="mt-4"
+         th:if="${totalPages > 1}">
+
+        <ul class="pagination justify-content-center">
+
+            <li class="page-item"
+                th:classappend="${currentPage == 1} ? 'disabled'">
+
+                <a class="page-link"
+                   th:href="@{/admin/answers(
+                       page=${currentPage - 1},
+                       kw=${kw},
+                       courseId=${courseId},
+                       assignmentId=${assignmentId},
+                       type=${type},
+                       correct=${correct}
+                   )}">
+                    Trước
+                </a>
+            </li>
+
+            <li class="page-item"
+                th:each="pageNumber : ${#numbers.sequence(1, totalPages)}"
+                th:classappend="${pageNumber == currentPage} ? 'active'">
+
+                <a class="page-link"
+                   th:text="${pageNumber}"
+                   th:href="@{/admin/answers(
+                       page=${pageNumber},
+                       kw=${kw},
+                       courseId=${courseId},
+                       assignmentId=${assignmentId},
+                       type=${type},
+                       correct=${correct}
+                   )}">
+                </a>
+            </li>
+
+            <li class="page-item"
+                th:classappend="${currentPage == totalPages} ? 'disabled'">
+
+                <a class="page-link"
+                   th:href="@{/admin/answers(
+                       page=${currentPage + 1},
+                       kw=${kw},
+                       courseId=${courseId},
+                       assignmentId=${assignmentId},
+                       type=${type},
+                       correct=${correct}
+                   )}">
+                    Sau
+                </a>
+            </li>
+
+        </ul>
+
+    </nav>
+
+</div>
+
+
+<!-- ADD -->
+<div class="modal fade"
+     id="addAnswerModal"
+     tabindex="-1">
+
+    <div class="modal-dialog modal-lg">
+
+        <div class="modal-content">
+
+            <form method="post"
+                  th:action="@{/admin/answers/add}">
+
+                <div class="modal-header">
+
+                    <h5 class="modal-title">
+                        Thêm đáp án
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal">
+                    </button>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Khóa học
+                        </label>
+
+                        <select class="form-select"
+                                id="answerCourse"
+                                required>
+
+                            <option value="">
+                                Chọn khóa học
+                            </option>
+
+                            <option th:each="course : ${courses}"
+                                    th:value="${course.id}"
+                                    th:text="${course.name}">
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Bài tập
+                        </label>
+
+                        <select class="form-select"
+                                id="answerAssignment"
+                                disabled
+                                required>
+
+                            <option value="">
+                                Vui lòng chọn khóa học trước
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Câu hỏi
+                        </label>
+
+                        <select class="form-select"
+                                id="answerQuestion"
+                                name="questionId"
+                                disabled
+                                required>
+
+                            <option value="">
+                                Vui lòng chọn bài tập trước
+                            </option>
+
+                        </select>
+
+                        <small id="questionTypeHelp"
+                               class="text-muted">
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Nội dung đáp án
+                        </label>
+
+                        <textarea class="form-control"
+                                  name="content"
+                                  rows="4"
+                                  required></textarea>
+                    </div>
+
+                    <div class="row">
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Thứ tự
+                            </label>
+
+                            <input type="number"
+                                   class="form-control"
+                                   name="orderNumber"
+                                   min="1"
+                                   required>
+                        </div>
+
+                        <div class="col-md-6 mb-3"
+                             id="correctAnswerContainer">
+
+                            <label class="form-label">
+                                Đáp án đúng
+                            </label>
+
+                            <div class="form-check mt-2">
+
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       name="correct"
+                                       value="true"
+                                       id="correctAnswer">
+
+                                <label class="form-check-label"
+                                       for="correctAnswer">
+                                    Đây là đáp án đúng
+                                </label>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">
+                        Hủy
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-primary">
+                        Thêm đáp án
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- EDIT -->
+<th:block th:each="answer : ${answers}">
+
+    <div class="modal fade"
+         th:id="'editAnswerModal' + ${answer.id}"
+         tabindex="-1">
+
+        <div class="modal-dialog modal-lg">
+
+            <div class="modal-content">
+
+                <form method="post"
+                      th:action="@{/admin/answers/update}">
+
+                    <input type="hidden"
+                           name="answerId"
+                           th:value="${answer.id}">
+
+                    <div class="modal-header">
+
+                        <h5 class="modal-title">
+                            Chỉnh sửa đáp án
+                        </h5>
+
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal">
+                        </button>
+
+                    </div>
+
+                    <div class="modal-body">
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Câu hỏi
+                            </label>
+
+                            <textarea class="form-control"
+                                      rows="3"
+                                      disabled
+                                      th:text="${answer.question.content}">
+                            </textarea>
+
+                            <small class="text-muted">
+                                Không thể thay đổi câu hỏi của đáp án.
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Nội dung đáp án
+                            </label>
+
+                            <textarea class="form-control"
+                                      name="content"
+                                      rows="4"
+                                      th:text="${answer.content}"
+                                      required>
+                            </textarea>
+                        </div>
+
+                        <div class="row">
+
+                            <div class="col-md-6 mb-3">
+
+                                <label class="form-label">
+                                    Thứ tự
+                                </label>
+
+                                <input type="number"
+                                       class="form-control"
+                                       name="orderNumber"
+                                       min="1"
+                                       th:value="${answer.orderNumber}"
+                                       required>
+
+                            </div>
+
+                            <div class="col-md-6 mb-3"
+                                 th:if="${answer.question.type.name() == 'MULTIPLE_CHOICE'}">
+
+                                <label class="form-label">
+                                    Đáp án đúng
+                                </label>
+
+                                <div class="form-check mt-2">
+
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="correct"
+                                           value="true"
+                                           th:id="'correctAnswer' + ${answer.id}"
+                                           th:checked="${answer.correct}">
+
+                                    <label class="form-check-label"
+                                           th:for="'correctAnswer' + ${answer.id}">
+                                        Đây là đáp án đúng
+                                    </label>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <div class="alert alert-light border mb-0"
+                             th:if="${answer.question.type.name() == 'SHORT_ANSWER'}">
+                            Đây là đáp án được chấp nhận cho câu trả lời ngắn.
+                        </div>
+
+                        <div class="alert alert-light border mb-0"
+                             th:if="${answer.question.type.name() == 'ESSAY'}">
+                            Đây là đáp án tham khảo dành cho giáo viên.
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">
+                            Hủy
+                        </button>
+
+                        <button type="submit"
+                                class="btn btn-primary">
+                            Lưu thay đổi
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+</th:block>
+
+
+<div th:replace="~{base :: footer}"></div>
+
+<script>
+    const courseSelect = document.getElementById("answerCourse");
+    const assignmentSelect = document.getElementById("answerAssignment");
+    const questionSelect = document.getElementById("answerQuestion");
+    const correctContainer = document.getElementById("correctAnswerContainer");
+    const correctCheckbox = document.getElementById("correctAnswer");
+    const questionTypeHelp = document.getElementById("questionTypeHelp");
+
+    courseSelect.addEventListener("change", async function () {
+        const courseId = this.value;
+
+        assignmentSelect.disabled = true;
+        questionSelect.disabled = true;
+
+        assignmentSelect.innerHTML = "";
+        questionSelect.innerHTML =
+            '<option value="">Vui lòng chọn bài tập trước</option>';
+
+        resetQuestionType();
+
+        if (!courseId) {
+            assignmentSelect.innerHTML =
+                '<option value="">Vui lòng chọn khóa học trước</option>';
+            return;
+        }
+
+        assignmentSelect.innerHTML =
+            '<option value="">Đang tải bài tập...</option>';
+
+        try {
+            const response = await fetch(
+                `/admin/answers/assignments?courseId=${courseId}`
+            );
+
+            const assignments = await response.json();
+
+            assignmentSelect.innerHTML =
+                '<option value="">Chọn bài tập</option>';
+
+            if (assignments.length === 0) {
+                assignmentSelect.innerHTML =
+                    '<option value="">Khóa học chưa có bài tập</option>';
+                return;
+            }
+
+            assignments.forEach(assignment => {
+                const option = document.createElement("option");
+
+                option.value = assignment.id;
+                option.textContent = assignment.name;
+
+                assignmentSelect.appendChild(option);
+            });
+
+            assignmentSelect.disabled = false;
+
+        } catch (error) {
+            assignmentSelect.innerHTML =
+                '<option value="">Không thể tải bài tập</option>';
+        }
+    });
+
+    assignmentSelect.addEventListener("change", async function () {
+        const assignmentId = this.value;
+
+        questionSelect.disabled = true;
+        questionSelect.innerHTML = "";
+
+        resetQuestionType();
+
+        if (!assignmentId) {
+            questionSelect.innerHTML =
+                '<option value="">Vui lòng chọn bài tập trước</option>';
+            return;
+        }
+
+        questionSelect.innerHTML =
+            '<option value="">Đang tải câu hỏi...</option>';
+
+        try {
+            const response = await fetch(
+                `/admin/answers/questions?assignmentId=${assignmentId}`
+            );
+
+            const questions = await response.json();
+
+            questionSelect.innerHTML =
+                '<option value="">Chọn câu hỏi</option>';
+
+            if (questions.length === 0) {
+                questionSelect.innerHTML =
+                    '<option value="">Bài tập chưa có câu hỏi</option>';
+                return;
+            }
+
+            questions.forEach(question => {
+                const option = document.createElement("option");
+
+                option.value = question.id;
+                option.textContent =
+                    `#${question.orderNumber} - ${question.content}`;
+
+                option.dataset.type = question.type;
+
+                questionSelect.appendChild(option);
+            });
+
+            questionSelect.disabled = false;
+
+        } catch (error) {
+            questionSelect.innerHTML =
+                '<option value="">Không thể tải câu hỏi</option>';
+        }
+    });
+
+    questionSelect.addEventListener("change", function () {
+        const option = this.options[this.selectedIndex];
+
+        resetQuestionType();
+
+        if (!option.value)
+            return;
+
+        const type = option.dataset.type;
+
+        if (type === "MULTIPLE_CHOICE") {
+            correctContainer.style.display = "block";
+            questionTypeHelp.textContent =
+                "Câu hỏi trắc nghiệm - chỉ được có một đáp án đúng.";
+        }
+
+        if (type === "SHORT_ANSWER") {
+            correctContainer.style.display = "none";
+            correctCheckbox.checked = false;
+            questionTypeHelp.textContent =
+                "Đáp án này sẽ được dùng để tự chấm câu trả lời ngắn.";
+        }
+
+        if (type === "ESSAY") {
+            correctContainer.style.display = "none";
+            correctCheckbox.checked = false;
+            questionTypeHelp.textContent =
+                "Nội dung này sẽ được dùng làm đáp án tham khảo khi chấm tự luận.";
+        }
+    });
+
+    function resetQuestionType() {
+        correctContainer.style.display = "none";
+        correctCheckbox.checked = false;
+        questionTypeHelp.textContent = "";
+    }
+
+    resetQuestionType();
+</script>
+
+</body>
+</html>

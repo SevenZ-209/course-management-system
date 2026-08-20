@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <title>Quản lý lộ trình học</title>
+    <th:block th:replace="~{base :: css}"></th:block>
+</head>
+
+<body>
+
+<div th:replace="~{base :: header}"></div>
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1">Quản lý lộ trình học</h3>
+
+            <span class="text-muted">
+                Tổng cộng:
+                <strong th:text="${totalRecords}">0</strong>
+                lộ trình
+            </span>
+        </div>
+
+        <button class="btn btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#addLearningPathModal">
+            Thêm lộ trình
+        </button>
+    </div>
+
+    <div th:if="${successMessage}"
+         class="alert alert-success"
+         th:text="${successMessage}">
+    </div>
+
+    <div th:if="${errorMessage}"
+         class="alert alert-danger"
+         th:text="${errorMessage}">
+    </div>
+
+    <!-- FILTER -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+
+            <form method="get"
+                  th:action="@{/admin/learning-paths}">
+
+                <div class="row g-3">
+
+                    <div class="col-md-4">
+                        <input type="text"
+                               class="form-control"
+                               name="kw"
+                               th:value="${kw}"
+                               placeholder="Tìm tên lộ trình">
+                    </div>
+
+                    <div class="col-md-3">
+                        <select class="form-select"
+                                name="courseId">
+
+                            <option value="">
+                                Tất cả khóa học
+                            </option>
+
+                            <option th:each="course : ${courses}"
+                                    th:value="${course.id}"
+                                    th:text="${course.name}"
+                                    th:selected="${courseId == course.id.toString()}">
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <select class="form-select"
+                                name="status">
+
+                            <option value="">
+                                Tất cả trạng thái
+                            </option>
+
+                            <option value="ACTIVE"
+                                    th:selected="${status == 'ACTIVE'}">
+                                Hoạt động
+                            </option>
+
+                            <option value="INACTIVE"
+                                    th:selected="${status == 'INACTIVE'}">
+                                Ngừng hoạt động
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <button type="submit"
+                                class="btn btn-primary">
+                            Tìm
+                        </button>
+
+                        <a th:href="@{/admin/learning-paths}"
+                           class="btn btn-outline-secondary">
+                            Làm mới
+                        </a>
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Lộ trình</th>
+                        <th>Khóa học</th>
+                        <th>Số bài/ngày</th>
+                        <th>Trạng thái</th>
+                        <th>Chỉnh sửa</th>
+                        <th style="width: 220px;">Đổi trạng thái</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    <tr th:each="path : ${learningPaths}">
+
+                        <td th:text="${path.id}"></td>
+
+                        <td>
+                            <div class="fw-semibold"
+                                 th:text="${path.name}">
+                            </div>
+                        </td>
+
+                        <td>
+                            <span class="badge text-bg-light border"
+                                  th:text="${path.course.name}">
+                            </span>
+                        </td>
+
+                        <td>
+                            <span th:text="${path.assignmentsPerDay}"></span>
+                            <span class="text-muted">bài</span>
+                        </td>
+
+                        <td>
+                            <span th:if="${path.status.name() == 'ACTIVE'}"
+                                  class="badge text-bg-success">
+                                Hoạt động
+                            </span>
+
+                            <span th:if="${path.status.name() == 'INACTIVE'}"
+                                  class="badge text-bg-secondary">
+                                Ngừng hoạt động
+                            </span>
+                        </td>
+
+                        <td>
+                            <div class="d-flex gap-2">
+
+                                <a th:href="@{/admin/learning-path-details(learningPathId=${path.id})}"
+                                   class="btn btn-sm btn-outline-info">
+                                    Chi tiết
+                                </a>
+
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary"
+                                        data-bs-toggle="modal"
+                                        th:data-bs-target="'#editLearningPathModal' + ${path.id}">
+                                    Chỉnh sửa
+                                </button>
+
+                            </div>
+                        </td>
+
+                        <td>
+                            <form method="post"
+                                  th:action="@{/admin/learning-paths/update-status}"
+                                  class="d-flex gap-2">
+
+                                <input type="hidden"
+                                       name="learningPathId"
+                                       th:value="${path.id}">
+
+                                <select class="form-select form-select-sm"
+                                        name="status">
+
+                                    <option value="ACTIVE"
+                                            th:selected="${path.status.name() == 'ACTIVE'}">
+                                        Hoạt động
+                                    </option>
+
+                                    <option value="INACTIVE"
+                                            th:selected="${path.status.name() == 'INACTIVE'}">
+                                        Ngừng hoạt động
+                                    </option>
+
+                                </select>
+
+                                <button type="submit"
+                                        class="btn btn-sm btn-outline-primary">
+                                    Lưu
+                                </button>
+
+                            </form>
+                        </td>
+
+                    </tr>
+
+                    <tr th:if="${#lists.isEmpty(learningPaths)}">
+                        <td colspan="7"
+                            class="text-center text-muted py-5">
+                            Chưa có lộ trình học.
+                        </td>
+                    </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- PAGINATION -->
+    <nav class="mt-4"
+         th:if="${totalPages > 1}">
+
+        <ul class="pagination justify-content-center">
+
+            <li class="page-item"
+                th:classappend="${currentPage == 1} ? 'disabled'">
+
+                <a class="page-link"
+                   th:href="@{/admin/learning-paths(
+                        page=${currentPage - 1},
+                        kw=${kw},
+                        courseId=${courseId},
+                        status=${status}
+                   )}">
+                    Trước
+                </a>
+            </li>
+
+            <li class="page-item"
+                th:each="pageNumber : ${#numbers.sequence(1, totalPages)}"
+                th:classappend="${pageNumber == currentPage} ? 'active'">
+
+                <a class="page-link"
+                   th:text="${pageNumber}"
+                   th:href="@{/admin/learning-paths(
+                        page=${pageNumber},
+                        kw=${kw},
+                        courseId=${courseId},
+                        status=${status}
+                   )}">
+                </a>
+
+            </li>
+
+            <li class="page-item"
+                th:classappend="${currentPage == totalPages} ? 'disabled'">
+
+                <a class="page-link"
+                   th:href="@{/admin/learning-paths(
+                        page=${currentPage + 1},
+                        kw=${kw},
+                        courseId=${courseId},
+                        status=${status}
+                   )}">
+                    Sau
+                </a>
+            </li>
+
+        </ul>
+
+    </nav>
+
+</div>
+
+
+<!-- ADD -->
+<div class="modal fade"
+     id="addLearningPathModal"
+     tabindex="-1">
+
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <form method="post"
+                  th:action="@{/admin/learning-paths/add}">
+
+                <div class="modal-header">
+
+                    <h5 class="modal-title">
+                        Thêm lộ trình học
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal">
+                    </button>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+
+                        <label class="form-label">
+                            Tên lộ trình
+                        </label>
+
+                        <input type="text"
+                               class="form-control"
+                               name="name"
+                               placeholder="Ví dụ: Lộ trình chuẩn"
+                               required>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label class="form-label">
+                            Khóa học
+                        </label>
+
+                        <select class="form-select"
+                                name="courseId"
+                                required>
+
+                            <option value="">
+                                Chọn khóa học
+                            </option>
+
+                            <option th:each="course : ${courses}"
+                                    th:value="${course.id}"
+                                    th:text="${course.name}">
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label class="form-label">
+                            Số bài phát mỗi ngày
+                        </label>
+
+                        <input type="number"
+                               class="form-control"
+                               name="assignmentsPerDay"
+                               min="1"
+                               value="1"
+                               required>
+
+                        <small class="text-muted">
+                            Số bài tập hệ thống dự kiến phát cho học viên mỗi ngày.
+                        </small>
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">
+                        Hủy
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-primary">
+                        Thêm lộ trình
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+</div>
+
+
+<!-- EDIT -->
+<th:block th:each="path : ${learningPaths}">
+
+    <div class="modal fade"
+         th:id="'editLearningPathModal' + ${path.id}"
+         tabindex="-1">
+
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <form method="post"
+                      th:action="@{/admin/learning-paths/update}">
+
+                    <input type="hidden"
+                           name="learningPathId"
+                           th:value="${path.id}">
+
+                    <div class="modal-header">
+
+                        <h5 class="modal-title">
+                            Chỉnh sửa lộ trình
+                        </h5>
+
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal">
+                        </button>
+
+                    </div>
+
+                    <div class="modal-body">
+
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Tên lộ trình
+                            </label>
+
+                            <input type="text"
+                                   class="form-control"
+                                   name="name"
+                                   th:value="${path.name}"
+                                   required>
+
+                        </div>
+
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Khóa học
+                            </label>
+
+                            <input type="text"
+                                   class="form-control"
+                                   th:value="${path.course.name}"
+                                   disabled>
+
+                            <small class="text-muted">
+                                Không thể thay đổi khóa học sau khi tạo lộ trình.
+                            </small>
+
+                        </div>
+
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Số bài phát mỗi ngày
+                            </label>
+
+                            <input type="number"
+                                   class="form-control"
+                                   name="assignmentsPerDay"
+                                   min="1"
+                                   th:value="${path.assignmentsPerDay}"
+                                   required>
+
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">
+                            Hủy
+                        </button>
+
+                        <button type="submit"
+                                class="btn btn-primary">
+                            Lưu thay đổi
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+</th:block>
+
+
+<div th:replace="~{base :: footer}"></div>
+
+</body>
+</html>

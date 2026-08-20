@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <title>Quản lý buổi học</title>
+    <th:block th:replace="~{base :: css}"></th:block>
+</head>
+
+<body>
+
+<div th:replace="~{base :: header}"></div>
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1">Quản lý buổi học online</h3>
+            <span class="text-muted">
+                Tổng cộng:
+                <strong th:text="${totalRecords}">0</strong>
+                buổi học
+            </span>
+        </div>
+
+        <button class="btn btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#addSessionModal">
+            Thêm buổi học
+        </button>
+    </div>
+
+    <div th:if="${successMessage}"
+         class="alert alert-success"
+         th:text="${successMessage}">
+    </div>
+
+    <div th:if="${errorMessage}"
+         class="alert alert-danger"
+         th:text="${errorMessage}">
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+
+            <form method="get" th:action="@{/admin/online-sessions}">
+                <div class="row g-3">
+
+                    <div class="col-md-3">
+                        <input type="text"
+                               class="form-control"
+                               name="kw"
+                               th:value="${kw}"
+                               placeholder="Tìm tiêu đề hoặc link">
+                    </div>
+
+                    <div class="col-md-3">
+                        <select class="form-select" name="classId">
+                            <option value="">Tất cả lớp học</option>
+
+                            <option th:each="courseClass : ${classes}"
+                                    th:value="${courseClass.id}"
+                                    th:text="${courseClass.name}"
+                                    th:selected="${classId == courseClass.id.toString()}">
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <select class="form-select" name="teacherId">
+                            <option value="">Tất cả giáo viên</option>
+
+                            <option th:each="teacher : ${teachers}"
+                                    th:value="${teacher.id}"
+                                    th:text="${teacher.fullName}"
+                                    th:selected="${teacherId == teacher.id.toString()}">
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <input type="date"
+                               class="form-control"
+                               name="date"
+                               th:value="${date}">
+                    </div>
+
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary">Tìm</button>
+
+                        <a th:href="@{/admin/online-sessions}"
+                           class="btn btn-outline-secondary">
+                            Làm mới
+                        </a>
+                    </div>
+
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Buổi học</th>
+                        <th>Lớp</th>
+                        <th>Giáo viên</th>
+                        <th>Thời gian</th>
+                        <th>Phòng học</th>
+                        <th style="width: 120px;">Thao tác</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    <tr th:each="onlineSession : ${sessions}">
+
+                        <td th:text="${onlineSession.id}"></td>
+
+                        <td class="fw-semibold"
+                            th:text="${onlineSession.title}">
+                        </td>
+
+                        <td>
+                            <div th:text="${onlineSession.courseClass.name}"></div>
+
+                            <small class="text-muted"
+                                   th:text="${onlineSession.courseClass.course.name}">
+                            </small>
+                        </td>
+
+                        <td th:text="${onlineSession.teacher.fullName}"></td>
+
+                        <td>
+                            <div>
+                                <span th:text="${#temporals.format(onlineSession.startTime, 'dd/MM/yyyy HH:mm')}"></span>
+                            </div>
+
+                            <small class="text-muted">
+                                đến
+                                <span th:text="${#temporals.format(onlineSession.endTime, 'HH:mm')}"></span>
+                            </small>
+                        </td>
+
+                        <td>
+                            <a th:href="${onlineSession.meetingUrl}"
+                               target="_blank"
+                               class="btn btn-sm btn-outline-success">
+                                Vào lớp
+                            </a>
+                        </td>
+
+                        <td>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-primary"
+                                    data-bs-toggle="modal"
+                                    th:data-bs-target="'#editSessionModal' + ${onlineSession.id}">
+                                Chỉnh sửa
+                            </button>
+                        </td>
+
+                    </tr>
+
+                    <tr th:if="${#lists.isEmpty(sessions)}">
+                        <td colspan="7"
+                            class="text-center text-muted py-5">
+                            Không tìm thấy buổi học.
+                        </td>
+                    </tr>
+
+                    </tbody>
+
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+    <nav class="mt-4" th:if="${totalPages > 1}">
+        <ul class="pagination justify-content-center">
+
+            <li class="page-item"
+                th:classappend="${currentPage == 1} ? 'disabled'">
+
+                <a class="page-link"
+                   th:href="@{/admin/online-sessions(
+                        page=${currentPage - 1},
+                        kw=${kw},
+                        classId=${classId},
+                        teacherId=${teacherId},
+                        date=${date}
+                   )}">
+                    Trước
+                </a>
+            </li>
+
+            <li class="page-item"
+                th:each="pageNumber : ${#numbers.sequence(1, totalPages)}"
+                th:classappend="${pageNumber == currentPage} ? 'active'">
+
+                <a class="page-link"
+                   th:text="${pageNumber}"
+                   th:href="@{/admin/online-sessions(
+                        page=${pageNumber},
+                        kw=${kw},
+                        classId=${classId},
+                        teacherId=${teacherId},
+                        date=${date}
+                   )}">
+                </a>
+            </li>
+
+            <li class="page-item"
+                th:classappend="${currentPage == totalPages} ? 'disabled'">
+
+                <a class="page-link"
+                   th:href="@{/admin/online-sessions(
+                        page=${currentPage + 1},
+                        kw=${kw},
+                        classId=${classId},
+                        teacherId=${teacherId},
+                        date=${date}
+                   )}">
+                    Sau
+                </a>
+            </li>
+
+        </ul>
+    </nav>
+
+</div>
+
+
+<!-- ADD -->
+<div class="modal fade" id="addSessionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <form method="post"
+                  th:action="@{/admin/online-sessions/add}">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">Thêm buổi học online</h5>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal">
+                    </button>
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label class="form-label">Tiêu đề buổi học</label>
+
+                        <input type="text"
+                               class="form-control"
+                               name="title"
+                               required>
+                    </div>
+
+                    <div class="row">
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Lớp học</label>
+
+                            <select class="form-select"
+                                    name="classId"
+                                    required>
+
+                                <option value="">Chọn lớp học</option>
+
+                                <option th:each="courseClass : ${classes}"
+                                        th:value="${courseClass.id}"
+                                        th:text="${courseClass.course.name + ' - ' + courseClass.name}">
+                                </option>
+
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Giáo viên</label>
+
+                            <select class="form-select"
+                                    name="teacherId"
+                                    required>
+
+                                <option value="">Chọn giáo viên</option>
+
+                                <option th:each="teacher : ${teachers}"
+                                        th:value="${teacher.id}"
+                                        th:text="${teacher.fullName}">
+                                </option>
+
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <div class="row">
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Bắt đầu</label>
+
+                            <input type="datetime-local"
+                                   class="form-control"
+                                   name="startTime"
+                                   required>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Kết thúc</label>
+
+                            <input type="datetime-local"
+                                   class="form-control"
+                                   name="endTime"
+                                   required>
+                        </div>
+
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Link phòng học</label>
+
+                        <input type="url"
+                               class="form-control"
+                               name="meetingUrl"
+                               placeholder="https://..."
+                               required>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">
+                        Hủy
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-primary">
+                        Thêm
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+<th:block th:each="onlineSession : ${sessions}">
+
+    <div class="modal fade"
+         th:id="'editSessionModal' + ${onlineSession.id}"
+         tabindex="-1">
+
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+
+                <form method="post"
+                      th:action="@{/admin/online-sessions/update}">
+
+                    <input type="hidden"
+                           name="sessionId"
+                           th:value="${onlineSession.id}">
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">Chỉnh sửa buổi học</h5>
+
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal">
+                        </button>
+                    </div>
+
+                    <div class="modal-body">
+
+                        <div class="mb-3">
+                            <label class="form-label">Tiêu đề buổi học</label>
+
+                            <input type="text"
+                                   class="form-control"
+                                   name="title"
+                                   th:value="${onlineSession.title}"
+                                   required>
+                        </div>
+
+                        <div class="row">
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Lớp học</label>
+
+                                <select class="form-select"
+                                        name="classId"
+                                        required>
+
+                                    <option th:each="courseClass : ${classes}"
+                                            th:value="${courseClass.id}"
+                                            th:text="${courseClass.course.name + ' - ' + courseClass.name}"
+                                            th:selected="${courseClass.id == onlineSession.courseClass.id}">
+                                    </option>
+
+                                </select>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Giáo viên</label>
+
+                                <select class="form-select"
+                                        name="teacherId"
+                                        required>
+
+                                    <option th:each="teacher : ${teachers}"
+                                            th:value="${teacher.id}"
+                                            th:text="${teacher.fullName}"
+                                            th:selected="${teacher.id == onlineSession.teacher.id}">
+                                    </option>
+
+                                </select>
+                            </div>
+
+                        </div>
+
+                        <div class="row">
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Bắt đầu</label>
+
+                                <input type="datetime-local"
+                                       class="form-control"
+                                       name="startTime"
+                                       th:value="${#temporals.format(onlineSession.startTime, 'yyyy-MM-dd''T''HH:mm')}"
+                                       required>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Kết thúc</label>
+
+                                <input type="datetime-local"
+                                       class="form-control"
+                                       name="endTime"
+                                       th:value="${#temporals.format(onlineSession.endTime, 'yyyy-MM-dd''T''HH:mm')}"
+                                       required>
+                            </div>
+
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Link phòng học</label>
+
+                            <input type="url"
+                                   class="form-control"
+                                   name="meetingUrl"
+                                   th:value="${onlineSession.meetingUrl}"
+                                   required>
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">
+                            Hủy
+                        </button>
+
+                        <button type="submit"
+                                class="btn btn-primary">
+                            Lưu thay đổi
+                        </button>
+
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+
+</th:block>
+
+<div th:replace="~{base :: footer}"></div>
+
+</body>
+</html>

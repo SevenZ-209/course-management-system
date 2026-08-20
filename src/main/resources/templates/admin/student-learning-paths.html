@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <title>Tiến độ lộ trình</title>
+    <th:block th:replace="~{base :: css}"></th:block>
+</head>
+
+<body>
+
+<div th:replace="~{base :: header}"></div>
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1">Tiến độ lộ trình học</h3>
+
+            <span class="text-muted">
+                Tổng cộng:
+                <strong th:text="${totalRecords}">0</strong>
+                lộ trình học viên
+            </span>
+        </div>
+
+        <button class="btn btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#assignPathModal">
+            Gán lộ trình
+        </button>
+    </div>
+
+    <div th:if="${successMessage}"
+         class="alert alert-success"
+         th:text="${successMessage}">
+    </div>
+
+    <div th:if="${errorMessage}"
+         class="alert alert-danger"
+         th:text="${errorMessage}">
+    </div>
+
+    <!-- FILTER -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+
+            <form method="get"
+                  th:action="@{/admin/student-learning-paths}">
+
+                <div class="row g-3">
+
+                    <div class="col-md-3">
+                        <input type="text"
+                               class="form-control"
+                               name="kw"
+                               th:value="${kw}"
+                               placeholder="Tên, username hoặc lộ trình">
+                    </div>
+
+                    <div class="col-md-3">
+                        <select class="form-select"
+                                name="courseId">
+
+                            <option value="">Tất cả khóa học</option>
+
+                            <option th:each="course : ${courses}"
+                                    th:value="${course.id}"
+                                    th:text="${course.name}"
+                                    th:selected="${courseId == course.id.toString()}">
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <select class="form-select"
+                                name="learningPathId">
+
+                            <option value="">Tất cả lộ trình</option>
+
+                            <option th:each="path : ${learningPaths}"
+                                    th:value="${path.id}"
+                                    th:text="${path.name}"
+                                    th:selected="${learningPathId == path.id.toString()}">
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <select class="form-select"
+                                name="status">
+
+                            <option value="">Tất cả trạng thái</option>
+
+                            <option value="IN_PROGRESS"
+                                    th:selected="${status == 'IN_PROGRESS'}">
+                                Đang học
+                            </option>
+
+                            <option value="PAUSED"
+                                    th:selected="${status == 'PAUSED'}">
+                                Tạm dừng
+                            </option>
+
+                            <option value="COMPLETED"
+                                    th:selected="${status == 'COMPLETED'}">
+                                Hoàn thành
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <button type="submit"
+                                class="btn btn-primary">
+                            Tìm
+                        </button>
+
+                        <a th:href="@{/admin/student-learning-paths}"
+                           class="btn btn-outline-secondary">
+                            Làm mới
+                        </a>
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Học viên</th>
+                        <th>Khóa học</th>
+                        <th>Lộ trình</th>
+                        <th>Bài hiện tại</th>
+                        <th>Trạng thái</th>
+                        <th>Bắt đầu</th>
+                        <th>Hoàn thành</th>
+                        <th>Thao tác</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    <tr th:each="progress : ${studentLearningPaths}">
+
+                        <td th:text="${progress.id}"></td>
+
+                        <td>
+                            <div class="fw-semibold"
+                                 th:text="${progress.student.fullName}">
+                            </div>
+
+                            <small class="text-muted">
+                                @<span th:text="${progress.student.username}"></span>
+                            </small>
+                        </td>
+
+                        <td>
+                            <span class="badge text-bg-light border"
+                                  th:text="${progress.learningPath.course.name}">
+                            </span>
+                        </td>
+
+                        <td class="fw-semibold"
+                            th:text="${progress.learningPath.name}">
+                        </td>
+
+                        <td>
+                            <div th:if="${progress.currentDetail != null}">
+
+                                <span class="badge text-bg-primary me-1"
+                                      th:text="${'#' + progress.currentDetail.orderNumber}">
+                                </span>
+
+                                <span th:text="${progress.currentDetail.assignment.name}">
+                                </span>
+
+                            </div>
+
+                            <span th:unless="${progress.currentDetail != null}"
+                                  class="text-muted">
+                                -
+                            </span>
+                        </td>
+
+                        <td>
+                            <span th:if="${progress.status.name() == 'IN_PROGRESS'}"
+                                  class="badge text-bg-success">
+                                Đang học
+                            </span>
+
+                            <span th:if="${progress.status.name() == 'PAUSED'}"
+                                  class="badge text-bg-warning">
+                                Tạm dừng
+                            </span>
+
+                            <span th:if="${progress.status.name() == 'COMPLETED'}"
+                                  class="badge text-bg-primary">
+                                Hoàn thành
+                            </span>
+                        </td>
+
+                        <td>
+                            <span th:if="${progress.startedAt != null}"
+                                  th:text="${#temporals.format(
+                                      progress.startedAt,
+                                      'dd/MM/yyyy HH:mm'
+                                  )}">
+                            </span>
+                        </td>
+
+                        <td>
+                            <span th:if="${progress.completedAt != null}"
+                                  th:text="${#temporals.format(
+                                      progress.completedAt,
+                                      'dd/MM/yyyy HH:mm'
+                                  )}">
+                            </span>
+
+                            <span th:unless="${progress.completedAt != null}"
+                                  class="text-muted">
+                                -
+                            </span>
+                        </td>
+
+                        <td>
+                            <form method="post"
+                                  th:if="${progress.status.name() == 'IN_PROGRESS'}"
+                                  th:action="@{/admin/student-learning-paths/pause}">
+
+                                <input type="hidden"
+                                       name="id"
+                                       th:value="${progress.id}">
+
+                                <button type="submit"
+                                        class="btn btn-sm btn-outline-warning">
+                                    Tạm dừng
+                                </button>
+                            </form>
+
+                            <form method="post"
+                                  th:if="${progress.status.name() == 'PAUSED'}"
+                                  th:action="@{/admin/student-learning-paths/resume}">
+
+                                <input type="hidden"
+                                       name="id"
+                                       th:value="${progress.id}">
+
+                                <button type="submit"
+                                        class="btn btn-sm btn-outline-success">
+                                    Tiếp tục
+                                </button>
+                            </form>
+
+                            <span th:if="${progress.status.name() == 'COMPLETED'}"
+                                  class="text-muted">
+                                -
+                            </span>
+                        </td>
+
+                    </tr>
+
+                    <tr th:if="${#lists.isEmpty(studentLearningPaths)}">
+                        <td colspan="9"
+                            class="text-center text-muted py-5">
+                            Chưa có học viên được gán lộ trình.
+                        </td>
+                    </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- PAGINATION -->
+    <nav class="mt-4"
+         th:if="${totalPages > 1}">
+
+        <ul class="pagination justify-content-center">
+
+            <li class="page-item"
+                th:classappend="${currentPage == 1} ? 'disabled'">
+
+                <a class="page-link"
+                   th:href="@{/admin/student-learning-paths(
+                        page=${currentPage - 1},
+                        kw=${kw},
+                        courseId=${courseId},
+                        learningPathId=${learningPathId},
+                        status=${status}
+                   )}">
+                    Trước
+                </a>
+            </li>
+
+            <li class="page-item"
+                th:each="pageNumber : ${#numbers.sequence(1, totalPages)}"
+                th:classappend="${pageNumber == currentPage} ? 'active'">
+
+                <a class="page-link"
+                   th:text="${pageNumber}"
+                   th:href="@{/admin/student-learning-paths(
+                        page=${pageNumber},
+                        kw=${kw},
+                        courseId=${courseId},
+                        learningPathId=${learningPathId},
+                        status=${status}
+                   )}">
+                </a>
+            </li>
+
+            <li class="page-item"
+                th:classappend="${currentPage == totalPages} ? 'disabled'">
+
+                <a class="page-link"
+                   th:href="@{/admin/student-learning-paths(
+                        page=${currentPage + 1},
+                        kw=${kw},
+                        courseId=${courseId},
+                        learningPathId=${learningPathId},
+                        status=${status}
+                   )}">
+                    Sau
+                </a>
+            </li>
+
+        </ul>
+
+    </nav>
+
+</div>
+
+
+<!-- ASSIGN PATH -->
+<div class="modal fade"
+     id="assignPathModal"
+     tabindex="-1">
+
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <form method="post"
+                  th:action="@{/admin/student-learning-paths/assign}">
+
+                <div class="modal-header">
+
+                    <h5 class="modal-title">
+                        Gán lộ trình cho học viên
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal">
+                    </button>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Học viên
+                        </label>
+
+                        <select class="form-select"
+                                id="pathStudent"
+                                name="studentId"
+                                required>
+
+                            <option value="">
+                                Chọn học viên
+                            </option>
+
+                            <option th:each="student : ${students}"
+                                    th:value="${student.id}"
+                                    th:text="${student.fullName + ' - @' + student.username}">
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Lộ trình
+                        </label>
+
+                        <select class="form-select"
+                                id="availableLearningPath"
+                                name="learningPathId"
+                                disabled
+                                required>
+
+                            <option value="">
+                                Vui lòng chọn học viên trước
+                            </option>
+
+                        </select>
+
+                        <small class="text-muted">
+                            Chỉ hiển thị lộ trình thuộc khóa học mà học viên đang tham gia.
+                        </small>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">
+                        Hủy
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-primary">
+                        Gán lộ trình
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+<div th:replace="~{base :: footer}"></div>
+
+
+<script>
+    const studentSelect = document.getElementById("pathStudent");
+    const pathSelect = document.getElementById("availableLearningPath");
+
+    studentSelect.addEventListener("change", async function () {
+        const studentId = this.value;
+
+        pathSelect.disabled = true;
+        pathSelect.innerHTML = "";
+
+        if (!studentId) {
+            pathSelect.innerHTML =
+                '<option value="">Vui lòng chọn học viên trước</option>';
+            return;
+        }
+
+        pathSelect.innerHTML =
+            '<option value="">Đang tải lộ trình...</option>';
+
+        try {
+            const response = await fetch(
+                `/admin/student-learning-paths/available-paths?studentId=${studentId}`
+            );
+
+            const paths = await response.json();
+
+            pathSelect.innerHTML =
+                '<option value="">Chọn lộ trình</option>';
+
+            if (paths.length === 0) {
+                pathSelect.innerHTML =
+                    '<option value="">Không có lộ trình phù hợp</option>';
+                return;
+            }
+
+            paths.forEach(path => {
+                const option = document.createElement("option");
+
+                option.value = path.id;
+                option.textContent =
+                    `${path.courseName} - ${path.name}`;
+
+                pathSelect.appendChild(option);
+            });
+
+            pathSelect.disabled = false;
+
+        } catch (error) {
+            pathSelect.innerHTML =
+                '<option value="">Không thể tải lộ trình</option>';
+        }
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <title>Quản lý bài tập</title>
+    <th:block th:replace="~{base :: css}"></th:block>
+</head>
+
+<body>
+
+<div th:replace="~{base :: header}"></div>
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1">Quản lý bài tập</h3>
+
+            <span class="text-muted">
+                Tổng cộng:
+                <strong th:text="${totalRecords}">0</strong>
+                bài tập
+            </span>
+        </div>
+
+        <button class="btn btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#addAssignmentModal">
+            Thêm bài tập
+        </button>
+    </div>
+
+    <div th:if="${successMessage}"
+         class="alert alert-success"
+         th:text="${successMessage}">
+    </div>
+
+    <div th:if="${errorMessage}"
+         class="alert alert-danger"
+         th:text="${errorMessage}">
+    </div>
+
+    <!-- FILTER -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+
+            <form method="get" th:action="@{/admin/assignments}">
+
+                <div class="row g-3">
+
+                    <div class="col-md-3">
+                        <input type="text"
+                               class="form-control"
+                               name="kw"
+                               th:value="${kw}"
+                               placeholder="Tìm tên bài tập">
+                    </div>
+
+                    <div class="col-md-3">
+                        <select class="form-select" name="courseId">
+
+                            <option value="">Tất cả khóa học</option>
+
+                            <option th:each="course : ${courses}"
+                                    th:value="${course.id}"
+                                    th:text="${course.name}"
+                                    th:selected="${courseId == course.id.toString()}">
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <select class="form-select" name="type">
+
+                            <option value="">Tất cả loại</option>
+
+                            <option value="PRACTICE"
+                                    th:selected="${type == 'PRACTICE'}">
+                                Bài luyện tập
+                            </option>
+
+                            <option value="TEST"
+                                    th:selected="${type == 'TEST'}">
+                                Bài kiểm tra
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <select class="form-select" name="status">
+
+                            <option value="">Tất cả trạng thái</option>
+
+                            <option value="ACTIVE"
+                                    th:selected="${status == 'ACTIVE'}">
+                                Hoạt động
+                            </option>
+
+                            <option value="INACTIVE"
+                                    th:selected="${status == 'INACTIVE'}">
+                                Ngừng hoạt động
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary">
+                            Tìm
+                        </button>
+
+                        <a th:href="@{/admin/assignments}"
+                           class="btn btn-outline-secondary">
+                            Làm mới
+                        </a>
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Bài tập</th>
+                        <th>Khóa học</th>
+                        <th>Loại</th>
+                        <th>Điểm tối đa</th>
+                        <th>Thời gian</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                        <th style="width: 210px;">Đổi trạng thái</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    <tr th:each="assignment : ${assignments}">
+
+                        <td th:text="${assignment.id}"></td>
+
+                        <td class="fw-semibold"
+                            th:text="${assignment.name}">
+                        </td>
+
+                        <td>
+                            <span class="badge text-bg-light border"
+                                  th:text="${assignment.course.name}">
+                            </span>
+                        </td>
+
+                        <td>
+                            <span th:if="${assignment.type.name() == 'PRACTICE'}"
+                                  class="badge text-bg-info">
+                                Luyện tập
+                            </span>
+
+                            <span th:if="${assignment.type.name() == 'TEST'}"
+                                  class="badge text-bg-warning">
+                                Kiểm tra
+                            </span>
+                        </td>
+
+                        <td th:text="${assignment.maximumScore}"></td>
+
+                        <td>
+                            <span th:if="${assignment.durationMinutes != null}">
+                                <span th:text="${assignment.durationMinutes}"></span>
+                                phút
+                            </span>
+
+                            <span th:unless="${assignment.durationMinutes != null}"
+                                  class="text-muted">
+                                Không giới hạn
+                            </span>
+                        </td>
+
+                        <td>
+                            <span th:if="${assignment.status.name() == 'ACTIVE'}"
+                                  class="badge text-bg-success">
+                                Hoạt động
+                            </span>
+
+                            <span th:if="${assignment.status.name() == 'INACTIVE'}"
+                                  class="badge text-bg-secondary">
+                                Ngừng hoạt động
+                            </span>
+                        </td>
+
+                        <td>
+                            <div class="d-flex gap-2">
+
+                                <a th:href="@{/admin/questions(assignmentId=${assignment.id})}"
+                                   class="btn btn-sm btn-outline-info">
+                                    Câu hỏi
+                                </a>
+
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary"
+                                        data-bs-toggle="modal"
+                                        th:data-bs-target="'#editAssignmentModal' + ${assignment.id}">
+                                    Chỉnh sửa
+                                </button>
+
+                            </div>
+                        </td>
+
+                        <td>
+                            <form method="post"
+                                  th:action="@{/admin/assignments/update-status}"
+                                  class="d-flex gap-2">
+
+                                <input type="hidden"
+                                       name="assignmentId"
+                                       th:value="${assignment.id}">
+
+                                <select class="form-select form-select-sm"
+                                        name="status">
+
+                                    <option value="ACTIVE"
+                                            th:selected="${assignment.status.name() == 'ACTIVE'}">
+                                        Hoạt động
+                                    </option>
+
+                                    <option value="INACTIVE"
+                                            th:selected="${assignment.status.name() == 'INACTIVE'}">
+                                        Ngừng hoạt động
+                                    </option>
+
+                                </select>
+
+                                <button type="submit"
+                                        class="btn btn-sm btn-outline-primary">
+                                    Lưu
+                                </button>
+
+                            </form>
+                        </td>
+
+                    </tr>
+
+                    <tr th:if="${#lists.isEmpty(assignments)}">
+                        <td colspan="9"
+                            class="text-center text-muted py-5">
+                            Chưa có bài tập.
+                        </td>
+                    </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- PAGINATION -->
+    <nav class="mt-4" th:if="${totalPages > 1}">
+        <ul class="pagination justify-content-center">
+
+            <li class="page-item"
+                th:classappend="${currentPage == 1} ? 'disabled'">
+
+                <a class="page-link"
+                   th:href="@{/admin/assignments(
+                        page=${currentPage - 1},
+                        kw=${kw},
+                        courseId=${courseId},
+                        type=${type},
+                        status=${status}
+                   )}">
+                    Trước
+                </a>
+            </li>
+
+            <li class="page-item"
+                th:each="pageNumber : ${#numbers.sequence(1, totalPages)}"
+                th:classappend="${pageNumber == currentPage} ? 'active'">
+
+                <a class="page-link"
+                   th:text="${pageNumber}"
+                   th:href="@{/admin/assignments(
+                        page=${pageNumber},
+                        kw=${kw},
+                        courseId=${courseId},
+                        type=${type},
+                        status=${status}
+                   )}">
+                </a>
+            </li>
+
+            <li class="page-item"
+                th:classappend="${currentPage == totalPages} ? 'disabled'">
+
+                <a class="page-link"
+                   th:href="@{/admin/assignments(
+                        page=${currentPage + 1},
+                        kw=${kw},
+                        courseId=${courseId},
+                        type=${type},
+                        status=${status}
+                   )}">
+                    Sau
+                </a>
+            </li>
+
+        </ul>
+    </nav>
+
+</div>
+
+
+<!-- ADD -->
+<div class="modal fade"
+     id="addAssignmentModal"
+     tabindex="-1">
+
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <form method="post"
+                  th:action="@{/admin/assignments/add}">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">Thêm bài tập</h5>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal">
+                    </button>
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label class="form-label">Tên bài tập</label>
+
+                        <input type="text"
+                               class="form-control"
+                               name="name"
+                               required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Khóa học</label>
+
+                        <select class="form-select"
+                                name="courseId"
+                                required>
+
+                            <option value="">Chọn khóa học</option>
+
+                            <option th:each="course : ${courses}"
+                                    th:value="${course.id}"
+                                    th:text="${course.name}">
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="row">
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Loại bài</label>
+
+                            <select class="form-select assignment-type"
+                                    name="type"
+                                    required>
+
+                                <option value="PRACTICE">
+                                    Bài luyện tập
+                                </option>
+
+                                <option value="TEST">
+                                    Bài kiểm tra
+                                </option>
+
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Điểm tối đa</label>
+
+                            <input type="number"
+                                   class="form-control"
+                                   name="maximumScore"
+                                   min="1"
+                                   value="100"
+                                   required>
+                        </div>
+
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Thời gian làm bài</label>
+
+                        <div class="input-group">
+                            <input type="number"
+                                   class="form-control assignment-duration"
+                                   name="durationMinutes"
+                                   min="1">
+
+                            <span class="input-group-text">
+                                phút
+                            </span>
+                        </div>
+
+                        <small class="text-muted duration-help">
+                            Bài luyện tập có thể để trống nếu không giới hạn thời gian.
+                        </small>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">
+                        Hủy
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-primary">
+                        Thêm bài tập
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- EDIT -->
+<th:block th:each="assignment : ${assignments}">
+
+    <div class="modal fade"
+         th:id="'editAssignmentModal' + ${assignment.id}"
+         tabindex="-1">
+
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+
+                <form method="post"
+                      th:action="@{/admin/assignments/update}">
+
+                    <input type="hidden"
+                           name="assignmentId"
+                           th:value="${assignment.id}">
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            Chỉnh sửa bài tập
+                        </h5>
+
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal">
+                        </button>
+                    </div>
+
+                    <div class="modal-body">
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Tên bài tập
+                            </label>
+
+                            <input type="text"
+                                   class="form-control"
+                                   name="name"
+                                   th:value="${assignment.name}"
+                                   required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Khóa học
+                            </label>
+
+                            <input type="text"
+                                   class="form-control"
+                                   th:value="${assignment.course.name}"
+                                   disabled>
+
+                            <small class="text-muted">
+                                Không thể thay đổi khóa học sau khi tạo bài.
+                            </small>
+                        </div>
+
+                        <div class="row">
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    Loại bài
+                                </label>
+
+                                <select class="form-select assignment-type"
+                                        name="type"
+                                        required>
+
+                                    <option value="PRACTICE"
+                                            th:selected="${assignment.type.name() == 'PRACTICE'}">
+                                        Bài luyện tập
+                                    </option>
+
+                                    <option value="TEST"
+                                            th:selected="${assignment.type.name() == 'TEST'}">
+                                        Bài kiểm tra
+                                    </option>
+
+                                </select>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    Điểm tối đa
+                                </label>
+
+                                <input type="number"
+                                       class="form-control"
+                                       name="maximumScore"
+                                       min="1"
+                                       th:value="${assignment.maximumScore}"
+                                       required>
+                            </div>
+
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Thời gian làm bài
+                            </label>
+
+                            <div class="input-group">
+
+                                <input type="number"
+                                       class="form-control assignment-duration"
+                                       name="durationMinutes"
+                                       min="1"
+                                       th:value="${assignment.durationMinutes}">
+
+                                <span class="input-group-text">
+                                    phút
+                                </span>
+
+                            </div>
+
+                            <small class="text-muted duration-help"></small>
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">
+                            Hủy
+                        </button>
+
+                        <button type="submit"
+                                class="btn btn-primary">
+                            Lưu thay đổi
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+</th:block>
+
+
+<div th:replace="~{base :: footer}"></div>
+
+
+<script>
+    document.querySelectorAll("form").forEach(form => {
+        const type = form.querySelector(".assignment-type");
+        const duration = form.querySelector(".assignment-duration");
+        const help = form.querySelector(".duration-help");
+
+        if (!type || !duration)
+            return;
+
+        function updateDuration() {
+            if (type.value === "TEST") {
+                duration.required = true;
+
+                if (help)
+                    help.textContent = "Bài kiểm tra bắt buộc phải có thời gian làm bài.";
+            } else {
+                duration.required = false;
+
+                if (help)
+                    help.textContent = "Bài luyện tập có thể để trống nếu không giới hạn thời gian.";
+            }
+        }
+
+        type.addEventListener("change", updateDuration);
+        updateDuration();
+    });
+</script>
+
+</body>
+</html>

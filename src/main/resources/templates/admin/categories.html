@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <title>Quản lý danh mục</title>
+    <th:block th:replace="~{base :: css}"></th:block>
+</head>
+
+<body>
+
+<div th:replace="~{base :: header}"></div>
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1">Quản lý danh mục</h3>
+            <span class="text-muted">
+                Tổng cộng:
+                <strong th:text="${totalRecords}">0</strong>
+                danh mục
+            </span>
+        </div>
+
+        <button class="btn btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#addCategoryModal">
+            Thêm danh mục
+        </button>
+    </div>
+
+    <div th:if="${successMessage}"
+         class="alert alert-success"
+         th:text="${successMessage}">
+    </div>
+
+    <div th:if="${errorMessage}"
+         class="alert alert-danger"
+         th:text="${errorMessage}">
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+
+            <form method="get" th:action="@{/admin/categories}">
+                <div class="row g-3">
+
+                    <div class="col-md-6">
+                        <input type="text"
+                               class="form-control"
+                               name="kw"
+                               th:value="${kw}"
+                               placeholder="Tìm tên hoặc mô tả danh mục">
+                    </div>
+
+                    <div class="col-md-3">
+                        <select class="form-select" name="status">
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="ACTIVE"
+                                    th:selected="${status == 'ACTIVE'}">
+                                Hoạt động
+                            </option>
+                            <option value="INACTIVE"
+                                    th:selected="${status == 'INACTIVE'}">
+                                Ngừng hoạt động
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary">
+                            Tìm kiếm
+                        </button>
+
+                        <a th:href="@{/admin/categories}"
+                           class="btn btn-outline-secondary">
+                            Làm mới
+                        </a>
+                    </div>
+
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Tên danh mục</th>
+                        <th>Mô tả</th>
+                        <th>Trạng thái</th>
+                        <th style="width: 160px;">Thao tác</th>
+                        <th style="width: 220px;">Đổi trạng thái</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    <tr th:each="category : ${categories}">
+
+                        <td th:text="${category.id}"></td>
+
+                        <td class="fw-semibold"
+                            th:text="${category.name}">
+                        </td>
+
+                        <td>
+                            <span th:if="${category.description != null and !category.description.isBlank()}"
+                                  th:text="${category.description}">
+                            </span>
+
+                            <span th:unless="${category.description != null and !category.description.isBlank()}"
+                                  class="text-muted">
+                                Chưa có mô tả
+                            </span>
+                        </td>
+
+                        <td>
+                            <span th:if="${category.status.name() == 'ACTIVE'}"
+                                  class="badge text-bg-success">
+                                Hoạt động
+                            </span>
+
+                            <span th:if="${category.status.name() == 'INACTIVE'}"
+                                  class="badge text-bg-secondary">
+                                Ngừng hoạt động
+                            </span>
+                        </td>
+
+                        <td>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-primary"
+                                    data-bs-toggle="modal"
+                                    th:data-bs-target="'#editCategoryModal' + ${category.id}">
+                                Chỉnh sửa
+                            </button>
+                        </td>
+
+                        <td>
+                            <form method="post"
+                                  th:action="@{/admin/categories/update-status}"
+                                  class="d-flex gap-2">
+
+                                <input type="hidden"
+                                       name="categoryId"
+                                       th:value="${category.id}">
+
+                                <select class="form-select form-select-sm"
+                                        name="status">
+
+                                    <option value="ACTIVE"
+                                            th:selected="${category.status.name() == 'ACTIVE'}">
+                                        Hoạt động
+                                    </option>
+
+                                    <option value="INACTIVE"
+                                            th:selected="${category.status.name() == 'INACTIVE'}">
+                                        Ngừng hoạt động
+                                    </option>
+
+                                </select>
+
+                                <button type="submit"
+                                        class="btn btn-sm btn-outline-dark">
+                                    Lưu
+                                </button>
+
+                            </form>
+                        </td>
+
+                    </tr>
+
+                    <tr th:if="${#lists.isEmpty(categories)}">
+                        <td colspan="6"
+                            class="text-center text-muted py-5">
+                            Không tìm thấy danh mục.
+                        </td>
+                    </tr>
+
+                    </tbody>
+
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+    <nav class="mt-4" th:if="${totalPages > 1}">
+        <ul class="pagination justify-content-center">
+
+            <li class="page-item"
+                th:classappend="${currentPage == 1} ? 'disabled'">
+
+                <a class="page-link"
+                   th:href="@{/admin/categories(
+                        page=${currentPage - 1},
+                        kw=${kw},
+                        status=${status}
+                   )}">
+                    Trước
+                </a>
+            </li>
+
+            <li class="page-item"
+                th:each="pageNumber : ${#numbers.sequence(1, totalPages)}"
+                th:classappend="${pageNumber == currentPage} ? 'active'">
+
+                <a class="page-link"
+                   th:text="${pageNumber}"
+                   th:href="@{/admin/categories(
+                        page=${pageNumber},
+                        kw=${kw},
+                        status=${status}
+                   )}">
+                </a>
+            </li>
+
+            <li class="page-item"
+                th:classappend="${currentPage == totalPages} ? 'disabled'">
+
+                <a class="page-link"
+                   th:href="@{/admin/categories(
+                        page=${currentPage + 1},
+                        kw=${kw},
+                        status=${status}
+                   )}">
+                    Sau
+                </a>
+            </li>
+
+        </ul>
+    </nav>
+
+</div>
+
+
+<!-- ADD CATEGORY -->
+<div class="modal fade"
+     id="addCategoryModal"
+     tabindex="-1">
+
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <form method="post"
+                  th:action="@{/admin/categories/add}">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">Thêm danh mục</h5>
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal">
+                    </button>
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label class="form-label">Tên danh mục</label>
+                        <input type="text"
+                               class="form-control"
+                               name="name"
+                               required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Mô tả</label>
+                        <textarea class="form-control"
+                                  name="description"
+                                  rows="4"></textarea>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">
+                        Hủy
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-primary">
+                        Thêm
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- EDIT CATEGORY -->
+<th:block th:each="category : ${categories}">
+
+    <div class="modal fade"
+         th:id="'editCategoryModal' + ${category.id}"
+         tabindex="-1">
+
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <form method="post"
+                      th:action="@{/admin/categories/update}">
+
+                    <input type="hidden"
+                           name="categoryId"
+                           th:value="${category.id}">
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">Chỉnh sửa danh mục</h5>
+
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal">
+                        </button>
+                    </div>
+
+                    <div class="modal-body">
+
+                        <div class="mb-3">
+                            <label class="form-label">Tên danh mục</label>
+
+                            <input type="text"
+                                   class="form-control"
+                                   name="name"
+                                   th:value="${category.name}"
+                                   required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Mô tả</label>
+
+                            <textarea class="form-control"
+                                      name="description"
+                                      rows="4"
+                                      th:text="${category.description}">
+                            </textarea>
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">
+                            Hủy
+                        </button>
+
+                        <button type="submit"
+                                class="btn btn-primary">
+                            Lưu thay đổi
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+</th:block>
+
+<div th:replace="~{base :: footer}"></div>
+
+</body>
+</html>

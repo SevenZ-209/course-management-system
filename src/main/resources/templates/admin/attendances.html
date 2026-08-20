@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="vi"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <title>Quản lý điểm danh</title>
+    <th:block th:replace="~{base :: css}"></th:block>
+</head>
+
+<body>
+
+<div th:replace="~{base :: header}"></div>
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1">Quản lý điểm danh</h3>
+            <span class="text-muted">
+                Tổng cộng:
+                <strong th:text="${totalRecords}">0</strong>
+                lượt điểm danh
+            </span>
+        </div>
+
+        <button class="btn btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#addAttendanceModal">
+            Điểm danh
+        </button>
+    </div>
+
+    <div th:if="${successMessage}"
+         class="alert alert-success"
+         th:text="${successMessage}">
+    </div>
+
+    <div th:if="${errorMessage}"
+         class="alert alert-danger"
+         th:text="${errorMessage}">
+    </div>
+
+    <!-- FILTER -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+
+            <form method="get"
+                  th:action="@{/admin/attendances}">
+
+                <div class="row g-3">
+
+                    <div class="col-md-3">
+                        <input type="text"
+                               class="form-control"
+                               name="kw"
+                               th:value="${kw}"
+                               placeholder="Tên, username hoặc email">
+                    </div>
+
+                    <div class="col-md-3">
+                        <select class="form-select"
+                                name="classId">
+
+                            <option value="">Tất cả lớp học</option>
+
+                            <option th:each="courseClass : ${classes}"
+                                    th:value="${courseClass.id}"
+                                    th:text="${courseClass.name}"
+                                    th:selected="${classId == courseClass.id.toString()}">
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <select class="form-select"
+                                name="sessionId">
+
+                            <option value="">Tất cả buổi học</option>
+
+                            <option th:each="onlineSession : ${sessions}"
+                                    th:value="${onlineSession.id}"
+                                    th:text="${onlineSession.courseClass.name + ' - ' + onlineSession.title}"
+                                    th:selected="${sessionId == onlineSession.id.toString()}">
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-1">
+                        <select class="form-select"
+                                name="present">
+
+                            <option value="">Tất cả</option>
+
+                            <option value="true"
+                                    th:selected="${present == 'true'}">
+                                Có mặt
+                            </option>
+
+                            <option value="false"
+                                    th:selected="${present == 'false'}">
+                                Vắng
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <button type="submit"
+                                class="btn btn-primary">
+                            Tìm
+                        </button>
+
+                        <a th:href="@{/admin/attendances}"
+                           class="btn btn-outline-secondary">
+                            Làm mới
+                        </a>
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Học viên</th>
+                        <th>Lớp</th>
+                        <th>Buổi học</th>
+                        <th>Thời gian buổi học</th>
+                        <th>Điểm danh</th>
+                        <th>Thời gian có mặt</th>
+                        <th>Ghi chú</th>
+                        <th>Thao tác</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    <tr th:each="attendance : ${attendances}">
+
+                        <td th:text="${attendance.id}"></td>
+
+                        <td>
+                            <div class="fw-semibold"
+                                 th:text="${attendance.student.fullName}">
+                            </div>
+
+                            <small class="text-muted">
+                                @<span th:text="${attendance.student.username}"></span>
+                            </small>
+                        </td>
+
+                        <td th:text="${attendance.onlineSession.courseClass.name}">
+                        </td>
+
+                        <td>
+                            <div class="fw-semibold"
+                                 th:text="${attendance.onlineSession.title}">
+                            </div>
+                        </td>
+
+                        <td>
+                            <span th:text="${#temporals.format(
+                                attendance.onlineSession.startTime,
+                                'dd/MM/yyyy HH:mm'
+                            )}">
+                            </span>
+                        </td>
+
+                        <td>
+                            <span th:if="${attendance.present}"
+                                  class="badge text-bg-success">
+                                Có mặt
+                            </span>
+
+                            <span th:unless="${attendance.present}"
+                                  class="badge text-bg-danger">
+                                Vắng
+                            </span>
+                        </td>
+
+                        <td>
+                            <span th:if="${attendance.attendedAt != null}"
+                                  th:text="${#temporals.format(
+                                      attendance.attendedAt,
+                                      'dd/MM/yyyy HH:mm'
+                                  )}">
+                            </span>
+
+                            <span th:unless="${attendance.attendedAt != null}"
+                                  class="text-muted">
+                                -
+                            </span>
+                        </td>
+
+                        <td>
+                            <span th:if="${attendance.note != null and !attendance.note.isBlank()}"
+                                  th:text="${attendance.note}">
+                            </span>
+
+                            <span th:unless="${attendance.note != null and !attendance.note.isBlank()}"
+                                  class="text-muted">
+                                -
+                            </span>
+                        </td>
+
+                        <td>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-primary"
+                                    data-bs-toggle="modal"
+                                    th:data-bs-target="'#editAttendanceModal' + ${attendance.id}">
+                                Chỉnh sửa
+                            </button>
+                        </td>
+
+                    </tr>
+
+                    <tr th:if="${#lists.isEmpty(attendances)}">
+                        <td colspan="9"
+                            class="text-center text-muted py-5">
+                            Chưa có dữ liệu điểm danh.
+                        </td>
+                    </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- PAGINATION -->
+    <nav class="mt-4"
+         th:if="${totalPages > 1}">
+
+        <ul class="pagination justify-content-center">
+
+            <li class="page-item"
+                th:classappend="${currentPage == 1} ? 'disabled'">
+
+                <a class="page-link"
+                   th:href="@{/admin/attendances(
+                        page=${currentPage - 1},
+                        kw=${kw},
+                        classId=${classId},
+                        sessionId=${sessionId},
+                        present=${present}
+                   )}">
+                    Trước
+                </a>
+            </li>
+
+            <li class="page-item"
+                th:each="pageNumber : ${#numbers.sequence(1, totalPages)}"
+                th:classappend="${pageNumber == currentPage} ? 'active'">
+
+                <a class="page-link"
+                   th:text="${pageNumber}"
+                   th:href="@{/admin/attendances(
+                        page=${pageNumber},
+                        kw=${kw},
+                        classId=${classId},
+                        sessionId=${sessionId},
+                        present=${present}
+                   )}">
+                </a>
+            </li>
+
+            <li class="page-item"
+                th:classappend="${currentPage == totalPages} ? 'disabled'">
+
+                <a class="page-link"
+                   th:href="@{/admin/attendances(
+                        page=${currentPage + 1},
+                        kw=${kw},
+                        classId=${classId},
+                        sessionId=${sessionId},
+                        present=${present}
+                   )}">
+                    Sau
+                </a>
+            </li>
+
+        </ul>
+    </nav>
+
+</div>
+
+
+<!-- ADD ATTENDANCE -->
+<div class="modal fade"
+     id="addAttendanceModal"
+     tabindex="-1">
+
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <form method="post"
+                  th:action="@{/admin/attendances/add}">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        Điểm danh học viên
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal">
+                    </button>
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label class="form-label">Buổi học</label>
+
+                        <select class="form-select"
+                                id="attendanceSession"
+                                name="sessionId"
+                                required>
+
+                            <option value="">Chọn buổi học</option>
+
+                            <option th:each="onlineSession : ${sessions}"
+                                    th:value="${onlineSession.id}"
+                                    th:text="${onlineSession.courseClass.name + ' - ' + onlineSession.title}">
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Học viên</label>
+
+                        <select class="form-select"
+                                id="attendanceStudent"
+                                name="studentId"
+                                disabled
+                                required>
+
+                            <option value="">Vui lòng chọn buổi học trước</option>
+
+                        </select>
+
+                        <small class="text-muted">
+                            Chỉ hiển thị học viên đang học trong lớp này.
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Trạng thái điểm danh
+                        </label>
+
+                        <select class="form-select"
+                                name="present"
+                                required>
+
+                            <option value="true">
+                                Có mặt
+                            </option>
+
+                            <option value="false">
+                                Vắng
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Ghi chú
+                        </label>
+
+                        <textarea class="form-control"
+                                  name="note"
+                                  rows="3"
+                                  placeholder="Ví dụ: Vào lớp trễ 10 phút"></textarea>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">
+                        Hủy
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-primary">
+                        Lưu điểm danh
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+<th:block th:each="attendance : ${attendances}">
+
+    <div class="modal fade"
+         th:id="'editAttendanceModal' + ${attendance.id}"
+         tabindex="-1">
+
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <form method="post"
+                      th:action="@{/admin/attendances/update}">
+
+                    <input type="hidden"
+                           name="attendanceId"
+                           th:value="${attendance.id}">
+
+                    <div class="modal-header">
+
+                        <h5 class="modal-title">
+                            Chỉnh sửa điểm danh
+                        </h5>
+
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal">
+                        </button>
+
+                    </div>
+
+                    <div class="modal-body">
+
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Học viên
+                            </label>
+
+                            <input type="text"
+                                   class="form-control"
+                                   th:value="${attendance.student.fullName}"
+                                   disabled>
+
+                        </div>
+
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Buổi học
+                            </label>
+
+                            <input type="text"
+                                   class="form-control"
+                                   th:value="${attendance.onlineSession.title}"
+                                   disabled>
+
+                        </div>
+
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Trạng thái
+                            </label>
+
+                            <select class="form-select"
+                                    name="present"
+                                    required>
+
+                                <option value="true"
+                                        th:selected="${attendance.present}">
+                                    Có mặt
+                                </option>
+
+                                <option value="false"
+                                        th:selected="${!attendance.present}">
+                                    Vắng
+                                </option>
+
+                            </select>
+
+                        </div>
+
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Ghi chú
+                            </label>
+
+                            <textarea class="form-control"
+                                      name="note"
+                                      rows="3"
+                                      th:text="${attendance.note}">
+                            </textarea>
+
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">
+                            Hủy
+                        </button>
+
+                        <button type="submit"
+                                class="btn btn-primary">
+                            Lưu thay đổi
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+</th:block>
+
+
+<div th:replace="~{base :: footer}"></div>
+<script>
+    const sessionSelect = document.getElementById("attendanceSession");
+    const studentSelect = document.getElementById("attendanceStudent");
+
+    sessionSelect.addEventListener("change", async function () {
+        const sessionId = this.value;
+
+        studentSelect.innerHTML = "";
+        studentSelect.disabled = true;
+
+        if (!sessionId) {
+            studentSelect.innerHTML =
+                '<option value="">Vui lòng chọn buổi học trước</option>';
+            return;
+        }
+
+        studentSelect.innerHTML =
+            '<option value="">Đang tải học viên...</option>';
+
+        try {
+            const response = await fetch(
+                `/admin/attendances/students?sessionId=${sessionId}`
+            );
+
+            const students = await response.json();
+
+            studentSelect.innerHTML =
+                '<option value="">Chọn học viên</option>';
+
+            if (students.length === 0) {
+                studentSelect.innerHTML =
+                    '<option value="">Lớp chưa có học viên</option>';
+                return;
+            }
+
+            students.forEach(student => {
+                const option = document.createElement("option");
+
+                option.value = student.id;
+                option.textContent =
+                    `${student.fullName} - @${student.username}`;
+
+                studentSelect.appendChild(option);
+            });
+
+            studentSelect.disabled = false;
+
+        } catch (error) {
+            studentSelect.innerHTML =
+                '<option value="">Không thể tải học viên</option>';
+        }
+    });
+</script>
+</body>
+</html>
