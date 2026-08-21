@@ -9,4 +9,8 @@ public interface CloudinaryService {
     CloudinaryUploadResult uploadPdf(MultipartFile file);
 
     void deletePdf(String publicId);
+
+    CloudinaryUploadResult uploadImage(MultipartFile file);
+
+    void deleteImage(String publicId);
 }
