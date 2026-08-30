@@ -10,10 +10,13 @@ import com.lmdk.course_management_system.services.EnrollmentService;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -55,6 +58,26 @@ public class AttendanceServiceImpl implements AttendanceService {
     }
 
     @Override
+    @Transactional
+    public List<Attendance> saveAttendances(List<Attendance> attendances, Integer classId, Integer sessionId) {
+        if (attendances == null || attendances.isEmpty()) return List.of();
+
+        if (classId == null || sessionId == null)
+            throw new IllegalArgumentException("Lớp học hoặc buổi học không hợp lệ!");
+
+        Set<Integer> activeStudentIds = new HashSet<>();
+        for (Enrollment enrollment : enrollmentService.getActiveEnrollmentsByClass(classId))
+            activeStudentIds.add(enrollment.getStudent().getId());
+
+        for (Attendance attendance : attendances) {
+            validateBulkAttendance(attendance, sessionId, activeStudentIds);
+            updateAttendedTime(attendance);
+        }
+
+        return attendanceRepository.saveAttendances(attendances);
+    }
+
+    @Override
     public List<Attendance> getAttendances(Map<String, String> params) {
         return attendanceRepository.getAttendances(params);
     }
@@ -62,6 +85,11 @@ public class AttendanceServiceImpl implements AttendanceService {
     @Override
     public List<Attendance> getAttendancesBySession(Integer sessionId) {
         return attendanceRepository.getAttendancesBySession(sessionId);
+    }
+
+    @Override
+    public List<Attendance> getAttendancesByStudentAndSessionIds(Integer studentId, List<Integer> sessionIds) {
+        return attendanceRepository.getAttendancesByStudentAndSessionIds(studentId, sessionIds);
     }
 
     @Override
@@ -113,6 +141,24 @@ public class AttendanceServiceImpl implements AttendanceService {
             throw new IllegalArgumentException(
                     "Học viên không thuộc lớp học này hoặc chưa được kích hoạt!"
             );
+    }
+
+    private void validateBulkAttendance(Attendance attendance, Integer sessionId, Set<Integer> activeStudentIds) {
+        if (attendance.getOnlineSession() == null || attendance.getStudent() == null)
+            throw new IllegalArgumentException("Dữ liệu điểm danh không hợp lệ!");
+
+        if (!sessionId.equals(attendance.getOnlineSession().getId()))
+            throw new IllegalArgumentException("Các dữ liệu điểm danh phải thuộc cùng một buổi học!");
+
+        User student = attendance.getStudent();
+        if (student.getRole() != User.UserRole.STUDENT || student.getStatus() != User.UserStatus.ACTIVE)
+            throw new IllegalArgumentException("Tài khoản học viên không hợp lệ hoặc không hoạt động!");
+
+        if (!activeStudentIds.contains(student.getId()))
+            throw new IllegalArgumentException("Học viên không thuộc lớp học này hoặc chưa được kích hoạt!");
+
+        if (attendance.getPresent() == null)
+            throw new IllegalArgumentException("Vui lòng chọn trạng thái điểm danh cho tất cả thay đổi!");
     }
 
     private void updateAttendedTime(Attendance attendance) {

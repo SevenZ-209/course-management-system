@@ -20,6 +20,10 @@ public class Assignment {
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lesson_id", unique = true)
+    private Lesson lesson;
+
     @Column(nullable = false)
     private String name;
 

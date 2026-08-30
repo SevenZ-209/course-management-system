@@ -14,7 +14,11 @@ public interface GradingResultService {
 
     GradingResult getGradingResultByAttempt(Integer attemptId);
 
+    Map<Integer, GradingResult> getGradingResultsByAttemptIds(List<Integer> attemptIds);
+
     GradingResult processSubmittedAttempt(Integer attemptId);
+
+    GradingResult submitAndProcessAttempt(Integer attemptId, Integer studentId);
 
     void gradeEssayAnswer(
             Integer studentAnswerId,
@@ -34,6 +38,10 @@ public interface GradingResultService {
     long countGradingResults(Map<String, String> params);
 
     List<AssignmentAttempt> getPendingAttempts(User grader);
+
+    List<AssignmentAttempt> getPendingAttempts(User grader, Map<String, String> params);
+
+    long countPendingAttempts(User grader, Map<String, String> params);
 
     AssignmentAttempt getAttemptForGrading(Integer attemptId, User grader);
 }

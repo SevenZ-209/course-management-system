@@ -1,7 +1,10 @@
 package com.lmdk.course_management_system.services.impl;
 
+import com.lmdk.course_management_system.exceptions.ForbiddenException;
 import com.lmdk.course_management_system.pojo.*;
 import com.lmdk.course_management_system.repository.*;
+import com.lmdk.course_management_system.services.AssignedAssignmentService;
+import com.lmdk.course_management_system.services.AssignmentAttemptService;
 import com.lmdk.course_management_system.services.EnrollmentService;
 import com.lmdk.course_management_system.services.GradingResultService;
 
@@ -15,6 +18,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +33,8 @@ public class GradingResultServiceImpl implements GradingResultService {
     private final AssignedAssignmentRepository assignedAssignmentRepository;
     private final StudentLearningPathService studentLearningPathService;
     private final EnrollmentService enrollmentService;
+    private final AssignedAssignmentService assignedAssignmentService;
+    private final AssignmentAttemptService assignmentAttemptService;
 
     @Override
     public GradingResult getGradingResultById(Integer id) {
@@ -40,9 +47,20 @@ public class GradingResultServiceImpl implements GradingResultService {
     }
 
     @Override
+    public Map<Integer, GradingResult> getGradingResultsByAttemptIds(List<Integer> attemptIds) {
+        return gradingResultRepository
+                .getGradingResultsByAttemptIds(attemptIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        result -> result.getAssignmentAttempt().getId(),
+                        Function.identity()
+                ));
+    }
+
+    @Override
     public GradingResult processSubmittedAttempt(Integer attemptId) {
         AssignmentAttempt attempt =
-                assignmentAttemptRepository.getAttemptById(attemptId);
+                assignmentAttemptRepository.getAttemptByIdForUpdate(attemptId);
 
         if (attempt == null)
             throw new IllegalArgumentException("Lần làm bài không tồn tại!");
@@ -99,6 +117,12 @@ public class GradingResultServiceImpl implements GradingResultService {
     }
 
     @Override
+    public GradingResult submitAndProcessAttempt(Integer attemptId, Integer studentId) {
+        AssignmentAttempt attempt = assignmentAttemptService.submitAttempt(attemptId, studentId);
+        return processSubmittedAttempt(attempt.getId());
+    }
+
+    @Override
     public void gradeEssayAnswer(Integer studentAnswerId,
                                  BigDecimal score,
                                  String teacherComment,
@@ -117,8 +141,9 @@ public class GradingResultServiceImpl implements GradingResultService {
                     "Chỉ có thể chấm thủ công câu hỏi tự luận!"
             );
 
-        AssignmentAttempt attempt =
-                studentAnswer.getAssignmentAttempt();
+        AssignmentAttempt attempt = assignmentAttemptRepository.getAttemptByIdForUpdate(
+                studentAnswer.getAssignmentAttempt().getId()
+        );
 
         if (attempt.getStatus()
                 != AssignmentAttempt.AttemptStatus.PENDING_GRADING)
@@ -144,7 +169,7 @@ public class GradingResultServiceImpl implements GradingResultService {
                                          User teacher,
                                          String comment) {
         AssignmentAttempt attempt =
-                assignmentAttemptRepository.getAttemptById(attemptId);
+                assignmentAttemptRepository.getAttemptByIdForUpdate(attemptId);
 
         if (attempt == null)
             throw new IllegalArgumentException(
@@ -242,6 +267,8 @@ public class GradingResultServiceImpl implements GradingResultService {
 
     private void finishAttempt(AssignmentAttempt attempt,
                                BigDecimal totalScore) {
+
+
         AssignedAssignment assigned =
                 attempt.getAssignedAssignment();
 
@@ -269,9 +296,21 @@ public class GradingResultServiceImpl implements GradingResultService {
                     "Lộ trình chưa cấu hình điểm đạt!"
             );
 
-        boolean passed = totalScore.compareTo(
-                detail.getMinimumScore()
-        ) >= 0;
+        boolean scorePassed =
+                totalScore.compareTo(
+                        detail.getMinimumScore()
+                ) >= 0;
+
+        Integer durationMinutes =
+                assigned.getAssignment()
+                        .getDurationMinutes();
+
+        boolean withinTime =
+                durationMinutes == null
+                        || attempt.getDurationSeconds() <= durationMinutes * 60;
+
+        boolean passed =
+                scorePassed && withinTime;
 
         attempt.setPassed(passed);
         attempt.setStatus(
@@ -371,7 +410,7 @@ public class GradingResultServiceImpl implements GradingResultService {
         if (teacher.getRole() != User.UserRole.TEACHER
                 && teacher.getRole() != User.UserRole.MANAGER
                 && teacher.getRole() != User.UserRole.ADMIN)
-            throw new IllegalArgumentException(
+            throw new ForbiddenException(
                     "Tài khoản không có quyền chấm bài!"
             );
     }
@@ -386,6 +425,48 @@ public class GradingResultServiceImpl implements GradingResultService {
 
         return assignmentAttemptRepository
                 .getPendingGradingAttemptsByTeacher(grader.getId());
+    }
+
+    @Override
+    public List<AssignmentAttempt> getPendingAttempts(
+            User grader,
+            Map<String, String> params
+    ) {
+        validateTeacher(grader);
+
+        params.put(
+                "status",
+                AssignmentAttempt.AttemptStatus.PENDING_GRADING.name()
+        );
+        params.put("order", "submittedAtAsc");
+
+        if(grader.getRole() == User.UserRole.TEACHER)
+            params.put("teacherId", String.valueOf(grader.getId()));
+        else
+            params.remove("teacherId");
+
+        return assignmentAttemptRepository.getAttempts(params);
+    }
+
+    @Override
+    public long countPendingAttempts(
+            User grader,
+            Map<String, String> params
+    ) {
+        validateTeacher(grader);
+
+        params.put(
+                "status",
+                AssignmentAttempt.AttemptStatus.PENDING_GRADING.name()
+        );
+        params.put("order", "submittedAtAsc");
+
+        if(grader.getRole() == User.UserRole.TEACHER)
+            params.put("teacherId", String.valueOf(grader.getId()));
+        else
+            params.remove("teacherId");
+
+        return assignmentAttemptRepository.countAttempts(params);
     }
 
     @Override
@@ -441,7 +522,7 @@ public class GradingResultServiceImpl implements GradingResultService {
                 );
 
         if (!allowed)
-            throw new IllegalArgumentException(
+            throw new ForbiddenException(
                     "Bạn không được phân công chấm bài của học viên này!"
             );
     }

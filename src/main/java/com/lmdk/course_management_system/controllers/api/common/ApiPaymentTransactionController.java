@@ -1,5 +1,7 @@
 package com.lmdk.course_management_system.controllers.api.common;
 
+import com.lmdk.course_management_system.dto.payment.PaymentTransactionPageResponse;
+import com.lmdk.course_management_system.exceptions.ForbiddenException;
 import com.lmdk.course_management_system.dto.payment.PaymentTransactionRequest;
 import com.lmdk.course_management_system.dto.payment.PaymentTransactionResponse;
 import com.lmdk.course_management_system.helpers.CurrentUserHelper;
@@ -12,8 +14,12 @@ import com.lmdk.course_management_system.services.PaymentTransactionService;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/payment-transactions")
@@ -25,6 +31,9 @@ public class ApiPaymentTransactionController {
     private final CurrentUserHelper currentUserHelper;
     private final PaymentTransactionMapper paymentTransactionMapper;
 
+    @Value("${payment-transactions.page-size:10}")
+    private int pageSize;
+
     @PostMapping
     public PaymentTransactionResponse create(
             @RequestBody PaymentTransactionRequest request,
@@ -34,7 +43,7 @@ public class ApiPaymentTransactionController {
                 currentUserHelper.getCurrentUser(authentication);
 
         if(student.getRole() != User.UserRole.STUDENT)
-            throw new IllegalArgumentException(
+            throw new ForbiddenException(
                     "Chỉ học viên mới được tạo giao dịch!"
             );
 
@@ -51,7 +60,7 @@ public class ApiPaymentTransactionController {
         if(!enrollment.getStudent()
                 .getId()
                 .equals(student.getId()))
-            throw new IllegalArgumentException(
+            throw new ForbiddenException(
                     "Bạn không có quyền thanh toán cho đăng ký này!"
             );
 
@@ -73,7 +82,7 @@ public class ApiPaymentTransactionController {
                 request.getTransactionCode()
         );
         transaction.setStatus(
-                PaymentTransaction.TransactionStatus.PENDING
+                PaymentTransaction.TransactionStatus.SUCCESS
         );
 
         PaymentTransaction saved =
@@ -83,32 +92,93 @@ public class ApiPaymentTransactionController {
                 .toResponse(saved);
     }
 
-    @PutMapping("/{id}/status")
-    public PaymentTransactionResponse updateStatus(
-            @PathVariable Integer id,
-            @RequestParam String status
-    ) {
-        PaymentTransaction.TransactionStatus newStatus;
+//    @PutMapping("/{id}/status")
+//    public PaymentTransactionResponse updateStatus(
+//            @PathVariable Integer id,
+//            @RequestParam String status
+//    ) {
+//        PaymentTransaction.TransactionStatus newStatus;
+//
+//        try {
+//            newStatus =
+//                    PaymentTransaction.TransactionStatus
+//                            .valueOf(status.toUpperCase());
+//        } catch(IllegalArgumentException ex) {
+//            throw new IllegalArgumentException(
+//                    "Trạng thái giao dịch không hợp lệ!"
+//            );
+//        }
+//
+//        PaymentTransaction updated =
+//                transactionService
+//                        .updateTransactionStatus(
+//                                id,
+//                                newStatus
+//                        );
+//
+//        return paymentTransactionMapper
+//                .toResponse(updated);
+//    }
 
-        try {
-            newStatus =
-                    PaymentTransaction.TransactionStatus
-                            .valueOf(status.toUpperCase());
-        } catch(IllegalArgumentException ex) {
-            throw new IllegalArgumentException(
-                    "Trạng thái giao dịch không hợp lệ!"
-            );
+    @GetMapping("/me")
+    public PaymentTransactionPageResponse getMyTransactions(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(required = false) String kw,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String date,
+            Authentication authentication
+    ) {
+        User student = currentUserHelper.getCurrentStudent(authentication);
+        page = Math.max(page, 1);
+
+        Map<String, String> params = new HashMap<>();
+        params.put("page", String.valueOf(page));
+        params.put("studentId", String.valueOf(student.getId()));
+
+        if(kw != null && !kw.isBlank())
+            params.put("kw", kw.trim());
+
+        if(status != null && !status.isBlank())
+            params.put("status", status.trim().toUpperCase());
+
+        if(date != null && !date.isBlank())
+            params.put("date", date.trim());
+
+        long totalRecords = transactionService.countTransactions(params);
+        int totalPages = Math.max((int) Math.ceil((double) totalRecords / pageSize), 1);
+
+        if(page > totalPages) {
+            page = totalPages;
+            params.put("page", String.valueOf(page));
         }
 
-        PaymentTransaction updated =
-                transactionService
-                        .updateTransactionStatus(
-                                id,
-                                newStatus
-                        );
+        Map<String, String> summaryParams = new HashMap<>();
+        summaryParams.put("studentId", String.valueOf(student.getId()));
 
-        return paymentTransactionMapper
-                .toResponse(updated);
+        long totalTransactions = transactionService.countTransactions(summaryParams);
+
+        summaryParams.put("status", PaymentTransaction.TransactionStatus.SUCCESS.name());
+        long successCount = transactionService.countTransactions(summaryParams);
+
+        summaryParams.put("status", PaymentTransaction.TransactionStatus.PENDING.name());
+        long pendingCount = transactionService.countTransactions(summaryParams);
+
+        summaryParams.put("status", PaymentTransaction.TransactionStatus.FAILED.name());
+        long failedCount = transactionService.countTransactions(summaryParams);
+
+        return new PaymentTransactionPageResponse(
+                transactionService.getTransactions(params)
+                        .stream()
+                        .map(paymentTransactionMapper::toResponse)
+                        .toList(),
+                page,
+                totalPages,
+                totalRecords,
+                totalTransactions,
+                successCount,
+                pendingCount,
+                failedCount
+        );
     }
 
     @GetMapping("/{id}")
@@ -116,35 +186,20 @@ public class ApiPaymentTransactionController {
             @PathVariable Integer id,
             Authentication authentication
     ) {
-        User currentUser =
-                currentUserHelper.getCurrentUser(
-                        authentication
-                );
-
-        PaymentTransaction transaction =
-                transactionService
-                        .getTransactionById(id);
+        User currentUser = currentUserHelper.getCurrentUser(authentication);
+        PaymentTransaction transaction = transactionService.getTransactionById(id);
 
         if(transaction == null)
-            throw new IllegalArgumentException(
-                    "Không tìm thấy giao dịch!"
-            );
+            throw new IllegalArgumentException("Không tìm thấy giao dịch!");
 
-        if(currentUser.getRole()
-                == User.UserRole.STUDENT) {
-
-            Integer ownerId =
-                    transaction.getEnrollment()
-                            .getStudent()
-                            .getId();
+        if(currentUser.getRole() == User.UserRole.STUDENT) {
+            Integer ownerId = transaction.getEnrollment().getStudent().getId();
 
             if(!ownerId.equals(currentUser.getId()))
-                throw new IllegalArgumentException(
-                        "Bạn không có quyền xem giao dịch này!"
-                );
-        }
+                throw new ForbiddenException("Bạn không có quyền xem giao dịch này!");
+        } else if(currentUser.getRole() != User.UserRole.ADMIN)
+            throw new ForbiddenException("Bạn không có quyền xem giao dịch này!");
 
-        return paymentTransactionMapper
-                .toResponse(transaction);
+        return paymentTransactionMapper.toResponse(transaction);
     }
 }

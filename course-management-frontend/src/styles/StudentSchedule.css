@@ -1,0 +1,341 @@
+.cm-schedule-page {
+    min-height: calc(100vh - 78px);
+    padding: 55px 24px 100px;
+    background:
+        radial-gradient(circle at 8% 0%, rgba(216,245,239,.65), transparent 25%),
+        var(--cm-surface);
+}
+
+.cm-schedule-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 25px;
+    margin-bottom: 30px;
+}
+
+.cm-schedule-heading > div:first-child > span {
+    color: var(--cm-primary);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .14em;
+}
+
+.cm-schedule-heading h1 {
+    margin: 6px 0;
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: -.045em;
+}
+
+.cm-schedule-heading p {
+    margin: 0;
+    color: var(--cm-text-soft);
+    font-size: 13px;
+}
+
+.cm-schedule-count {
+    min-width: 115px;
+    padding: 13px 18px;
+    border-radius: 16px;
+    background: var(--cm-primary-soft);
+    text-align: center;
+}
+
+.cm-schedule-count strong {
+    display: block;
+    color: var(--cm-primary);
+    font-size: 23px;
+    line-height: 1;
+}
+
+.cm-schedule-count span {
+    color: var(--cm-text-soft);
+    font-size: 9px;
+}
+
+/* FILTER */
+
+.cm-schedule-filter {
+    display: grid;
+    grid-template-columns: 180px 180px 1fr auto;
+    align-items: end;
+    gap: 14px;
+    margin-bottom: 40px;
+    padding: 20px;
+    border: 1px solid rgba(0,106,96,.06);
+    border-radius: 17px;
+    background: white;
+    box-shadow: 0 3px 15px rgba(25,65,58,.035);
+}
+
+.cm-schedule-filter .form-label {
+    margin-bottom: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--cm-text-soft);
+}
+
+.cm-ended-filter {
+    display: flex;
+    align-items: center;
+    min-height: 42px;
+}
+
+.cm-ended-filter label {
+    color: var(--cm-text-soft);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.cm-ended-filter .form-check-input:checked {
+    background-color: var(--cm-primary);
+    border-color: var(--cm-primary);
+}
+
+.cm-filter-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* GROUP */
+
+.cm-schedule-group {
+    margin-bottom: 43px;
+}
+
+.cm-schedule-date {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    margin-bottom: 14px;
+}
+
+.cm-schedule-date span {
+    color: var(--cm-primary);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .13em;
+}
+
+.cm-schedule-date h3 {
+    margin: 4px 0 0;
+    font-size: 18px;
+    font-weight: 800;
+    text-transform: capitalize;
+}
+
+.cm-schedule-date > small {
+    color: var(--cm-text-soft);
+    font-size: 10px;
+}
+
+/* SESSION */
+
+.cm-session-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cm-student-session {
+    display: grid;
+    grid-template-columns: 80px 2px 1fr auto;
+    align-items: center;
+    gap: 20px;
+    padding: 21px 23px;
+    border: 1px solid rgba(0,106,96,.06);
+    border-radius: 18px;
+    background: white;
+    box-shadow: 0 3px 14px rgba(25,65,58,.035);
+    transition: .25s ease;
+}
+
+.cm-student-session:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--cm-shadow);
+}
+
+.cm-session-clock {
+    text-align: center;
+}
+
+.cm-session-clock strong {
+    display: block;
+    color: var(--cm-primary-dark);
+    font-size: 17px;
+}
+
+.cm-session-clock span {
+    color: var(--cm-text-soft);
+    font-size: 10px;
+}
+
+.cm-session-line {
+    width: 2px;
+    height: 48px;
+    border-radius: 999px;
+    background: var(--cm-primary-light);
+}
+
+.cm-session-information {
+    min-width: 0;
+}
+
+.cm-session-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.cm-session-badges .badge {
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: 9px;
+}
+
+.cm-session-badges > span {
+    color: var(--cm-primary);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.cm-session-information h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.cm-session-details {
+    display: flex;
+    gap: 35px;
+    margin-top: 12px;
+}
+
+.cm-session-details > span {
+    display: flex;
+    flex-direction: column;
+}
+
+.cm-session-details small {
+    color: var(--cm-text-soft);
+    font-size: 9px;
+}
+
+.cm-session-details strong {
+    margin-top: 2px;
+    color: var(--cm-text);
+    font-size: 11px;
+}
+
+.cm-session-action .btn {
+    white-space: nowrap;
+}
+
+/* EMPTY */
+
+.cm-schedule-empty {
+    padding: 75px 20px;
+    border-radius: 20px;
+    background: var(--cm-surface-low);
+    text-align: center;
+}
+
+.cm-schedule-empty > div {
+    width: 55px;
+    height: 55px;
+    margin: 0 auto 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--cm-primary-light);
+    color: var(--cm-primary);
+    font-size: 22px;
+}
+
+.cm-schedule-empty h4 {
+    margin-bottom: 5px;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.cm-schedule-empty p {
+    margin: 0;
+    color: var(--cm-text-soft);
+    font-size: 12px;
+}
+
+@media (max-width: 991px) {
+    .cm-schedule-filter {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .cm-student-session {
+        grid-template-columns: 65px 2px 1fr;
+    }
+
+    .cm-session-action {
+        grid-column: 3;
+    }
+}
+
+@media (max-width: 600px) {
+    .cm-schedule-page {
+        padding: 40px 16px 80px;
+    }
+
+    .cm-schedule-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .cm-schedule-count {
+        display: none;
+    }
+
+    .cm-schedule-filter {
+        grid-template-columns: 1fr;
+    }
+
+    .cm-filter-actions {
+        width: 100%;
+    }
+
+    .cm-filter-actions .btn {
+        flex: 1;
+    }
+
+    .cm-student-session {
+        grid-template-columns: 1fr;
+        gap: 13px;
+    }
+
+    .cm-session-clock {
+        text-align: left;
+    }
+
+    .cm-session-clock strong,
+    .cm-session-clock span {
+        display: inline;
+        margin-right: 5px;
+    }
+
+    .cm-session-line {
+        display: none;
+    }
+
+    .cm-session-details {
+        gap: 13px;
+        flex-direction: column;
+    }
+
+    .cm-session-action {
+        grid-column: auto;
+    }
+
+    .cm-session-action .btn {
+        width: 100%;
+    }
+}

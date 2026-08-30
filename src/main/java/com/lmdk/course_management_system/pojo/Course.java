@@ -34,6 +34,12 @@ public class Course {
     @Column(name = "tuition_fee", precision = 15, scale = 2, nullable = false)
     private BigDecimal tuitionFee;
 
+    @Column(name = "image_url", length = 1000)
+    private String imageUrl;
+
+    @Column(name = "image_public_id")
+    private String imagePublicId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private CourseStatus status = CourseStatus.ACTIVE;

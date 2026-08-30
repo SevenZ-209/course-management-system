@@ -9,6 +9,8 @@ public interface AssignedAssignmentRepository {
 
     AssignedAssignment getAssignedAssignmentById(Integer id);
 
+    AssignedAssignment getAssignedAssignmentByIdForUpdate(Integer id);
+
     AssignedAssignment getByStudentAndLearningPathDetail(
             Integer studentId,
             Integer learningPathDetailId
@@ -37,4 +39,10 @@ public interface AssignedAssignmentRepository {
     List<AssignedAssignment> getAssignedAssignmentsByClass(
             Integer classId
     );
+
+    List<AssignedAssignment> getByStudentAndCourse(
+            Integer studentId,
+            Integer courseId
+    );
+
 }

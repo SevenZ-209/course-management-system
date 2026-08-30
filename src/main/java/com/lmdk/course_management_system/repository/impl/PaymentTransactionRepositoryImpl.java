@@ -4,6 +4,7 @@ import com.lmdk.course_management_system.pojo.PaymentTransaction;
 import com.lmdk.course_management_system.repository.PaymentTransactionRepository;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
@@ -32,6 +33,11 @@ public class PaymentTransactionRepositoryImpl implements PaymentTransactionRepos
     @Override
     public PaymentTransaction getTransactionById(Integer id) {
         return entityManager.find(PaymentTransaction.class, id);
+    }
+
+    @Override
+    public PaymentTransaction getTransactionByIdForUpdate(Integer id) {
+        return entityManager.find(PaymentTransaction.class, id, LockModeType.PESSIMISTIC_WRITE);
     }
 
     @Override
@@ -167,6 +173,28 @@ public class PaymentTransactionRepositoryImpl implements PaymentTransactionRepos
         return entityManager.createQuery(cq).getSingleResult() > 0;
     }
 
+    @Override
+    public List<PaymentTransaction> getTransactionsByStudent(Integer studentId) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<PaymentTransaction> cq = cb.createQuery(PaymentTransaction.class);
+        Root<PaymentTransaction> root = cq.from(PaymentTransaction.class);
+
+        Fetch<PaymentTransaction, ?> enrollment = root.fetch("enrollment", JoinType.LEFT);
+        enrollment.fetch("student", JoinType.LEFT);
+        enrollment.fetch("courseClass", JoinType.LEFT)
+                .fetch("course", JoinType.LEFT);
+
+        cq.select(root)
+                .distinct(true)
+                .where(cb.equal(
+                        root.get("enrollment").get("student").get("id"),
+                        studentId
+                ))
+                .orderBy(cb.desc(root.get("createdAt")));
+
+        return entityManager.createQuery(cq).getResultList();
+    }
+
     private List<Predicate> createPredicates(CriteriaBuilder cb,
                                              Root<PaymentTransaction> root,
                                              Map<String, String> params) {
@@ -192,6 +220,12 @@ public class PaymentTransactionRepositoryImpl implements PaymentTransactionRepos
                     ), value),
                     cb.like(cb.lower(
                             root.get("enrollment").get("student").get("email")
+                    ), value),
+                    cb.like(cb.lower(
+                            root.get("enrollment").get("courseClass").get("course").get("name")
+                    ), value),
+                    cb.like(cb.lower(
+                            root.get("enrollment").get("courseClass").get("name")
                     ), value)
             ));
         }
@@ -233,7 +267,7 @@ public class PaymentTransactionRepositoryImpl implements PaymentTransactionRepos
             try {
                 predicates.add(cb.equal(
                         root.get("status"),
-                        PaymentTransaction.TransactionStatus.valueOf(status)
+                        PaymentTransaction.TransactionStatus.valueOf(status.trim().toUpperCase())
                 ));
             } catch (IllegalArgumentException ignored) {
             }

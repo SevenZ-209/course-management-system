@@ -2,6 +2,7 @@ package com.lmdk.course_management_system.services.impl;
 
 import com.lmdk.course_management_system.pojo.*;
 import com.lmdk.course_management_system.repository.AssignedAssignmentRepository;
+import com.lmdk.course_management_system.repository.StudentLearningPathRepository;
 import com.lmdk.course_management_system.services.*;
 
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -23,10 +25,16 @@ public class AssignedAssignmentServiceImpl implements AssignedAssignmentService 
     private final AssignmentService assignmentService;
     private final EnrollmentService enrollmentService;
     private final UserService userService;
+    private final StudentLearningPathRepository studentLearningPathRepository;
 
     @Override
     public AssignedAssignment getAssignedAssignmentById(Integer id) {
         return assignedAssignmentRepository.getAssignedAssignmentById(id);
+    }
+
+    @Override
+    public AssignedAssignment getAssignedAssignmentByIdForUpdate(Integer id) {
+        return assignedAssignmentRepository.getAssignedAssignmentByIdForUpdate(id);
     }
 
     @Override
@@ -89,6 +97,70 @@ public class AssignedAssignmentServiceImpl implements AssignedAssignmentService 
     ) {
         return assignedAssignmentRepository
                 .getAssignedAssignmentsByClass(classId);
+    }
+    @Override
+    @Transactional
+    public void assignAllLearningPathAssignments(Integer studentLearningPathId) {
+
+        StudentLearningPath progress =
+                studentLearningPathRepository
+                        .getStudentLearningPathById(studentLearningPathId);
+
+        if(progress == null)
+            throw new IllegalArgumentException(
+                    "Không tìm thấy lộ trình học viên!"
+            );
+
+        List<LearningPathDetail> details =
+                progress.getLearningPath()
+                        .getDetails()
+                        .stream()
+                        .sorted(
+                                Comparator.comparing(
+                                        LearningPathDetail::getOrderNumber
+                                )
+                        )
+                        .toList();
+
+
+        for(LearningPathDetail detail : details){
+
+            if(assignedAssignmentRepository
+                    .existsByStudentAndLearningPathDetail(
+                            progress.getStudent().getId(),
+                            detail.getId()
+                    ))
+                continue;
+
+
+            AssignedAssignment assigned =
+                    new AssignedAssignment();
+
+            assigned.setStudent(
+                    progress.getStudent()
+            );
+
+            assigned.setAssignment(
+                    detail.getAssignment()
+            );
+
+            assigned.setLearningPathDetail(
+                    detail
+            );
+
+            assigned.setStatus(
+                    detail.getOrderNumber() == 1
+                            ? AssignedAssignment.AssignedStatus.AVAILABLE
+                            : AssignedAssignment.AssignedStatus.LOCKED
+            );
+
+            assigned.setAssignedAt(
+                    LocalDateTime.now()
+            );
+
+            assignedAssignmentRepository
+                    .addAssignedAssignment(assigned);
+        }
     }
 
     @Override

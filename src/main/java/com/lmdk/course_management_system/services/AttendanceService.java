@@ -15,9 +15,13 @@ public interface AttendanceService {
 
     void updateAttendance(Attendance attendance);
 
+    List<Attendance> saveAttendances(List<Attendance> attendances, Integer classId, Integer sessionId);
+
     List<Attendance> getAttendances(Map<String, String> params);
 
     List<Attendance> getAttendancesBySession(Integer sessionId);
+
+    List<Attendance> getAttendancesByStudentAndSessionIds(Integer studentId, List<Integer> sessionIds);
 
     long countAttendances(Map<String, String> params);
 }

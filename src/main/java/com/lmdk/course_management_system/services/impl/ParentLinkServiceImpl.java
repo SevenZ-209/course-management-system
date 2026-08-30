@@ -1,5 +1,6 @@
 package com.lmdk.course_management_system.services.impl;
 
+import com.lmdk.course_management_system.exceptions.ForbiddenException;
 import com.lmdk.course_management_system.pojo.ParentLink;
 import com.lmdk.course_management_system.pojo.User;
 import com.lmdk.course_management_system.repository.ParentLinkRepository;
@@ -174,7 +175,7 @@ public class ParentLinkServiceImpl implements ParentLinkService {
                 || !parentLink.getParent()
                 .getId()
                 .equals(parent.getId()))
-            throw new IllegalArgumentException(
+            throw new ForbiddenException(
                     "Bạn không có quyền hủy liên kết này!"
             );
 

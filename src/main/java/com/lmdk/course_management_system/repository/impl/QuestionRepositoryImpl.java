@@ -57,8 +57,7 @@ public class QuestionRepositoryImpl implements QuestionRepository {
         cq.select(root)
                 .where(predicates.toArray(new Predicate[0]))
                 .orderBy(
-                        cb.asc(root.get("assignment").get("name")),
-                        cb.asc(root.get("orderNumber"))
+                        cb.desc(root.get("id"))
                 );
 
         TypedQuery<Question> query = entityManager.createQuery(cq);

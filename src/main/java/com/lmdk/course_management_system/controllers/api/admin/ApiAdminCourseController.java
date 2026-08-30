@@ -6,6 +6,9 @@ import com.lmdk.course_management_system.pojo.Category;
 import com.lmdk.course_management_system.pojo.Course;
 import com.lmdk.course_management_system.services.CategoryService;
 import com.lmdk.course_management_system.services.CourseService;
+import com.lmdk.course_management_system.dto.cloudinary.CloudinaryUploadResult;
+import com.lmdk.course_management_system.services.CloudinaryService;
+import org.springframework.http.MediaType;
 
 import lombok.RequiredArgsConstructor;
 
@@ -24,6 +27,7 @@ public class ApiAdminCourseController {
     private final CourseService courseService;
     private final CategoryService categoryService;
     private final AdminCourseMapper adminCourseMapper;
+    private final CloudinaryService cloudinaryService;
 
     @Value("${courses.page-size:10}")
     private int pageSize;
@@ -75,49 +79,85 @@ public class ApiAdminCourseController {
         );
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public AdminCourseActionResponse addCourse(
-            @RequestBody CourseRequest request
+            @ModelAttribute CourseRequest request
     ) {
-        Category category =
-                requireCategory(request.categoryId());
+        Category category = requireCategory(request.categoryId());
+        CloudinaryUploadResult upload = null;
 
-        Course course = new Course();
-        course.setName(request.name());
-        course.setDescription(request.description());
-        course.setTuitionFee(request.tuitionFee());
-        course.setCategory(category);
+        try {
+            Course course = new Course();
+            course.setName(request.name());
+            course.setDescription(request.description());
+            course.setTuitionFee(request.tuitionFee());
+            course.setCategory(category);
 
-        courseService.addCourse(course);
+            if(request.image() != null && !request.image().isEmpty()) {
+                upload = cloudinaryService.uploadCourseImage(request.image());
+                course.setImageUrl(upload.url());
+                course.setImagePublicId(upload.publicId());
+            }
 
-        return new AdminCourseActionResponse(
-                course.getId(),
-                "Thêm khóa học thành công!"
-        );
+            courseService.addCourse(course);
+
+            return new AdminCourseActionResponse(
+                    course.getId(),
+                    "Thêm khóa học thành công!"
+            );
+        } catch(RuntimeException ex) {
+            if(upload != null)
+                cloudinaryService.deleteCourseImage(upload.publicId());
+
+            throw ex;
+        }
     }
 
-    @PutMapping("/{courseId}")
+    @PutMapping(
+            value = "/{courseId}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
     public AdminCourseActionResponse updateCourse(
             @PathVariable Integer courseId,
-            @RequestBody CourseRequest request
+            @ModelAttribute CourseRequest request
     ) {
-        Course course =
-                requireCourse(courseId);
+        Course course = requireCourse(courseId);
+        Category category = requireCategory(request.categoryId());
 
-        Category category =
-                requireCategory(request.categoryId());
+        String oldPublicId = course.getImagePublicId();
+        String oldImageUrl = course.getImageUrl();
+        CloudinaryUploadResult newUpload = null;
 
-        course.setName(request.name());
-        course.setDescription(request.description());
-        course.setTuitionFee(request.tuitionFee());
-        course.setCategory(category);
+        try {
+            course.setName(request.name());
+            course.setDescription(request.description());
+            course.setTuitionFee(request.tuitionFee());
+            course.setCategory(category);
 
-        courseService.updateCourse(course);
+            if(request.image() != null && !request.image().isEmpty()) {
+                newUpload = cloudinaryService.uploadCourseImage(request.image());
+                course.setImageUrl(newUpload.url());
+                course.setImagePublicId(newUpload.publicId());
+            }
 
-        return new AdminCourseActionResponse(
-                courseId,
-                "Cập nhật khóa học thành công!"
-        );
+            courseService.updateCourse(course);
+
+            if(newUpload != null && oldPublicId != null && !oldPublicId.isBlank())
+                cloudinaryService.deleteCourseImage(oldPublicId);
+
+            return new AdminCourseActionResponse(
+                    courseId,
+                    "Cập nhật khóa học thành công!"
+            );
+        } catch(RuntimeException ex) {
+            if(newUpload != null) {
+                cloudinaryService.deleteCourseImage(newUpload.publicId());
+                course.setImageUrl(oldImageUrl);
+                course.setImagePublicId(oldPublicId);
+            }
+
+            throw ex;
+        }
     }
 
     @GetMapping("/options")

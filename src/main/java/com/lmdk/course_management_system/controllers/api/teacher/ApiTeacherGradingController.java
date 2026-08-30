@@ -10,10 +10,13 @@ import com.lmdk.course_management_system.services.StudentAnswerService;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/teacher/grading")
@@ -26,20 +29,49 @@ public class ApiTeacherGradingController {
     private final CurrentUserHelper currentUserHelper;
     private final TeacherGradingMapper teacherGradingMapper;
 
+    @Value("${assignment-attempts.page-size:10}")
+    private int pageSize;
+
     @GetMapping("/pending")
-    public List<PendingAttemptResponse> getPendingAttempts(
+    public PendingAttemptPageResponse getPendingAttempts(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(required = false) String kw,
             Authentication authentication
     ) {
-        User grader =
-                currentUserHelper.getCurrentUser(
-                        authentication
-                );
+        User grader = currentUserHelper.getCurrentUser(authentication);
 
-        return gradingResultService
-                .getPendingAttempts(grader)
+        page = Math.max(page, 1);
+        Map<String, String> params = new HashMap<>();
+        params.put("page", String.valueOf(page));
+
+        if(kw != null && !kw.isBlank())
+            params.put("kw", kw.trim());
+
+        long totalRecords = gradingResultService
+                .countPendingAttempts(grader, params);
+
+        int totalPages = Math.max(
+                (int) Math.ceil((double) totalRecords / pageSize),
+                1
+        );
+
+        if(page > totalPages) {
+            page = totalPages;
+            params.put("page", String.valueOf(page));
+        }
+
+        List<PendingAttemptResponse> attempts = gradingResultService
+                .getPendingAttempts(grader, params)
                 .stream()
                 .map(teacherGradingMapper::toPendingResponse)
                 .toList();
+
+        return new PendingAttemptPageResponse(
+                attempts,
+                page,
+                totalPages,
+                totalRecords
+        );
     }
 
     @GetMapping("/{attemptId}")

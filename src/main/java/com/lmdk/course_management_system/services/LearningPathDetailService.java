@@ -17,7 +17,11 @@ public interface LearningPathDetailService {
 
     List<LearningPathDetail> getDetailsByLearningPath(Integer learningPathId);
 
+    List<LearningPathDetail> getDetailsByLearningPaths(List<Integer> learningPathIds);
+
     long countDetails(Map<String, String> params);
 
     LearningPathDetail getNextDetail(Integer learningPathId, Integer currentOrderNumber);
+
+    LearningPathDetail getFirstDetail(Integer learningPathId);
 }

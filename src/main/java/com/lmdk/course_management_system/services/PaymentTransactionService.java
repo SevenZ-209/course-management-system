@@ -20,9 +20,13 @@ public interface PaymentTransactionService {
             PaymentTransaction.TransactionStatus status
     );
 
+    List<PaymentTransaction> getTransactionsByStudent(Integer studentId);
+
     List<PaymentTransaction> getTransactions(Map<String, String> params);
 
     List<PaymentTransaction> getTransactionsByEnrollment(Integer enrollmentId);
 
     long countTransactions(Map<String, String> params);
+
+    PaymentTransaction createAutoSuccess(PaymentTransaction transaction);
 }

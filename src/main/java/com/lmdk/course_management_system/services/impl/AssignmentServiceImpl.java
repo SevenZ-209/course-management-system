@@ -4,6 +4,7 @@ import com.lmdk.course_management_system.pojo.Assignment;
 import com.lmdk.course_management_system.pojo.Course;
 import com.lmdk.course_management_system.repository.AssignmentRepository;
 import com.lmdk.course_management_system.services.AssignmentService;
+import com.lmdk.course_management_system.pojo.Lesson;
 
 import lombok.RequiredArgsConstructor;
 
@@ -26,10 +27,23 @@ public class AssignmentServiceImpl implements AssignmentService {
 
     @Override
     public Assignment addAssignment(Assignment assignment) {
+
         validateAssignment(assignment);
 
+        if (assignment.getLesson() != null
+                && assignmentRepository.existsByLessonId(
+                assignment.getLesson().getId()
+        )) {
+
+            throw new IllegalStateException(
+                    "Bài học này đã có bài tập!"
+            );
+        }
+
         if (assignment.getStatus() == null)
-            assignment.setStatus(Assignment.AssignmentStatus.ACTIVE);
+            assignment.setStatus(
+                    Assignment.AssignmentStatus.ACTIVE
+            );
 
         return assignmentRepository.addAssignment(assignment);
     }

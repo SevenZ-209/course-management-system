@@ -9,6 +9,8 @@ public interface EnrollmentRepository {
 
     Enrollment getEnrollmentById(Integer id);
 
+    Enrollment getEnrollmentByIdForUpdate(Integer id);
+
     Enrollment getEnrollment(Integer studentId, Integer classId);
 
     Enrollment addEnrollment(Enrollment enrollment);
@@ -28,6 +30,12 @@ public interface EnrollmentRepository {
     long countOccupiedByClassExceptId(Integer classId, Integer enrollmentId);
 
     boolean existsEnrollment(Integer studentId, Integer classId);
+
+    boolean existsBlockingEnrollmentByStudentAndCourse(Integer studentId, Integer courseId);
+
+    boolean existsBlockingEnrollmentByStudentAndCourseExceptId(
+            Integer studentId, Integer courseId, Integer enrollmentId
+    );
 
     List<Enrollment> getPendingEnrollments();
 

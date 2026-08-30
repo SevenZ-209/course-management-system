@@ -1,9 +1,6 @@
 package com.lmdk.course_management_system.controllers.api.admin;
 
-import com.lmdk.course_management_system.dto.admin.answer.AdminAnswerActionResponse;
-import com.lmdk.course_management_system.dto.admin.answer.AdminAnswerPageResponse;
-import com.lmdk.course_management_system.dto.admin.answer.CreateAnswerRequest;
-import com.lmdk.course_management_system.dto.admin.answer.UpdateAnswerRequest;
+import com.lmdk.course_management_system.dto.admin.answer.*;
 import com.lmdk.course_management_system.mappers.admin.AdminAnswerMapper;
 import com.lmdk.course_management_system.pojo.Answer;
 import com.lmdk.course_management_system.pojo.Question;
@@ -141,6 +138,19 @@ public class ApiAdminAnswerController {
         return new AdminAnswerActionResponse(
                 answer.getId(),
                 "Thêm đáp án thành công!"
+        );
+    }
+
+    @PostMapping("/bulk")
+    public AdminAnswerActionResponse addBulk(
+            @RequestBody BulkAnswerRequest request
+    ){
+
+        answerService.addBulk(request);
+
+        return new AdminAnswerActionResponse(
+                null,
+                "Lưu đáp án thành công!"
         );
     }
 

@@ -9,10 +9,13 @@ public record AttemptDetailResponse(
         Integer attemptNumber,
         Integer assignmentId,
         String assignmentName,
+        Integer courseId,
+        String courseName,
+        Integer enrollmentId,
         BigDecimal maximumScore,
         LocalDateTime startedAt,
         LocalDateTime endTime,
-        long remainingSeconds,
+        Long remainingSeconds,
         List<QuestionResponse> questions
 ) {
 }

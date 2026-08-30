@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/student/dashboard")
@@ -70,17 +71,17 @@ public class ApiStudentDashboardController {
                                 student.getId()
                         );
 
+        Map<Integer, AssignmentAttempt> latestAttempts = assignmentAttemptService
+                .getLatestAttemptsByAssignedAssignmentIds(
+                        assignments.stream().map(AssignedAssignment::getId).toList()
+                );
+
         List<AssignmentWithAttempt> assignmentAttempts =
                 assignments.stream()
-                        .map(assigned ->
-                                new AssignmentWithAttempt(
-                                        assigned,
-                                        assignmentAttemptService
-                                                .getLatestAttempt(
-                                                        assigned.getId()
-                                                )
-                                )
-                        )
+                        .map(assigned -> new AssignmentWithAttempt(
+                                assigned,
+                                latestAttempts.get(assigned.getId())
+                        ))
                         .toList();
 
         Integer inProgressAssignments =

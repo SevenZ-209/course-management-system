@@ -66,6 +66,7 @@ public class StudentAssignmentMapper {
 
     public AttemptDetailResponse toAttemptDetailResponse(
             AssignmentAttempt attempt,
+            Integer enrollmentId,
             List<QuestionResponse> questions
     ) {
         Assignment assignment =
@@ -76,6 +77,9 @@ public class StudentAssignmentMapper {
                 attempt.getAttemptNumber(),
                 assignment.getId(),
                 assignment.getName(),
+                assignment.getCourse().getId(),
+                assignment.getCourse().getName(),
+                enrollmentId,
                 assignment.getMaximumScore(),
                 attempt.getStartedAt(),
                 assignmentAttemptHelper.calculateEndTime(attempt),
@@ -195,21 +199,21 @@ public class StudentAssignmentMapper {
                         ? null
                         : result.getAutoScore(),
 
-                result == null
-                        ? null
-                        : result.getEssayScore(),
+                graded && result != null
+                        ? result.getEssayScore()
+                        : null,
 
-                result == null
-                        ? null
-                        : result.getTotalScore(),
+                graded && result != null
+                        ? result.getTotalScore()
+                        : null,
 
                 graded
                         ? attempt.getPassed()
                         : null,
 
-                result == null
-                        ? null
-                        : result.getComment()
+                graded && result != null
+                        ? result.getComment()
+                        : null
         );
     }
 }

@@ -32,4 +32,6 @@ public interface AnswerRepository {
             Integer orderNumber,
             Integer answerId
     );
+
+    void deleteByQuestionId(Integer questionId);
 }

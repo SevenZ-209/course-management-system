@@ -63,6 +63,24 @@ public class AttendanceRepositoryImpl implements AttendanceRepository {
     }
 
     @Override
+    public List<Attendance> saveAttendances(List<Attendance> attendances) {
+        if (attendances == null || attendances.isEmpty()) return List.of();
+
+        List<Attendance> saved = new ArrayList<>();
+        for (Attendance attendance : attendances) {
+            if (attendance.getId() == null) {
+                entityManager.persist(attendance);
+                saved.add(attendance);
+            } else {
+                saved.add(entityManager.merge(attendance));
+            }
+        }
+
+        entityManager.flush();
+        return saved;
+    }
+
+    @Override
     public List<Attendance> getAttendances(Map<String, String> params) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Attendance> cq = cb.createQuery(Attendance.class);
@@ -103,6 +121,26 @@ public class AttendanceRepositoryImpl implements AttendanceRepository {
                         sessionId
                 ))
                 .orderBy(cb.asc(root.get("student").get("fullName")));
+
+        return entityManager.createQuery(cq).getResultList();
+    }
+
+    @Override
+    public List<Attendance> getAttendancesByStudentAndSessionIds(Integer studentId, List<Integer> sessionIds) {
+        if (studentId == null || sessionIds == null || sessionIds.isEmpty())
+            return List.of();
+
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Attendance> cq = cb.createQuery(Attendance.class);
+        Root<Attendance> root = cq.from(Attendance.class);
+
+        root.fetch("onlineSession", JoinType.LEFT);
+
+        cq.select(root)
+                .where(
+                        cb.equal(root.get("student").get("id"), studentId),
+                        root.get("onlineSession").get("id").in(sessionIds)
+                );
 
         return entityManager.createQuery(cq).getResultList();
     }

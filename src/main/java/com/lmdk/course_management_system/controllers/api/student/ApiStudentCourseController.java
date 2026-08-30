@@ -1,5 +1,6 @@
 package com.lmdk.course_management_system.controllers.api.student;
 
+import com.lmdk.course_management_system.dto.student.assignment.CourseAssignmentResponse;
 import com.lmdk.course_management_system.dto.student.course.*;
 import com.lmdk.course_management_system.dto.student.learningpath.StudentLearningPathResponse;
 import com.lmdk.course_management_system.dto.student.classinfo.ClassResponse;
@@ -14,6 +15,7 @@ import com.lmdk.course_management_system.services.*;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -44,14 +46,8 @@ public class ApiStudentCourseController {
     public List<ClassResponse> getClassesByCourse(
             @PathVariable Integer courseId
     ) {
-        return classService.getAllClasses()
+        return classService.getClassesByCourse(courseId)
                 .stream()
-                .filter(courseClass ->
-                        courseClass.getCourse() != null
-                                && courseClass.getCourse()
-                                .getId()
-                                .equals(courseId)
-                )
                 .map(courseClassMapper::toResponse)
                 .toList();
     }
@@ -83,16 +79,29 @@ public class ApiStudentCourseController {
                 courseId
         );
 
+        StudentLearningPath progress =
+                studentLearningPathService
+                        .getStudentLearningPathsByStudent(student.getId())
+                        .stream()
+                        .filter(p ->
+                                p.getLearningPath()
+                                        .getCourse()
+                                        .getId()
+                                        .equals(courseId)
+                        )
+                        .findFirst()
+                        .orElse(null);
+
         return studentLearningPathService
                 .getStudentLearningPathsByStudent(student.getId())
                 .stream()
-                .filter(progress ->
-                        progress.getLearningPath()
+                .filter(path ->
+                        path.getLearningPath()
                                 .getCourse()
                                 .getId()
                                 .equals(courseId)
                 )
-                .map(progress -> {
+                .map(path -> {
                     List<LearningPathDetail> details =
                             learningPathDetailService
                                     .getDetailsByLearningPath(
@@ -126,6 +135,25 @@ public class ApiStudentCourseController {
                 courseId
         );
 
+        StudentLearningPath progress =
+                studentLearningPathService
+                        .getStudentLearningPathsByStudent(student.getId())
+                        .stream()
+                        .filter(p ->
+                                p.getLearningPath()
+                                        .getCourse()
+                                        .getId()
+                                        .equals(courseId)
+                        )
+                        .findFirst()
+                        .orElse(null);
+
+        List<LearningPathDetail> details =
+                learningPathDetailService
+                        .getDetailsByLearningPath(
+                                progress.getLearningPath().getId()
+                        );
+
         List<StudentModuleResponse> modules =
                 courseModuleService
                         .getModulesByCourse(courseId)
@@ -135,7 +163,13 @@ public class ApiStudentCourseController {
                                     lessonService
                                             .getLessonsByModule(module.getId())
                                             .stream()
-                                            .map(studentCourseContentMapper::toLessonResponse)
+                                            .map(lesson ->
+                                                    studentCourseContentMapper
+                                                            .toLessonResponse(
+                                                                    lesson,
+                                                                    progress, details
+                                                            )
+                                            )
                                             .toList();
 
                             return studentCourseContentMapper
@@ -145,6 +179,27 @@ public class ApiStudentCourseController {
 
         return studentCourseContentMapper
                 .toResponse(course, modules);
+    }
+
+    @GetMapping("/{courseId}/assignments")
+    public List<CourseAssignmentResponse> getCourseAssignments(
+            @PathVariable Integer courseId,
+            Authentication authentication
+    ) {
+
+        User student =
+                currentUserHelper.getCurrentStudent(authentication);
+
+        studentAccessHelper.requireActiveCourse(
+                student.getId(),
+                courseId
+        );
+
+        return studentLearningPathService
+                .getCourseAssignments(
+                        student.getId(),
+                        courseId
+                );
     }
 
     @GetMapping("/detail/{enrollmentId}")
@@ -179,6 +234,23 @@ public class ApiStudentCourseController {
                         )
                         .findFirst()
                         .orElse(null);
+
+        if(progress == null)
+            throw new IllegalArgumentException(
+                    "Học viên chưa có lộ trình học cho khóa này!"
+            );
+
+        System.out.println(
+                "CURRENT LP = "
+                        + progress.getLearningPath().getId()
+        );
+
+        System.out.println(
+                "CURRENT DETAIL = "
+                        + (progress.getCurrentDetail() != null
+                        ? progress.getCurrentDetail().getId()
+                        : "COMPLETED")
+        );
 
         return studentCourseMapper
                 .toDetailResponse(

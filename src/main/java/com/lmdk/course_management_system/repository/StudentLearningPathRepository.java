@@ -11,6 +11,8 @@ public interface StudentLearningPathRepository {
 
     StudentLearningPath getStudentLearningPath(Integer studentId, Integer learningPathId);
 
+    StudentLearningPath getStudentLearningPathForUpdate(Integer studentId, Integer learningPathId);
+
     StudentLearningPath addStudentLearningPath(StudentLearningPath studentLearningPath);
 
     void updateStudentLearningPath(StudentLearningPath studentLearningPath);
@@ -18,6 +20,8 @@ public interface StudentLearningPathRepository {
     List<StudentLearningPath> getStudentLearningPaths(Map<String, String> params);
 
     List<StudentLearningPath> getStudentLearningPathsByStudent(Integer studentId);
+
+    List<StudentLearningPath> getStudentLearningPathsByStudentsAndCourse(List<Integer> studentIds, Integer courseId);
 
     List<StudentLearningPath> getStudentLearningPathsByLearningPath(Integer learningPathId);
 

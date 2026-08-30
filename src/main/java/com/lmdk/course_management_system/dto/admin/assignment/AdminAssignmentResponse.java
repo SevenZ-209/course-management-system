@@ -7,9 +7,10 @@ public record AdminAssignmentResponse(
         String name,
         Integer courseId,
         String courseName,
+        Integer lessonId,
+        String lessonName,
         String type,
         BigDecimal maximumScore,
         Integer durationMinutes,
         String status
-) {
-}
+) {}

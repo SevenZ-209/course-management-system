@@ -20,4 +20,6 @@ public interface AssignmentRepository {
     List<Assignment> getAllAssignments();
 
     long countAssignments(Map<String, String> params);
+
+    boolean existsByLessonId(Integer lessonId);
 }

@@ -11,6 +11,8 @@ public interface AssignedAssignmentService {
 
     AssignedAssignment getAssignedAssignmentById(Integer id);
 
+    AssignedAssignment getAssignedAssignmentByIdForUpdate(Integer id);
+
     AssignedAssignment assignCurrentDetail(
             Integer studentLearningPathId,
             LocalDateTime availableAt,
@@ -41,5 +43,9 @@ public interface AssignedAssignmentService {
 
     List<AssignedAssignment> getAssignedAssignmentsByClass(
             Integer classId
+    );
+
+    void assignAllLearningPathAssignments(
+            Integer studentLearningPathId
     );
 }

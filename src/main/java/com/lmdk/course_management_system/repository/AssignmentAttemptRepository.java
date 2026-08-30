@@ -9,9 +9,13 @@ public interface AssignmentAttemptRepository {
 
     AssignmentAttempt getAttemptById(Integer id);
 
+    AssignmentAttempt getAttemptByIdForUpdate(Integer id);
+
     AssignmentAttempt getAttempt(Integer assignedAssignmentId, Integer attemptNumber);
 
     AssignmentAttempt getLatestAttempt(Integer assignedAssignmentId);
+
+    List<AssignmentAttempt> getLatestAttemptsByAssignedAssignmentIds(List<Integer> assignedAssignmentIds);
 
     AssignmentAttempt addAttempt(AssignmentAttempt attempt);
 

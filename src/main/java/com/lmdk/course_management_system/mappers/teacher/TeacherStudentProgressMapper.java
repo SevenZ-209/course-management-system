@@ -27,6 +27,7 @@ public class TeacherStudentProgressMapper {
                     null,
                     null,
                     null,
+                    null,
 
                     null,
                     null,
@@ -50,23 +51,22 @@ public class TeacherStudentProgressMapper {
 
         Integer currentAssignmentId =
                 progress.getCurrentDetail() == null
+                        || progress.getCurrentDetail().getAssignment() == null
                         ? null
-                        : progress.getCurrentDetail()
-                          .getAssignment()
-                          .getId();
+                        : progress.getCurrentDetail().getAssignment().getId();
 
         String currentAssignmentName =
                 progress.getCurrentDetail() == null
+                        || progress.getCurrentDetail().getAssignment() == null
                         ? null
-                        : progress.getCurrentDetail()
-                          .getAssignment()
-                          .getName();
+                        : progress.getCurrentDetail().getAssignment().getName();
 
         return new TeacherStudentProgressResponse(
                 student.getId(),
                 student.getFullName(),
                 student.getUsername(),
 
+                progress.getId(),
                 progress.getLearningPath().getId(),
                 progress.getLearningPath().getName(),
                 progress.getStatus().name(),

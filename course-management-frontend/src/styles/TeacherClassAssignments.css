@@ -1,0 +1,474 @@
+.cm-class-assignment-heading,
+.cm-class-section-head,
+.cm-class-path-title,
+.cm-class-path-progress-head,
+.cm-class-current {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.cm-class-assignment-heading {
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+.cm-class-assignment-summary {
+    margin-bottom: 20px;
+}
+
+.cm-class-assignment-stat {
+    height: 100%;
+    padding: 16px 18px;
+    border: 1px solid #dfeae8;
+    border-radius: 15px;
+    background: #f7fbfa;
+}
+
+.cm-class-assignment-stat span,
+.cm-class-assignment-stat small {
+    display: block;
+    color: #7c908c;
+    font-size: 10px;
+}
+
+.cm-class-assignment-stat strong {
+    display: block;
+    margin: 3px 0 4px;
+    color: #006a60;
+    font-size: 27px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.cm-class-path-card,
+.cm-class-assigned-card {
+    margin-bottom: 20px;
+}
+
+.cm-class-path-card > .card-body,
+.cm-class-assigned-card > .card-body {
+    padding: 22px;
+}
+
+.cm-class-section-head {
+    align-items: flex-start;
+    margin-bottom: 18px;
+}
+
+.cm-class-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 190px;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.cm-class-controls .form-control,
+.cm-class-controls .form-select {
+    min-height: 38px;
+    border-color: #dce8e6;
+    border-radius: 10px;
+    color: #4b625e;
+    font-size: 10px;
+}
+
+.cm-class-controls .form-control:focus,
+.cm-class-controls .form-select:focus {
+    border-color: #75b5ad;
+    box-shadow: 0 0 0 .2rem rgba(0, 106, 96, .07);
+}
+
+.cm-class-path-list {
+    display: grid;
+    gap: 12px;
+}
+
+.cm-class-path-item {
+    display: grid;
+    grid-template-columns: minmax(180px, 220px) 1fr;
+    overflow: hidden;
+    border: 1px solid #e0ebe9;
+    border-radius: 15px;
+    background: #fff;
+}
+
+.cm-class-student {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px;
+    border-right: 1px solid #e5eeec;
+    background: #f8fbfa;
+}
+
+.cm-class-student-avatar {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    place-items: center;
+    border-radius: 12px;
+    color: #fff;
+    background: #00776b;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.cm-class-student strong,
+.cm-class-student span {
+    display: block;
+}
+
+.cm-class-student strong {
+    color: #173f3b;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.cm-class-student span {
+    margin-top: 2px;
+    color: #849692;
+    font-size: 10px;
+}
+
+.cm-class-path-main {
+    padding: 16px 18px;
+}
+
+.cm-class-path-title > div > span,
+.cm-class-current > div > span,
+.cm-class-assignment-student > span,
+.cm-class-assignment-status > span,
+.cm-class-assignment-attempt > span,
+.cm-class-assignment-dates span {
+    display: block;
+    color: #829590;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: .08em;
+}
+
+.cm-class-path-title > div > strong,
+.cm-class-current > div > strong {
+    display: block;
+    margin-top: 3px;
+    color: #173f3b;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.cm-class-path-progress-head {
+    margin: 13px 0 7px;
+    color: #829590;
+    font-size: 9px;
+}
+
+.cm-class-path-progress-head strong {
+    color: #46615c;
+}
+
+.cm-class-current {
+    margin-top: 13px;
+    padding-top: 12px;
+    border-top: 1px solid #edf2f1;
+}
+
+.cm-class-current-state {
+    padding: 6px 9px;
+    border-radius: 999px;
+    color: #526965;
+    background: #f0f5f4;
+    font-size: 9px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.cm-class-current-state.is-active {
+    color: #006a60;
+    background: #e8f6f2;
+}
+
+.cm-class-current-state.is-pending {
+    color: #8a6100;
+    background: #fff5cf;
+}
+
+.cm-class-current-state.is-completed {
+    color: #087856;
+    background: #e9f7f1;
+}
+
+.cm-class-current-state.is-locked {
+    color: #687a77;
+    background: #edf1f0;
+}
+
+.cm-class-assigned-head {
+    align-items: flex-end;
+}
+
+.cm-class-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.cm-class-filter button {
+    padding: 7px 10px;
+    border: 1px solid #dce8e6;
+    border-radius: 9px;
+    color: #647a76;
+    background: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    transition: all .18s ease;
+}
+
+.cm-class-filter button b {
+    margin-left: 4px;
+    color: #8da09c;
+}
+
+.cm-class-filter button.active {
+    border-color: #00776b;
+    color: #fff;
+    background: #00776b;
+}
+
+.cm-class-filter button.active b {
+    color: #d9f0ec;
+}
+
+.cm-class-assignment-list {
+    overflow: hidden;
+    border: 1px solid #e1ebe9;
+    border-radius: 14px;
+}
+
+.cm-class-assignment-row {
+    display: grid;
+    grid-template-columns: minmax(190px, 1.5fr) minmax(130px, .9fr) minmax(100px, .65fr) minmax(110px, .75fr) minmax(190px, 1.1fr);
+    align-items: center;
+    gap: 14px;
+    padding: 15px 16px;
+    border-bottom: 1px solid #e7efed;
+}
+
+.cm-class-assignment-row:last-child {
+    border-bottom: 0;
+}
+
+.cm-class-assignment-row:hover {
+    background: #fbfdfc;
+}
+
+.cm-class-assignment-name {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.cm-class-assignment-name > strong {
+    color: #173f3b;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.cm-class-assignment-sub {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 5px;
+    color: #849692;
+    font-size: 9px;
+}
+
+.cm-class-assignment-sub span + span::before {
+    content: "•";
+    margin-right: 10px;
+    color: #bdcac7;
+}
+
+.cm-class-assignment-student strong,
+.cm-class-assignment-student small,
+.cm-class-assignment-attempt strong,
+.cm-class-assignment-attempt small,
+.cm-class-assignment-dates strong {
+    display: block;
+}
+
+.cm-class-assignment-student strong {
+    margin-top: 3px;
+    color: #2f4a45;
+    font-size: 10px;
+}
+
+.cm-class-assignment-student small,
+.cm-class-assignment-attempt small {
+    margin-top: 2px;
+    color: #899b97;
+    font-size: 9px;
+}
+
+.cm-class-assignment-status > div,
+.cm-class-assignment-attempt > div {
+    margin-top: 5px;
+}
+
+.cm-class-assignment-attempt strong {
+    margin-top: 3px;
+    color: #304944;
+    font-size: 10px;
+}
+
+.cm-class-assignment-dates {
+    display: grid;
+    gap: 7px;
+}
+
+.cm-class-assignment-dates strong {
+    margin-top: 2px;
+    color: #526965;
+    font-size: 9px;
+    font-weight: 600;
+}
+
+.cm-class-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-top: 15px;
+    padding-top: 14px;
+    border-top: 1px solid #edf2f1;
+    color: #81938f;
+    font-size: 9px;
+}
+
+.cm-class-pagination > span b {
+    color: #3f5a55;
+}
+
+.cm-class-pagination-buttons {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.cm-class-pagination-buttons button {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    place-items: center;
+    border: 1px solid #dce8e6;
+    border-radius: 8px;
+    color: #607671;
+    background: #fff;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.cm-class-pagination-buttons button:hover:not(:disabled),
+.cm-class-pagination-buttons button.active {
+    border-color: #00776b;
+    color: #fff;
+    background: #00776b;
+}
+
+.cm-class-pagination-buttons button:disabled {
+    cursor: not-allowed;
+    opacity: .4;
+}
+
+.cm-class-pagination-buttons > span {
+    padding: 0 2px;
+    color: #9aaba7;
+    font-size: 10px;
+}
+
+.cm-class-manual-note {
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+@media (max-width: 991px) {
+    .cm-class-path-item {
+        grid-template-columns: 1fr;
+    }
+
+    .cm-class-student {
+        border-right: 0;
+        border-bottom: 1px solid #e5eeec;
+    }
+
+    .cm-class-assignment-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cm-class-assignment-info {
+        grid-column: 1 / -1;
+    }
+
+    .cm-class-assignment-dates {
+        grid-column: 1 / -1;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767px) {
+    .cm-class-assignment-heading,
+    .cm-class-section-head,
+    .cm-class-current {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .cm-class-assignment-heading .btn {
+        width: 100%;
+    }
+
+    .cm-class-controls {
+        grid-template-columns: 1fr;
+    }
+
+    .cm-class-path-title {
+        align-items: flex-start;
+    }
+
+    .cm-class-current-state {
+        align-self: flex-start;
+    }
+
+    .cm-class-assigned-head {
+        align-items: stretch;
+    }
+
+    .cm-class-filter button {
+        flex: 1;
+    }
+
+    .cm-class-assignment-row {
+        grid-template-columns: 1fr;
+    }
+
+    .cm-class-assignment-info,
+    .cm-class-assignment-dates {
+        grid-column: auto;
+    }
+
+    .cm-class-assignment-dates {
+        grid-template-columns: 1fr;
+    }
+
+    .cm-class-pagination {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .cm-class-pagination-buttons {
+        flex-wrap: wrap;
+    }
+}

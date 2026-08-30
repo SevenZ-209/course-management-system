@@ -1,10 +1,12 @@
 package com.lmdk.course_management_system.services.impl;
 
+import com.lmdk.course_management_system.dto.admin.answer.BulkAnswerRequest;
 import com.lmdk.course_management_system.pojo.Answer;
 import com.lmdk.course_management_system.pojo.Question;
 import com.lmdk.course_management_system.repository.AnswerRepository;
 import com.lmdk.course_management_system.services.AnswerService;
 
+import com.lmdk.course_management_system.services.QuestionService;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
@@ -19,6 +21,7 @@ import java.util.Map;
 public class AnswerServiceImpl implements AnswerService {
 
     private final AnswerRepository answerRepository;
+    private final QuestionService questionService;
 
     @Override
     public Answer getAnswerById(Integer id) {
@@ -77,6 +80,59 @@ public class AnswerServiceImpl implements AnswerService {
     @Override
     public List<Answer> getAnswers(Map<String, String> params) {
         return answerRepository.getAnswers(params);
+    }
+
+    @Override
+    @Transactional
+    public void addBulk(BulkAnswerRequest request) {
+
+        Question question = questionService.getQuestionById(
+                request.getQuestionId()
+        );
+
+        if(question == null)
+            throw new IllegalArgumentException(
+                    "Không tìm thấy câu hỏi!"
+            );
+
+
+        int correctCount = 0;
+
+
+        for(var item : request.getAnswers()) {
+
+            if(Boolean.TRUE.equals(item.getCorrect()))
+                correctCount++;
+
+        }
+
+
+        if(question.getType() == Question.QuestionType.MULTIPLE_CHOICE
+                && correctCount != 1)
+
+            throw new IllegalArgumentException(
+                    "Câu hỏi trắc nghiệm phải có đúng 1 đáp án đúng!"
+            );
+
+
+        answerRepository.deleteByQuestionId(
+                question.getId()
+        );
+
+
+        for(var item : request.getAnswers()) {
+
+            Answer answer = new Answer();
+
+            answer.setQuestion(question);
+            answer.setContent(item.getContent());
+            answer.setCorrect(item.getCorrect());
+            answer.setOrderNumber(item.getOrderNumber());
+
+            addAnswer(answer);
+
+        }
+
     }
 
     @Override

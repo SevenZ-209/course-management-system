@@ -3,6 +3,8 @@ package com.lmdk.course_management_system.dto.student.course;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 @Data
 @AllArgsConstructor
 public class StudentLessonDetailResponse {
@@ -20,4 +22,9 @@ public class StudentLessonDetailResponse {
 
     private String fileName;
     private String fileUrl;
+
+    private Integer assignmentId;
+    private String assignmentName;
+    private BigDecimal maximumScore;
+    Integer assignedAssignmentId;
 }

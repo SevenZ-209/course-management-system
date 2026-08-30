@@ -1,5 +1,7 @@
 package com.lmdk.course_management_system.services.impl;
 
+import com.lmdk.course_management_system.exceptions.ForbiddenException;
+import com.lmdk.course_management_system.helpers.AssignmentAttemptHelper;
 import com.lmdk.course_management_system.pojo.AssignedAssignment;
 import com.lmdk.course_management_system.pojo.AssignmentAttempt;
 import com.lmdk.course_management_system.pojo.LearningPathDetail;
@@ -19,6 +21,8 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -30,8 +34,7 @@ public class AssignmentAttemptServiceImpl implements AssignmentAttemptService {
     private final QuestionRepository questionRepository;
     private final StudentAnswerRepository studentAnswerRepository;
     private final EnrollmentService enrollmentService;
-    
-
+    private final AssignmentAttemptHelper assignmentAttemptHelper;
 
 
     @Override
@@ -45,6 +48,17 @@ public class AssignmentAttemptServiceImpl implements AssignmentAttemptService {
     }
 
     @Override
+    public Map<Integer, AssignmentAttempt> getLatestAttemptsByAssignedAssignmentIds(List<Integer> assignedAssignmentIds) {
+        return assignmentAttemptRepository
+                .getLatestAttemptsByAssignedAssignmentIds(assignedAssignmentIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        attempt -> attempt.getAssignedAssignment().getId(),
+                        Function.identity()
+                ));
+    }
+
+    @Override
     public AssignmentAttempt getInProgressAttempt(Integer assignedAssignmentId) {
         return assignmentAttemptRepository.getInProgressAttempt(assignedAssignmentId);
     }
@@ -52,7 +66,7 @@ public class AssignmentAttemptServiceImpl implements AssignmentAttemptService {
     @Override
     public AssignmentAttempt startAttempt(Integer assignedAssignmentId, Integer studentId) {
         AssignedAssignment assigned =
-                assignedAssignmentService.getAssignedAssignmentById(assignedAssignmentId);
+                assignedAssignmentService.getAssignedAssignmentByIdForUpdate(assignedAssignmentId);
 
         validateCanStart(assigned, studentId);
 
@@ -72,6 +86,14 @@ public class AssignmentAttemptServiceImpl implements AssignmentAttemptService {
                 ? 1
                 : latest.getAttemptNumber() + 1;
 
+        while (assignmentAttemptRepository
+                .existsAttemptNumber(
+                        assignedAssignmentId,
+                        attemptNumber
+                )) {
+            attemptNumber++;
+        }
+
         AssignmentAttempt attempt = new AssignmentAttempt();
         attempt.setAssignedAssignment(assigned);
         attempt.setAttemptNumber(attemptNumber);
@@ -87,7 +109,7 @@ public class AssignmentAttemptServiceImpl implements AssignmentAttemptService {
     @Override
     public AssignmentAttempt submitAttempt(Integer attemptId, Integer studentId) {
         AssignmentAttempt attempt =
-                assignmentAttemptRepository.getAttemptById(attemptId);
+                assignmentAttemptRepository.getAttemptByIdForUpdate(attemptId);
 
         if (attempt == null)
             throw new IllegalArgumentException("Lần làm bài không tồn tại!");
@@ -95,7 +117,7 @@ public class AssignmentAttemptServiceImpl implements AssignmentAttemptService {
         AssignedAssignment assigned = attempt.getAssignedAssignment();
 
         if (!assigned.getStudent().getId().equals(studentId))
-            throw new IllegalArgumentException(
+            throw new ForbiddenException(
                     "Bạn không có quyền nộp bài làm này!"
             );
 
@@ -109,63 +131,52 @@ public class AssignmentAttemptServiceImpl implements AssignmentAttemptService {
                     "Lần làm bài không có thời gian bắt đầu!"
             );
 
-        validateSubmissionTime(attempt);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime endTime =
+                assignmentAttemptHelper.calculateEndTime(attempt);
+
+        boolean expired =
+                endTime != null && !now.isBefore(endTime);
 
         Integer assignmentId = assigned.getAssignment().getId();
 
         long totalQuestions =
-                questionRepository.getQuestionsByAssignment(assignmentId).size();
+                questionRepository
+                        .getQuestionsByAssignment(assignmentId)
+                        .size();
 
         long totalAnswers =
-                studentAnswerRepository.countStudentAnswersByAttempt(attemptId);
+                studentAnswerRepository
+                        .countStudentAnswersByAttempt(attemptId);
 
-        if (totalAnswers < totalQuestions)
+        if (!expired && totalAnswers < totalQuestions)
             throw new IllegalArgumentException(
                     "Vui lòng trả lời đầy đủ các câu hỏi trước khi nộp bài!"
             );
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime submittedAt =
+                expired && endTime != null
+                        ? endTime
+                        : now;
 
-        attempt.setSubmittedAt(now);
+        attempt.setSubmittedAt(submittedAt);
 
         long duration = Duration.between(
                 attempt.getStartedAt(),
-                now
+                submittedAt
         ).getSeconds();
 
         attempt.setDurationSeconds(
                 Math.toIntExact(Math.max(duration, 0))
         );
 
-        attempt.setStatus(AssignmentAttempt.AttemptStatus.SUBMITTED);
+        attempt.setStatus(
+                AssignmentAttempt.AttemptStatus.SUBMITTED
+        );
 
         assignmentAttemptRepository.updateAttempt(attempt);
 
         return attempt;
-    }
-
-    private void validateSubmissionTime(AssignmentAttempt attempt) {
-        LocalDateTime now = LocalDateTime.now();
-        AssignedAssignment assigned = attempt.getAssignedAssignment();
-
-        if (assigned.getDueAt() != null
-                && now.isAfter(assigned.getDueAt()))
-            throw new IllegalArgumentException(
-                    "Bài tập đã quá hạn nộp!"
-            );
-
-        Integer durationMinutes =
-                assigned.getAssignment().getDurationMinutes();
-
-        if (durationMinutes != null && durationMinutes > 0) {
-            LocalDateTime endTime =
-                    attempt.getStartedAt().plusMinutes(durationMinutes);
-
-            if (now.isAfter(endTime))
-                throw new IllegalArgumentException(
-                        "Đã hết thời gian làm bài!"
-                );
-        }
     }
 
     @Override
@@ -187,24 +198,45 @@ public class AssignmentAttemptServiceImpl implements AssignmentAttemptService {
 
     private void validateCanStart(AssignedAssignment assigned,
                                   Integer studentId) {
+
+        System.out.println("===== START CHECK =====");
+        System.out.println("ASSIGNED = " + assigned);
+        System.out.println("STUDENT ID = " + studentId);
+
         if (assigned == null)
             throw new IllegalArgumentException(
                     "Bài được giao không tồn tại!"
             );
 
         if (!assigned.getStudent().getId().equals(studentId))
-            throw new IllegalArgumentException(
+            throw new ForbiddenException(
                     "Bạn không có quyền làm bài này!"
             );
+
+
 
         Integer courseId =
                 assigned.getAssignment()
                         .getCourse()
                         .getId();
 
-        if (!enrollmentService.existsActiveEnrollmentByStudentAndCourse(
-                studentId,
-                courseId))
+        System.out.println("===== COURSE CHECK =====");
+        System.out.println("COURSE ID = " + courseId);
+        System.out.println("STUDENT ID = " + studentId);
+
+        System.out.println("===== ENROLLMENT CHECK =====");
+        System.out.println("studentId = " + studentId);
+        System.out.println("courseId = " + courseId);
+
+        boolean active =
+                enrollmentService.existsActiveEnrollmentByStudentAndCourse(
+                        studentId,
+                        courseId
+                );
+
+        System.out.println("ENROLLMENT RESULT = " + active);
+
+        if (!active)
             throw new IllegalArgumentException(
                     "Bạn không còn đăng ký hợp lệ với khóa học này!"
             );
@@ -230,20 +262,22 @@ public class AssignmentAttemptServiceImpl implements AssignmentAttemptService {
             );
 
         if (assigned.getStatus()
-                == AssignedAssignment.AssignedStatus.LOCKED) {
-            assignedAssignmentService.updateAvailabilityStatus(
-                    assigned.getId(),
-                    AssignedAssignment.AssignedStatus.AVAILABLE
-            );
-        }
-
-        if (assigned.getStatus()
-                != AssignedAssignment.AssignedStatus.AVAILABLE
-                && assigned.getStatus()
-                != AssignedAssignment.AssignedStatus.LOCKED)
+                != AssignedAssignment.AssignedStatus.AVAILABLE)
             throw new IllegalArgumentException(
-                    "Bài tập hiện không thể thực hiện!"
+                    "Bài tập đang bị khóa!"
             );
+
+
+        System.out.println(
+                "STATUS = " + assigned.getStatus()
+        );
+
+        System.out.println(
+                "COURSE ID = " +
+                        assigned.getAssignment()
+                                .getCourse()
+                                .getId()
+        );
     }
 
     private void validatePreviousAttempt(AssignmentAttempt latest) {

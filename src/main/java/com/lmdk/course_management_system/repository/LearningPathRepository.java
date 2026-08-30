@@ -20,4 +20,6 @@ public interface LearningPathRepository {
     List<LearningPath> getAllLearningPaths();
 
     long countLearningPaths(Map<String, String> params);
+
+    LearningPath getByCourseId(Integer courseId);
 }

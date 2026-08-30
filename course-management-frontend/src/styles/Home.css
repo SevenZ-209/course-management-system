@@ -1,0 +1,228 @@
+.cm-home {
+    padding-bottom: 40px;
+}
+
+.cm-home-header {
+    margin-bottom: 25px;
+}
+
+.cm-home-header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.cm-home-header p {
+    color: #666;
+    margin: 0;
+}
+
+
+.cm-home-search {
+    display: flex;
+    gap: 12px;
+    max-width: 700px;
+    margin-bottom: 25px;
+}
+
+.cm-home-search .form-control {
+    height: 46px;
+    border-radius: 12px;
+    padding: 0 16px;
+}
+
+.cm-home-search .btn {
+    height: 46px;
+    min-width: 120px;
+    border-radius: 12px;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.cm-result-count {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+.cm-filter-box {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding: 18px;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 14px;
+}
+
+.cm-filter-box select {
+    width: 220px;
+    height: 42px;
+    border-radius: 10px;
+}
+
+
+.cm-filter-group span {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+
+.cm-filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+
+.cm-filter-buttons button {
+    border: 1px solid #ddd;
+    background: white;
+    padding: 7px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.2s;
+}
+
+
+.cm-filter-buttons button:hover {
+    border-color: #0d6efd;
+}
+
+
+.cm-filter-buttons button.active {
+    background: #0d6efd;
+    color: white;
+    border-color: #0d6efd;
+}
+
+
+.cm-filter-select {
+    display: flex;
+    gap: 10px;
+}
+
+
+.cm-filter-select select {
+    width: 200px;
+    height: 42px;
+    border-radius: 10px;
+}
+
+
+/* CARD */
+
+.cm-home-card {
+    border: 1px solid #eee;
+    border-radius: 16px;
+    overflow: hidden;
+    transition: 0.2s;
+}
+
+
+.cm-home-card:hover {
+    transform: translateY(-2px);
+}
+
+
+.cm-home-image {
+    width: 100%;
+    height: 190px;
+    object-fit: cover;
+}
+
+
+.cm-home-card .card-body {
+    padding: 20px;
+}
+
+
+.cm-course-tag {
+    display: inline-block;
+    background: #eef4ff;
+    color: #0d6efd;
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 13px;
+    margin-bottom: 12px;
+}
+
+
+.cm-home-card h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+
+.cm-home-card p {
+    color: #666;
+    font-size: 14px;
+    min-height: 45px;
+}
+
+
+.cm-course-footer {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+
+.cm-course-footer strong {
+    font-size: 18px;
+    color: #111;
+}
+
+
+.cm-course-footer .btn {
+    border-radius: 10px;
+    font-size: 14px;
+}
+
+
+/* PAGINATION */
+
+.cm-home-pagination {
+    margin-top: 35px;
+    justify-content: center;
+}
+
+
+/* EMPTY */
+
+.cm-empty {
+    text-align: center;
+    padding: 50px;
+    color: #777;
+}
+
+
+/* MOBILE */
+
+@media(max-width:768px) {
+
+    .cm-home-search {
+        flex-direction: column;
+    }
+
+
+    .cm-filter-box {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+
+    .cm-filter-select {
+        flex-direction: column;
+    }
+
+
+    .cm-filter-select select {
+        width: 100%;
+    }
+
+}

@@ -5,6 +5,7 @@ import com.lmdk.course_management_system.pojo.Enrollment;
 import com.lmdk.course_management_system.repository.AssignmentAttemptRepository;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
@@ -33,6 +34,11 @@ public class AssignmentAttemptRepositoryImpl implements AssignmentAttemptReposit
     @Override
     public AssignmentAttempt getAttemptById(Integer id) {
         return entityManager.find(AssignmentAttempt.class, id);
+    }
+
+    @Override
+    public AssignmentAttempt getAttemptByIdForUpdate(Integer id) {
+        return entityManager.find(AssignmentAttempt.class, id, LockModeType.PESSIMISTIC_WRITE);
     }
 
     @Override
@@ -81,6 +87,36 @@ public class AssignmentAttemptRepositoryImpl implements AssignmentAttemptReposit
     }
 
     @Override
+    public List<AssignmentAttempt> getLatestAttemptsByAssignedAssignmentIds(List<Integer> assignedAssignmentIds) {
+        if (assignedAssignmentIds == null || assignedAssignmentIds.isEmpty())
+            return List.of();
+
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<AssignmentAttempt> cq = cb.createQuery(AssignmentAttempt.class);
+        Root<AssignmentAttempt> root = cq.from(AssignmentAttempt.class);
+
+        root.fetch("assignedAssignment", JoinType.LEFT);
+
+        Subquery<Integer> latestNumber = cq.subquery(Integer.class);
+        Root<AssignmentAttempt> subRoot = latestNumber.from(AssignmentAttempt.class);
+
+        latestNumber.select(cb.max(subRoot.<Integer>get("attemptNumber")))
+                .where(cb.equal(
+                        subRoot.get("assignedAssignment").get("id"),
+                        root.get("assignedAssignment").get("id")
+                ));
+
+        cq.select(root)
+                .distinct(true)
+                .where(
+                        root.get("assignedAssignment").get("id").in(assignedAssignmentIds),
+                        cb.equal(root.get("attemptNumber"), latestNumber)
+                );
+
+        return entityManager.createQuery(cq).getResultList();
+    }
+
+    @Override
     public AssignmentAttempt addAttempt(AssignmentAttempt attempt) {
         entityManager.persist(attempt);
         return attempt;
@@ -103,12 +139,16 @@ public class AssignmentAttemptRepositoryImpl implements AssignmentAttemptReposit
         Fetch<?, ?> assignment = assigned.fetch("assignment", JoinType.LEFT);
         assignment.fetch("course", JoinType.LEFT);
 
-        List<Predicate> predicates = createPredicates(cb, root, params);
+        List<Predicate> predicates = createPredicates(cb, cq, root, params);
 
         cq.select(root)
                 .distinct(true)
-                .where(predicates.toArray(new Predicate[0]))
-                .orderBy(cb.desc(root.get("startedAt")));
+                .where(predicates.toArray(new Predicate[0]));
+
+        if("submittedAtAsc".equals(params.get("order")))
+            cq.orderBy(cb.asc(root.get("submittedAt")));
+        else
+            cq.orderBy(cb.desc(root.get("startedAt")));
 
         TypedQuery<AssignmentAttempt> query = entityManager.createQuery(cq);
         int page = parsePage(params.get("page"));
@@ -141,7 +181,7 @@ public class AssignmentAttemptRepositoryImpl implements AssignmentAttemptReposit
         CriteriaQuery<Long> cq = cb.createQuery(Long.class);
         Root<AssignmentAttempt> root = cq.from(AssignmentAttempt.class);
 
-        List<Predicate> predicates = createPredicates(cb, root, params);
+        List<Predicate> predicates = createPredicates(cb, cq, root, params);
 
         cq.select(cb.count(root))
                 .where(predicates.toArray(new Predicate[0]));
@@ -317,6 +357,7 @@ public class AssignmentAttemptRepositoryImpl implements AssignmentAttemptReposit
     }
 
     private List<Predicate> createPredicates(CriteriaBuilder cb,
+                                             CommonAbstractCriteria query,
                                              Root<AssignmentAttempt> root,
                                              Map<String, String> params) {
         List<Predicate> predicates = new ArrayList<>();
@@ -329,6 +370,7 @@ public class AssignmentAttemptRepositoryImpl implements AssignmentAttemptReposit
         String status = params.get("status");
         String passed = params.get("passed");
         String date = params.get("date");
+        String teacherId = params.get("teacherId");
 
         if (kw != null && !kw.isBlank()) {
             String value = "%" + kw.trim().toLowerCase() + "%";
@@ -352,6 +394,12 @@ public class AssignmentAttemptRepositoryImpl implements AssignmentAttemptReposit
                     cb.like(cb.lower(
                             root.get("assignedAssignment")
                                     .get("assignment")
+                                    .get("name")
+                    ), value),
+                    cb.like(cb.lower(
+                            root.get("assignedAssignment")
+                                    .get("assignment")
+                                    .get("course")
                                     .get("name")
                     ), value)
             ));
@@ -420,6 +468,47 @@ public class AssignmentAttemptRepositoryImpl implements AssignmentAttemptReposit
 
             if ("false".equalsIgnoreCase(passed))
                 predicates.add(cb.isFalse(root.get("passed")));
+        }
+
+        if(teacherId != null && !teacherId.isBlank()) {
+            try {
+                Integer teacherIdValue = Integer.parseInt(teacherId);
+
+                Subquery<Integer> subquery = query.subquery(Integer.class);
+                Root<Enrollment> enrollment = subquery.from(Enrollment.class);
+
+                subquery.select(cb.literal(1))
+                        .where(
+                                cb.equal(
+                                        enrollment.get("student").get("id"),
+                                        root.get("assignedAssignment")
+                                                .get("student")
+                                                .get("id")
+                                ),
+                                cb.equal(
+                                        enrollment.get("courseClass")
+                                                .get("course")
+                                                .get("id"),
+                                        root.get("assignedAssignment")
+                                                .get("assignment")
+                                                .get("course")
+                                                .get("id")
+                                ),
+                                cb.equal(
+                                        enrollment.get("courseClass")
+                                                .get("teacher")
+                                                .get("id"),
+                                        teacherIdValue
+                                ),
+                                cb.equal(
+                                        enrollment.get("status"),
+                                        Enrollment.EnrollmentStatus.ACTIVE
+                                )
+                        );
+
+                predicates.add(cb.exists(subquery));
+            } catch (NumberFormatException ignored) {
+            }
         }
 
         if (date != null && !date.isBlank()) {

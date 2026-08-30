@@ -64,6 +64,30 @@ public class GradingResultRepositoryImpl implements GradingResultRepository {
     }
 
     @Override
+    public List<GradingResult> getGradingResultsByAttemptIds(List<Integer> attemptIds) {
+        if (attemptIds == null || attemptIds.isEmpty())
+            return List.of();
+
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<GradingResult> cq = cb.createQuery(GradingResult.class);
+        Root<GradingResult> root = cq.from(GradingResult.class);
+
+        Fetch<GradingResult, ?> attempt = root.fetch("assignmentAttempt", JoinType.LEFT);
+        Fetch<?, ?> assigned = attempt.fetch("assignedAssignment", JoinType.LEFT);
+
+        assigned.fetch("student", JoinType.LEFT);
+        assigned.fetch("assignment", JoinType.LEFT)
+                .fetch("course", JoinType.LEFT);
+        root.fetch("teacher", JoinType.LEFT);
+
+        cq.select(root)
+                .distinct(true)
+                .where(root.get("assignmentAttempt").get("id").in(attemptIds));
+
+        return entityManager.createQuery(cq).getResultList();
+    }
+
+    @Override
     public GradingResult addGradingResult(GradingResult gradingResult) {
         entityManager.persist(gradingResult);
         return gradingResult;

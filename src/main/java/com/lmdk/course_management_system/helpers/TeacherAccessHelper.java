@@ -1,5 +1,6 @@
 package com.lmdk.course_management_system.helpers;
 
+import com.lmdk.course_management_system.exceptions.ForbiddenException;
 import com.lmdk.course_management_system.pojo.CourseClass;
 import com.lmdk.course_management_system.pojo.User;
 import com.lmdk.course_management_system.services.CourseClassService;
@@ -19,7 +20,7 @@ public class TeacherAccessHelper {
             Integer classId
     ) {
         if(teacher.getRole() != User.UserRole.TEACHER)
-            throw new IllegalArgumentException(
+            throw new ForbiddenException(
                     "Tài khoản không phải giáo viên!"
             );
 
@@ -35,7 +36,7 @@ public class TeacherAccessHelper {
                 || !courseClass.getTeacher()
                 .getId()
                 .equals(teacher.getId()))
-            throw new IllegalArgumentException(
+            throw new ForbiddenException(
                     "Bạn không có quyền truy cập lớp học này!"
             );
 

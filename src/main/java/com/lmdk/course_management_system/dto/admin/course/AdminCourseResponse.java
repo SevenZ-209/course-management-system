@@ -7,6 +7,7 @@ public record AdminCourseResponse(
         String name,
         String description,
         BigDecimal tuitionFee,
+        String imageUrl,
         Integer categoryId,
         String categoryName,
         String status

@@ -97,6 +97,28 @@ public class LearningPathDetailRepositoryImpl implements LearningPathDetailRepos
     }
 
     @Override
+    public List<LearningPathDetail> getDetailsByLearningPaths(List<Integer> learningPathIds) {
+        if(learningPathIds == null || learningPathIds.isEmpty()) return List.of();
+
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<LearningPathDetail> cq = cb.createQuery(LearningPathDetail.class);
+        Root<LearningPathDetail> root = cq.from(LearningPathDetail.class);
+
+        root.fetch("learningPath", JoinType.LEFT);
+        root.fetch("assignment", JoinType.LEFT);
+
+        cq.select(root)
+                .distinct(true)
+                .where(root.get("learningPath").get("id").in(learningPathIds))
+                .orderBy(
+                        cb.asc(root.get("learningPath").get("id")),
+                        cb.asc(root.get("orderNumber"))
+                );
+
+        return entityManager.createQuery(cq).getResultList();
+    }
+
+    @Override
     public long countDetails(Map<String, String> params) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Long> cq = cb.createQuery(Long.class);
@@ -178,25 +200,38 @@ public class LearningPathDetailRepositoryImpl implements LearningPathDetailRepos
 
     @Override
     public LearningPathDetail getNextDetail(Integer learningPathId, Integer currentOrderNumber) {
+
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-        CriteriaQuery<LearningPathDetail> cq = cb.createQuery(LearningPathDetail.class);
-        Root<LearningPathDetail> root = cq.from(LearningPathDetail.class);
+
+        CriteriaQuery<LearningPathDetail> cq =
+                cb.createQuery(LearningPathDetail.class);
+
+        Root<LearningPathDetail> root =
+                cq.from(LearningPathDetail.class);
 
         root.fetch("assignment", JoinType.LEFT);
-        root.fetch("learningPath", JoinType.LEFT);
 
         cq.select(root)
                 .where(
-                        cb.equal(root.get("learningPath").get("id"), learningPathId),
-                        cb.greaterThan(root.get("orderNumber"), currentOrderNumber)
+                        cb.equal(
+                                root.get("learningPath").get("id"),
+                                learningPathId
+                        ),
+                        cb.greaterThan(
+                                root.get("orderNumber"),
+                                currentOrderNumber
+                        )
                 )
-                .orderBy(cb.asc(root.get("orderNumber")));
+                .orderBy(
+                        cb.asc(root.get("orderNumber"))
+                );
 
-        List<LearningPathDetail> results = entityManager.createQuery(cq)
-                .setMaxResults(1)
-                .getResultList();
+        List<LearningPathDetail> result =
+                entityManager.createQuery(cq)
+                        .setMaxResults(1)
+                        .getResultList();
 
-        return results.isEmpty() ? null : results.get(0);
+        return result.isEmpty() ? null : result.get(0);
     }
 
     private List<Predicate> createPredicates(CriteriaBuilder cb,

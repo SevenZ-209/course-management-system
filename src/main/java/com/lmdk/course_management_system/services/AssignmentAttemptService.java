@@ -11,6 +11,8 @@ public interface AssignmentAttemptService {
 
     AssignmentAttempt getLatestAttempt(Integer assignedAssignmentId);
 
+    Map<Integer, AssignmentAttempt> getLatestAttemptsByAssignedAssignmentIds(List<Integer> assignedAssignmentIds);
+
     AssignmentAttempt getInProgressAttempt(Integer assignedAssignmentId);
 
     AssignmentAttempt startAttempt(Integer assignedAssignmentId, Integer studentId);

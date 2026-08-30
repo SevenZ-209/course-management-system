@@ -17,6 +17,8 @@ public interface LearningPathDetailRepository {
 
     List<LearningPathDetail> getDetailsByLearningPath(Integer learningPathId);
 
+    List<LearningPathDetail> getDetailsByLearningPaths(List<Integer> learningPathIds);
+
     long countDetails(Map<String, String> params);
 
     boolean existsOrderNumber(Integer learningPathId, Integer orderNumber);

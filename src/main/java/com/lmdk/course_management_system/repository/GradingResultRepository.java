@@ -11,6 +11,8 @@ public interface GradingResultRepository {
 
     GradingResult getGradingResultByAttempt(Integer attemptId);
 
+    List<GradingResult> getGradingResultsByAttemptIds(List<Integer> attemptIds);
+
     GradingResult addGradingResult(GradingResult gradingResult);
 
     void updateGradingResult(GradingResult gradingResult);

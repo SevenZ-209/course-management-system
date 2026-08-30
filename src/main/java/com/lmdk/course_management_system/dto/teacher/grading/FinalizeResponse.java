@@ -8,7 +8,7 @@ public record FinalizeResponse(
         BigDecimal autoScore,
         BigDecimal essayScore,
         BigDecimal totalScore,
-        boolean passed,
+        Boolean passed,
         String status
 ) {
 }

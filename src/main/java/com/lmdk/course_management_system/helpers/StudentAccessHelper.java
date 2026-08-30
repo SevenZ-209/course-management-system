@@ -1,5 +1,6 @@
 package com.lmdk.course_management_system.helpers;
 
+import com.lmdk.course_management_system.exceptions.ForbiddenException;
 import com.lmdk.course_management_system.pojo.Enrollment;
 import com.lmdk.course_management_system.services.EnrollmentService;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,7 @@ public class StudentAccessHelper {
 
     public void requireActiveCourse(Integer studentId, Integer courseId) {
         if(!enrollmentService.existsActiveEnrollmentByStudentAndCourse(studentId, courseId))
-            throw new IllegalArgumentException(
+            throw new ForbiddenException(
                     "Bạn chưa được kích hoạt trong khóa học này!"
             );
     }
@@ -25,7 +26,7 @@ public class StudentAccessHelper {
             throw new IllegalArgumentException("Đăng ký không tồn tại!");
 
         if(!enrollment.getStudent().getId().equals(studentId))
-            throw new IllegalArgumentException(
+            throw new ForbiddenException(
                     "Bạn không có quyền xem khóa học này!"
             );
 

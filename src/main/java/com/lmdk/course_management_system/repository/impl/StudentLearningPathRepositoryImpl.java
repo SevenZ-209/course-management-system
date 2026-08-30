@@ -4,6 +4,7 @@ import com.lmdk.course_management_system.pojo.StudentLearningPath;
 import com.lmdk.course_management_system.repository.StudentLearningPathRepository;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
@@ -55,6 +56,32 @@ public class StudentLearningPathRepositoryImpl implements StudentLearningPathRep
 
         try {
             return entityManager.createQuery(cq).getSingleResult();
+        } catch (NoResultException ex) {
+            return null;
+        }
+    }
+
+    @Override
+    public StudentLearningPath getStudentLearningPathForUpdate(Integer studentId, Integer learningPathId) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<StudentLearningPath> cq = cb.createQuery(StudentLearningPath.class);
+        Root<StudentLearningPath> root = cq.from(StudentLearningPath.class);
+
+        root.fetch("student", JoinType.LEFT);
+        root.fetch("learningPath", JoinType.LEFT).fetch("course", JoinType.LEFT);
+        root.fetch("currentDetail", JoinType.LEFT).fetch("assignment", JoinType.LEFT);
+
+        cq.select(root)
+                .distinct(true)
+                .where(
+                        cb.equal(root.get("student").get("id"), studentId),
+                        cb.equal(root.get("learningPath").get("id"), learningPathId)
+                );
+
+        try {
+            return entityManager.createQuery(cq)
+                    .setLockMode(LockModeType.PESSIMISTIC_WRITE)
+                    .getSingleResult();
         } catch (NoResultException ex) {
             return null;
         }
@@ -116,6 +143,30 @@ public class StudentLearningPathRepositoryImpl implements StudentLearningPathRep
         cq.select(root)
                 .distinct(true)
                 .where(cb.equal(root.get("student").get("id"), studentId))
+                .orderBy(cb.desc(root.get("startedAt")));
+
+        return entityManager.createQuery(cq).getResultList();
+    }
+
+    @Override
+    public List<StudentLearningPath> getStudentLearningPathsByStudentsAndCourse(
+            List<Integer> studentIds, Integer courseId) {
+        if(studentIds == null || studentIds.isEmpty()) return List.of();
+
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<StudentLearningPath> cq = cb.createQuery(StudentLearningPath.class);
+        Root<StudentLearningPath> root = cq.from(StudentLearningPath.class);
+
+        root.fetch("student", JoinType.LEFT);
+        root.fetch("learningPath", JoinType.LEFT).fetch("course", JoinType.LEFT);
+        root.fetch("currentDetail", JoinType.LEFT).fetch("assignment", JoinType.LEFT);
+
+        cq.select(root)
+                .distinct(true)
+                .where(
+                        root.get("student").get("id").in(studentIds),
+                        cb.equal(root.get("learningPath").get("course").get("id"), courseId)
+                )
                 .orderBy(cb.desc(root.get("startedAt")));
 
         return entityManager.createQuery(cq).getResultList();

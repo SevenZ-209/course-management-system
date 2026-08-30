@@ -8,13 +8,21 @@ import org.springframework.stereotype.Component;
 @Component
 public class PaymentTransactionMapper {
 
-    public PaymentTransactionResponse toResponse(
-            PaymentTransaction transaction
-    ) {
+    public PaymentTransactionResponse toResponse(PaymentTransaction transaction) {
+        var enrollment = transaction.getEnrollment();
+        var courseClass = enrollment.getCourseClass();
+        var course = courseClass.getCourse();
 
         return new PaymentTransactionResponse(
                 transaction.getId(),
-                transaction.getEnrollment().getId(),
+                enrollment.getId(),
+
+                course.getId(),
+                course.getName(),
+
+                courseClass.getId(),
+                courseClass.getName(),
+
                 transaction.getAmount(),
                 transaction.getPaymentMethod(),
                 transaction.getTransactionCode(),

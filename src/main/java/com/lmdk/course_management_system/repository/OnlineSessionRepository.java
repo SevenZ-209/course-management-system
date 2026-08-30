@@ -17,6 +17,8 @@ public interface OnlineSessionRepository {
 
     List<OnlineSession> getSessionsByClass(Integer classId);
 
+    List<OnlineSession> getEndedSessionsByStudent(Integer studentId);
+
     long countSessions(Map<String, String> params);
 
     List<OnlineSession> getAllSessions();

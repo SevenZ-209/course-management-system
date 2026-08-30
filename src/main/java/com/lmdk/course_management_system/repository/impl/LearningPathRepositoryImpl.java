@@ -8,6 +8,7 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.*;
 
+import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -115,6 +116,34 @@ public class LearningPathRepositoryImpl implements LearningPathRepository {
                 .where(predicates.toArray(new Predicate[0]));
 
         return entityManager.createQuery(cq).getSingleResult();
+    }
+
+    @Override
+    public LearningPath getByCourseId(Integer courseId) {
+
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+
+        CriteriaQuery<LearningPath> cq =
+                cb.createQuery(LearningPath.class);
+
+        Root<LearningPath> root =
+                cq.from(LearningPath.class);
+
+        cq.select(root)
+                .where(
+                        cb.equal(
+                                root.get("course").get("id"),
+                                courseId
+                        )
+                );
+
+        List<LearningPath> result =
+                entityManager.createQuery(cq)
+                        .getResultList();
+
+        return result.isEmpty()
+                ? null
+                : result.get(0);
     }
 
     private List<Predicate> createPredicates(CriteriaBuilder cb,

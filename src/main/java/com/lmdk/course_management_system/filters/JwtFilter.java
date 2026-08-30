@@ -1,5 +1,7 @@
 package com.lmdk.course_management_system.filters;
 
+import com.lmdk.course_management_system.pojo.User;
+import com.lmdk.course_management_system.services.UserService;
 import com.lmdk.course_management_system.utils.JwtUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -20,6 +22,7 @@ import java.util.List;
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
+    private final UserService userService;
 
     @Override
     protected void doFilterInternal(
@@ -43,46 +46,36 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         try {
-            String email =
-                    jwtUtils.validateTokenAndGetEmail(token);
+            String username = jwtUtils.validateTokenAndGetUsername(token);
 
-            if(email == null || email.isBlank()) {
+            if(username == null || username.isBlank()) {
                 unauthorized(response);
                 return;
             }
 
-            if(SecurityContextHolder
-                    .getContext()
-                    .getAuthentication() == null) {
+            if(SecurityContextHolder.getContext().getAuthentication() == null) {
+                User user = userService.getUserByUsername(username);
 
-                String role =
-                        jwtUtils.getRoleFromToken(token);
-
-                if(role == null || role.isBlank()) {
+                if(user == null || user.getStatus() != User.UserStatus.ACTIVE) {
                     unauthorized(response);
                     return;
                 }
 
                 SimpleGrantedAuthority authority =
-                        new SimpleGrantedAuthority(
-                                "ROLE_" + role.trim().toUpperCase()
-                        );
+                        new SimpleGrantedAuthority("ROLE_" + user.getRole().name());
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
-                                email,
+                                user.getUsername(),
                                 null,
                                 List.of(authority)
                         );
 
-                SecurityContextHolder
-                        .getContext()
-                        .setAuthentication(authentication);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
             }
 
             filterChain.doFilter(request, response);
-
-        } catch(Exception e) {
+        } catch(Exception ex) {
             SecurityContextHolder.clearContext();
             unauthorized(response);
         }

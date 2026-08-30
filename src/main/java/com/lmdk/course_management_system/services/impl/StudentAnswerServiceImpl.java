@@ -1,5 +1,6 @@
 package com.lmdk.course_management_system.services.impl;
 
+import com.lmdk.course_management_system.exceptions.ForbiddenException;
 import com.lmdk.course_management_system.pojo.Answer;
 import com.lmdk.course_management_system.pojo.AssignedAssignment;
 import com.lmdk.course_management_system.pojo.AssignmentAttempt;
@@ -198,7 +199,7 @@ public class StudentAnswerServiceImpl implements StudentAnswerService {
                 .getStudent()
                 .getId()
                 .equals(studentId))
-            throw new IllegalArgumentException(
+            throw new ForbiddenException(
                     "Bạn không có quyền chỉnh sửa bài làm này!"
             );
 

@@ -1,11 +1,14 @@
 package com.lmdk.course_management_system.controllers.api.teacher;
 
+import com.lmdk.course_management_system.dto.teacher.assignment.TeacherAssignedAssignmentPageResponse;
 import com.lmdk.course_management_system.dto.teacher.assignment.TeacherAssignedAssignmentResponse;
 import com.lmdk.course_management_system.dto.teacher.assignment.TeacherAvailableAssignmentResponse;
 import com.lmdk.course_management_system.dto.teacher.assignment.TeacherManualAssignmentRequest;
 import com.lmdk.course_management_system.dto.teacher.assignment.TeacherReleaseCurrentAssignmentRequest;
 import com.lmdk.course_management_system.dto.teacher.classinfo.TeacherClassResponse;
+import com.lmdk.course_management_system.dto.teacher.classinfo.TeacherStudentProgressPageResponse;
 import com.lmdk.course_management_system.dto.teacher.classinfo.TeacherStudentProgressResponse;
+import com.lmdk.course_management_system.dto.teacher.classinfo.TeacherStudentPageResponse;
 import com.lmdk.course_management_system.dto.teacher.classinfo.TeacherStudentResponse;
 import com.lmdk.course_management_system.dto.teacher.session.TeacherOnlineSessionResponse;
 import com.lmdk.course_management_system.helpers.CurrentUserHelper;
@@ -13,15 +16,24 @@ import com.lmdk.course_management_system.helpers.TeacherAccessHelper;
 import com.lmdk.course_management_system.mappers.teacher.*;
 import com.lmdk.course_management_system.pojo.*;
 import com.lmdk.course_management_system.services.*;
+import com.lmdk.course_management_system.dto.teacher.attendance.BulkUpdateTeacherAttendanceRequest;
 import com.lmdk.course_management_system.dto.teacher.attendance.TeacherAttendanceResponse;
+import com.lmdk.course_management_system.dto.teacher.attendance.UpdateTeacherAttendanceItemRequest;
 import com.lmdk.course_management_system.dto.teacher.attendance.UpdateTeacherAttendanceRequest;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/teacher/classes")
@@ -46,6 +58,12 @@ public class ApiTeacherClassController {
     private final TeacherStudentMapper teacherStudentMapper;
     private final AttendanceService attendanceService;
     private final TeacherAttendanceMapper teacherAttendanceMapper;
+
+    @Value("${enrollments.page-size:10}")
+    private int enrollmentPageSize;
+
+    @Value("${assigned-assignments.page-size:10}")
+    private int assignedAssignmentPageSize;
 
     @GetMapping
     public List<TeacherClassResponse> getMyClasses(
@@ -82,6 +100,28 @@ public class ApiTeacherClassController {
                 .toList();
     }
 
+    @GetMapping("/{classId}")
+    public TeacherClassResponse getClass(
+            @PathVariable Integer classId,
+            Authentication authentication
+    ) {
+        User teacher = currentUserHelper.getCurrentUser(authentication);
+
+        CourseClass courseClass = teacherAccessHelper.requireTeacherClass(
+                teacher,
+                classId
+        );
+
+        Integer studentCount = enrollmentService
+                .getActiveEnrollmentsByClass(classId)
+                .size();
+
+        return teacherClassMapper.toResponse(
+                courseClass,
+                studentCount
+        );
+    }
+
     @GetMapping("/{classId}/sessions/{sessionId}/attendance")
     public List<TeacherAttendanceResponse> getAttendance(
             @PathVariable Integer classId,
@@ -104,26 +144,80 @@ public class ApiTeacherClassController {
                         classId
                 );
 
+        Map<Integer, Attendance> attendanceByStudentId = new HashMap<>();
+        for (Attendance attendance : attendanceService.getAttendancesBySession(session.getId()))
+            attendanceByStudentId.put(attendance.getStudent().getId(), attendance);
+
         return enrollmentService
                 .getActiveEnrollmentsByClass(classId)
                 .stream()
                 .map(enrollment -> {
-
-                    User student =
-                            enrollment.getStudent();
-
-                    Attendance attendance =
-                            attendanceService.getAttendance(
-                                    session.getId(),
-                                    student.getId()
-                            );
-
-                    return teacherAttendanceMapper
-                            .toResponse(
-                                    student,
-                                    attendance
-                            );
+                    User student = enrollment.getStudent();
+                    return teacherAttendanceMapper.toResponse(
+                            student,
+                            attendanceByStudentId.get(student.getId())
+                    );
                 })
+                .toList();
+    }
+
+    @PutMapping("/{classId}/sessions/{sessionId}/attendance")
+    public List<TeacherAttendanceResponse> updateAttendances(
+            @PathVariable Integer classId,
+            @PathVariable Integer sessionId,
+            @RequestBody BulkUpdateTeacherAttendanceRequest request,
+            Authentication authentication
+    ) {
+        User teacher = currentUserHelper.getCurrentUser(authentication);
+        teacherAccessHelper.requireTeacherClass(teacher, classId);
+        OnlineSession session = requireSessionInClass(sessionId, classId);
+
+        if (request == null || request.attendances() == null || request.attendances().isEmpty())
+            throw new IllegalArgumentException("Không có thay đổi điểm danh cần lưu!");
+
+        Map<Integer, User> studentsById = new HashMap<>();
+        for (Enrollment enrollment : enrollmentService.getActiveEnrollmentsByClass(classId))
+            studentsById.put(enrollment.getStudent().getId(), enrollment.getStudent());
+
+        Map<Integer, Attendance> existingByStudentId = new HashMap<>();
+        for (Attendance attendance : attendanceService.getAttendancesBySession(sessionId))
+            existingByStudentId.put(attendance.getStudent().getId(), attendance);
+
+        Set<Integer> requestedStudentIds = new HashSet<>();
+        List<Attendance> changes = new ArrayList<>();
+
+        for (UpdateTeacherAttendanceItemRequest item : request.attendances()) {
+            if (item.studentId() == null || item.present() == null)
+                throw new IllegalArgumentException("Dữ liệu điểm danh không hợp lệ!");
+
+            if (!requestedStudentIds.add(item.studentId()))
+                throw new IllegalArgumentException("Danh sách điểm danh có học viên bị trùng!");
+
+            User student = studentsById.get(item.studentId());
+            if (student == null)
+                throw new IllegalArgumentException("Học viên không thuộc lớp học này hoặc chưa được kích hoạt!");
+
+            Attendance attendance = existingByStudentId.get(item.studentId());
+            if (attendance == null) {
+                attendance = new Attendance();
+                attendance.setOnlineSession(session);
+                attendance.setStudent(student);
+            }
+
+            attendance.setPresent(item.present());
+            attendance.setNote(item.note() == null || item.note().isBlank() ? null : item.note().trim());
+            changes.add(attendance);
+        }
+
+        Map<Integer, Attendance> savedByStudentId = new HashMap<>();
+        for (Attendance attendance : attendanceService.saveAttendances(changes, classId, sessionId))
+            savedByStudentId.put(attendance.getStudent().getId(), attendance);
+
+        return request.attendances().stream()
+                .map(item -> teacherAttendanceMapper.toResponse(
+                        studentsById.get(item.studentId()),
+                        savedByStudentId.get(item.studentId())
+                ))
                 .toList();
     }
 
@@ -313,38 +407,60 @@ public class ApiTeacherClassController {
     }
 
     @GetMapping("/{classId}/assignments")
-    public List<TeacherAssignedAssignmentResponse> getAssignments(
+    public TeacherAssignedAssignmentPageResponse getAssignments(
             @PathVariable Integer classId,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(required = false) String kw,
+            @RequestParam(required = false) Integer studentId,
+            @RequestParam(required = false) Integer learningPathId,
+            @RequestParam(required = false) Integer assignmentId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String source,
+            @RequestParam(required = false) String date,
             Authentication authentication
     ) {
-        User teacher =
-                currentUserHelper.getCurrentUser(
-                        authentication
+        User teacher = currentUserHelper.getCurrentUser(authentication);
+        teacherAccessHelper.requireTeacherClass(teacher, classId);
+
+        page = Math.max(page, 1);
+        Map<String, String> params = new HashMap<>();
+        params.put("page", String.valueOf(page));
+        params.put("classId", String.valueOf(classId));
+
+        if(kw != null && !kw.isBlank()) params.put("kw", kw.trim());
+        if(studentId != null) params.put("studentId", String.valueOf(studentId));
+        if(learningPathId != null) params.put("learningPathId", String.valueOf(learningPathId));
+        if(assignmentId != null) params.put("assignmentId", String.valueOf(assignmentId));
+        if(status != null && !status.isBlank()) params.put("status", status.trim().toUpperCase());
+        if(source != null && !source.isBlank()) params.put("source", source.trim().toUpperCase());
+        if(date != null && !date.isBlank()) params.put("date", date.trim());
+
+        long totalRecords = assignedAssignmentService.countAssignedAssignments(params);
+        int totalPages = Math.max((int) Math.ceil((double) totalRecords / assignedAssignmentPageSize), 1);
+
+        if(page > totalPages) {
+            page = totalPages;
+            params.put("page", String.valueOf(page));
+        }
+
+        List<AssignedAssignment> assignedAssignments =
+                assignedAssignmentService.getAssignedAssignments(params);
+
+        Map<Integer, AssignmentAttempt> latestAttempts = assignmentAttemptService
+                .getLatestAttemptsByAssignedAssignmentIds(
+                        assignedAssignments.stream().map(AssignedAssignment::getId).toList()
                 );
 
-        teacherAccessHelper.requireTeacherClass(
-                teacher,
-                classId
-        );
-
-        return assignedAssignmentService
-                .getAssignedAssignmentsByClass(classId)
+        List<TeacherAssignedAssignmentResponse> assignments = assignedAssignments
                 .stream()
-                .map(assigned -> {
-
-                    AssignmentAttempt latest =
-                            assignmentAttemptService
-                                    .getLatestAttempt(
-                                            assigned.getId()
-                                    );
-
-                    return teacherAssignedAssignmentMapper
-                            .toResponse(
-                                    assigned,
-                                    latest
-                            );
-                })
+                .map(assigned -> teacherAssignedAssignmentMapper.toResponse(
+                        assigned, latestAttempts.get(assigned.getId())
+                ))
                 .toList();
+
+        return new TeacherAssignedAssignmentPageResponse(
+                assignments, page, totalPages, totalRecords
+        );
     }
 
     @PostMapping(
@@ -450,87 +566,114 @@ public class ApiTeacherClassController {
     }
 
     @GetMapping("/{classId}/students")
-    public List<TeacherStudentResponse> getStudents(
+    public TeacherStudentPageResponse getStudents(
             @PathVariable Integer classId,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(required = false) String kw,
             Authentication authentication
     ) {
-        User teacher =
-                currentUserHelper.getCurrentUser(
-                        authentication
-                );
+        User teacher = currentUserHelper.getCurrentUser(authentication);
+        teacherAccessHelper.requireTeacherClass(teacher, classId);
 
-        teacherAccessHelper.requireTeacherClass(
-                teacher,
-                classId
+        page = Math.max(page, 1);
+        Map<String, String> params = new HashMap<>();
+        params.put("page", String.valueOf(page));
+        params.put("classId", String.valueOf(classId));
+        params.put("status", Enrollment.EnrollmentStatus.ACTIVE.name());
+        if(kw != null && !kw.isBlank()) params.put("kw", kw.trim());
+
+        long totalRecords = enrollmentService.countEnrollments(params);
+        int totalPages = Math.max((int) Math.ceil((double) totalRecords / enrollmentPageSize), 1);
+
+        if(page > totalPages) {
+            page = totalPages;
+            params.put("page", String.valueOf(page));
+        }
+
+        return new TeacherStudentPageResponse(
+                enrollmentService.getEnrollments(params)
+                        .stream()
+                        .map(teacherStudentMapper::toResponse)
+                        .toList(),
+                page,
+                totalPages,
+                totalRecords
         );
-
-        return enrollmentService
-                .getActiveEnrollmentsByClass(classId)
-                .stream()
-                .map(teacherStudentMapper::toResponse)
-                .toList();
     }
 
     @GetMapping("/{classId}/progress")
-    public List<TeacherStudentProgressResponse> getStudentProgress(
+    public TeacherStudentProgressPageResponse getStudentProgress(
             @PathVariable Integer classId,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(required = false) String kw,
+            @RequestParam(required = false) String status,
             Authentication authentication
     ) {
+        User teacher = currentUserHelper.getCurrentUser(authentication);
+        CourseClass courseClass = teacherAccessHelper.requireTeacherClass(teacher, classId);
+        Integer courseId = courseClass.getCourse().getId();
 
-        User teacher =
-                currentUserHelper.getCurrentUser(
-                        authentication
-                );
+        page = Math.max(page, 1);
+        Map<String, String> params = new HashMap<>();
+        params.put("page", String.valueOf(page));
+        params.put("classId", String.valueOf(classId));
+        params.put("status", Enrollment.EnrollmentStatus.ACTIVE.name());
+        if(kw != null && !kw.isBlank()) params.put("kw", kw.trim());
+        if(status != null && !status.isBlank()) {
+            params.put("progressCourseId", String.valueOf(courseId));
+            params.put("progressStatus", status.trim().toUpperCase());
+        }
 
-        CourseClass courseClass =
-                teacherAccessHelper.requireTeacherClass(
-                        teacher,
-                        classId
-                );
+        long totalRecords = enrollmentService.countEnrollments(params);
+        int totalPages = Math.max((int) Math.ceil((double) totalRecords / enrollmentPageSize), 1);
 
-        Integer courseId =
-                courseClass.getCourse().getId();
+        if(page > totalPages) {
+            page = totalPages;
+            params.put("page", String.valueOf(page));
+        }
 
-        return enrollmentService
-                .getActiveEnrollmentsByClass(classId)
+        List<Enrollment> enrollments = enrollmentService.getEnrollments(params);
+        List<Integer> studentIds = enrollments.stream()
+                .map(enrollment -> enrollment.getStudent().getId())
+                .toList();
+
+        Map<Integer, StudentLearningPath> progressByStudent = new HashMap<>();
+        studentLearningPathService
+                .getStudentLearningPathsByStudentsAndCourse(studentIds, courseId)
+                .forEach(progress -> progressByStudent
+                        .putIfAbsent(progress.getStudent().getId(), progress));
+
+        List<Integer> learningPathIds = progressByStudent.values().stream()
+                .map(progress -> progress.getLearningPath().getId())
+                .distinct()
+                .toList();
+
+        Map<Integer, List<LearningPathDetail>> detailsByPath = learningPathDetailService
+                .getDetailsByLearningPaths(learningPathIds)
                 .stream()
+                .collect(Collectors.groupingBy(
+                        detail -> detail.getLearningPath().getId()
+                ));
+
+        List<TeacherStudentProgressResponse> progress = enrollments.stream()
                 .map(enrollment -> {
-
-                    User student =
-                            enrollment.getStudent();
-
-                    StudentLearningPath progress =
-                            studentLearningPathService
-                                    .getStudentLearningPathsByStudent(
-                                            student.getId()
-                                    )
-                                    .stream()
-                                    .filter(p ->
-                                            p.getLearningPath()
-                                                    .getCourse()
-                                                    .getId()
-                                                    .equals(courseId)
-                                    )
-                                    .findFirst()
-                                    .orElse(null);
-
-                    List<LearningPathDetail> details =
-                            progress == null
-                                    ? List.of()
-                                    : learningPathDetailService
-                                      .getDetailsByLearningPath(
-                                              progress.getLearningPath()
-                                              .getId()
-                                      );
-
-                    return teacherStudentProgressMapper
-                            .toResponse(
-                                    student,
-                                    progress,
-                                    details
+                    User student = enrollment.getStudent();
+                    StudentLearningPath studentProgress = progressByStudent.get(student.getId());
+                    List<LearningPathDetail> details = studentProgress == null
+                            ? List.of()
+                            : detailsByPath.getOrDefault(
+                                    studentProgress.getLearningPath().getId(), List.of()
                             );
+
+                    return teacherStudentProgressMapper.toResponse(
+                            student, studentProgress, details
+                    );
                 })
                 .toList();
+
+        return new TeacherStudentProgressPageResponse(
+                progress, page, totalPages, totalRecords
+        );
     }
 
     private OnlineSession requireSessionInClass(

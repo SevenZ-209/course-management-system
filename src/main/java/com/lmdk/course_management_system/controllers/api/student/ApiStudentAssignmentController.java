@@ -8,10 +8,15 @@ import com.lmdk.course_management_system.services.*;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/student/assignments")
@@ -25,25 +30,61 @@ public class ApiStudentAssignmentController {
     private final AnswerService answerService;
     private final GradingResultService gradingResultService;
     private final StudentLearningPathService studentLearningPathService;
-
+    private final EnrollmentService enrollmentService;
     private final CurrentUserHelper currentUserHelper;
     private final StudentAccessHelper studentAccessHelper;
     private final AssignedAssignmentHelper assignedAssignmentHelper;
     private final AssignmentAttemptHelper assignmentAttemptHelper;
     private final StudentAssignmentMapper studentAssignmentMapper;
 
+    @Value("${assigned-assignments.page-size:10}")
+    private int assignedAssignmentPageSize;
+
     @GetMapping
-    public List<AssignedAssignmentResponse> getAssignments(
+    public StudentAssignmentPageResponse getAssignments(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(required = false) String kw,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Integer courseId,
             Authentication authentication
     ) {
-        User student =
-                currentUserHelper.getCurrentStudent(authentication);
+        User student = currentUserHelper.getCurrentStudent(authentication);
 
-        return assignedAssignmentService
-                .getAssignedAssignmentsByStudent(student.getId())
+        page = Math.max(page, 1);
+        Map<String, String> params = new HashMap<>();
+        params.put("page", String.valueOf(page));
+        params.put("studentId", String.valueOf(student.getId()));
+
+        if(kw != null && !kw.isBlank()) params.put("kw", kw.trim());
+        if(status != null && !status.isBlank()) params.put("status", status.trim().toUpperCase());
+        if(courseId != null) params.put("courseId", String.valueOf(courseId));
+
+        long totalRecords = assignedAssignmentService.countAssignedAssignments(params);
+        int totalPages = Math.max((int) Math.ceil((double) totalRecords / assignedAssignmentPageSize), 1);
+
+        if(page > totalPages) {
+            page = totalPages;
+            params.put("page", String.valueOf(page));
+        }
+
+        List<AssignedAssignment> assignedAssignments =
+                assignedAssignmentService.getAssignedAssignments(params);
+
+        Map<Integer, AssignmentAttempt> latestAttempts = assignmentAttemptService
+                .getLatestAttemptsByAssignedAssignmentIds(
+                        assignedAssignments.stream().map(AssignedAssignment::getId).toList()
+                );
+
+        List<AssignedAssignmentResponse> assignments = assignedAssignments
                 .stream()
-                .map(this::mapAssignedAssignment)
+                .map(assigned -> mapAssignedAssignment(
+                        assigned, latestAttempts.get(assigned.getId())
+                ))
                 .toList();
+
+        return new StudentAssignmentPageResponse(
+                assignments, page, totalPages, totalRecords
+        );
     }
 
     @GetMapping("/current")
@@ -152,12 +193,6 @@ public class ApiStudentAssignmentController {
                 student.getId()
         );
 
-        if(attempt.getStatus()
-                != AssignmentAttempt.AttemptStatus.IN_PROGRESS)
-            throw new IllegalArgumentException(
-                    "Bài làm không còn ở trạng thái đang thực hiện!"
-            );
-
         Assignment assignment =
                 attempt.getAssignedAssignment()
                         .getAssignment();
@@ -188,9 +223,20 @@ public class ApiStudentAssignmentController {
                         })
                         .toList();
 
+        Integer enrollmentId = enrollmentService
+                .getActiveEnrollmentsByStudent(student.getId())
+                .stream()
+                .filter(enrollment -> enrollment.getCourseClass() != null
+                        && enrollment.getCourseClass().getCourse() != null
+                        && enrollment.getCourseClass().getCourse().getId().equals(assignment.getCourse().getId()))
+                .map(Enrollment::getId)
+                .findFirst()
+                .orElse(null);
+
         return studentAssignmentMapper
                 .toAttemptDetailResponse(
                         attempt,
+                        enrollmentId,
                         questions
                 );
     }
@@ -225,23 +271,11 @@ public class ApiStudentAssignmentController {
         User student =
                 currentUserHelper.getCurrentStudent(authentication);
 
-        AssignmentAttempt attempt =
-                assignmentAttemptService.submitAttempt(
-                        attemptId,
-                        student.getId()
-                );
+        GradingResult result = gradingResultService
+                .submitAndProcessAttempt(attemptId, student.getId());
 
-        GradingResult result =
-                gradingResultService
-                        .processSubmittedAttempt(
-                                attempt.getId()
-                        );
-
-        AssignmentAttempt updated =
-                assignmentAttemptService
-                        .getAttemptById(
-                                attempt.getId()
-                        );
+        AssignmentAttempt updated = assignmentAttemptService
+                .getAttemptById(attemptId);
 
         return studentAssignmentMapper
                 .toSubmitResponse(
@@ -281,24 +315,22 @@ public class ApiStudentAssignmentController {
     private AssignedAssignmentResponse mapAssignedAssignment(
             AssignedAssignment assigned
     ) {
-        AssignmentAttempt latest =
-                assignmentAttemptService
-                        .getLatestAttempt(
-                                assigned.getId()
-                        );
+        return mapAssignedAssignment(
+                assigned,
+                assignmentAttemptService.getLatestAttempt(assigned.getId())
+        );
+    }
 
-        boolean canStart =
-                assignedAssignmentHelper
-                        .canStart(
-                                assigned,
-                                latest
-                        );
+    private AssignedAssignmentResponse mapAssignedAssignment(
+            AssignedAssignment assigned,
+            AssignmentAttempt latest
+    ) {
+        boolean canStart = assignedAssignmentHelper.canStart(assigned, latest);
 
-        return studentAssignmentMapper
-                .toAssignedResponse(
-                        assigned,
-                        latest,
-                        canStart
-                );
+        return studentAssignmentMapper.toAssignedResponse(
+                assigned,
+                latest,
+                canStart
+        );
     }
 }

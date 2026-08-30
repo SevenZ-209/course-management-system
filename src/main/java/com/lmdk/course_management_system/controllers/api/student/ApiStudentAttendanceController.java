@@ -5,6 +5,7 @@ import com.lmdk.course_management_system.helpers.CurrentUserHelper;
 import com.lmdk.course_management_system.mappers.student.StudentAttendanceMapper;
 import com.lmdk.course_management_system.pojo.Attendance;
 import com.lmdk.course_management_system.pojo.Enrollment;
+import com.lmdk.course_management_system.pojo.OnlineSession;
 import com.lmdk.course_management_system.pojo.User;
 import com.lmdk.course_management_system.services.AttendanceService;
 import com.lmdk.course_management_system.services.EnrollmentService;
@@ -15,7 +16,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/student/classes")
@@ -56,23 +59,21 @@ public class ApiStudentAttendanceController {
                     "Bạn chưa được kích hoạt trong lớp học này!"
             );
 
-        return onlineSessionService
-                .getSessionsByClass(classId)
-                .stream()
-                .map(session -> {
+        List<OnlineSession> sessions =
+                onlineSessionService.getSessionsByClass(classId);
 
-                    Attendance attendance =
-                            attendanceService.getAttendance(
-                                    session.getId(),
-                                    student.getId()
-                            );
+        Map<Integer, Attendance> attendanceBySessionId = new HashMap<>();
+        for (Attendance attendance : attendanceService.getAttendancesByStudentAndSessionIds(
+                student.getId(),
+                sessions.stream().map(OnlineSession::getId).toList()
+        ))
+            attendanceBySessionId.put(attendance.getOnlineSession().getId(), attendance);
 
-                    return studentAttendanceMapper
-                            .toResponse(
-                                    session,
-                                    attendance
-                            );
-                })
+        return sessions.stream()
+                .map(session -> studentAttendanceMapper.toResponse(
+                        session,
+                        attendanceBySessionId.get(session.getId())
+                ))
                 .toList();
     }
 }

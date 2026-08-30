@@ -1,5 +1,6 @@
 package com.lmdk.course_management_system.services;
 
+import com.lmdk.course_management_system.dto.admin.answer.BulkAnswerRequest;
 import com.lmdk.course_management_system.pojo.Answer;
 
 import java.util.List;
@@ -20,4 +21,6 @@ public interface AnswerService {
     List<Answer> getCorrectAnswersByQuestion(Integer questionId);
 
     long countAnswers(Map<String, String> params);
+
+    void addBulk(BulkAnswerRequest request);
 }

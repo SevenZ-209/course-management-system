@@ -1,6 +1,7 @@
 package com.lmdk.course_management_system.controllers.api.common;
 
 import com.lmdk.course_management_system.dto.enrollment.EnrollmentRequest;
+import com.lmdk.course_management_system.exceptions.ForbiddenException;
 import com.lmdk.course_management_system.dto.enrollment.EnrollmentResponse;
 import com.lmdk.course_management_system.helpers.CurrentUserHelper;
 import com.lmdk.course_management_system.mappers.common.EnrollmentMapper;
@@ -10,6 +11,7 @@ import com.lmdk.course_management_system.pojo.User;
 import com.lmdk.course_management_system.services.CourseClassService;
 import com.lmdk.course_management_system.services.EnrollmentService;
 
+import com.lmdk.course_management_system.services.StudentLearningPathService;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.security.core.Authentication;
@@ -26,6 +28,7 @@ public class ApiEnrollmentController {
     private final CourseClassService classService;
     private final CurrentUserHelper currentUserHelper;
     private final EnrollmentMapper enrollmentMapper;
+    private final StudentLearningPathService studentLearningPathService;
 
     @PostMapping
     public EnrollmentResponse enroll(
@@ -76,7 +79,7 @@ public class ApiEnrollmentController {
         if(!enrollment.getStudent()
                 .getId()
                 .equals(student.getId()))
-            throw new IllegalArgumentException(
+            throw new ForbiddenException(
                     "Bạn không có quyền xem đăng ký này!"
             );
 

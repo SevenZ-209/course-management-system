@@ -9,6 +9,8 @@ public interface CourseClassRepository {
 
     CourseClass getClassById(Integer id);
 
+    CourseClass getClassByIdForUpdate(Integer id);
+
     CourseClass addClass(CourseClass courseClass);
 
     void updateClass(CourseClass courseClass);

@@ -191,4 +191,50 @@ public class CloudinaryServiceImpl implements CloudinaryService {
                     "File tải lên không phải hình ảnh hợp lệ!"
             );
     }
+
+    @Override
+    public CloudinaryUploadResult uploadCourseImage(MultipartFile file) {
+        validateImage(file);
+
+        try {
+            Map<?, ?> result = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                            "resource_type", "image",
+                            "folder", "course-management/courses",
+                            "use_filename", true,
+                            "unique_filename", true
+                    )
+            );
+
+            return new CloudinaryUploadResult(
+                    result.get("public_id").toString(),
+                    result.get("secure_url").toString(),
+                    file.getOriginalFilename()
+            );
+        } catch(Exception ex) {
+            throw new IllegalArgumentException(
+                    "Không thể tải ảnh khóa học lên Cloudinary!"
+            );
+        }
+    }
+
+    @Override
+    public void deleteCourseImage(String publicId) {
+        if(publicId == null || publicId.isBlank()) return;
+
+        try {
+            cloudinary.uploader().destroy(
+                    publicId,
+                    ObjectUtils.asMap(
+                            "resource_type", "image",
+                            "invalidate", true
+                    )
+            );
+        } catch(Exception ex) {
+            throw new IllegalArgumentException(
+                    "Không thể xóa ảnh khóa học trên Cloudinary!"
+            );
+        }
+    }
 }

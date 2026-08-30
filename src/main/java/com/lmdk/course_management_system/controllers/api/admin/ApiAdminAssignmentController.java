@@ -4,9 +4,11 @@ import com.lmdk.course_management_system.dto.admin.assignment.*;
 import com.lmdk.course_management_system.mappers.admin.AdminAssignmentMapper;
 import com.lmdk.course_management_system.pojo.Assignment;
 import com.lmdk.course_management_system.pojo.Course;
+import com.lmdk.course_management_system.pojo.Lesson;
 import com.lmdk.course_management_system.services.AssignmentService;
 import com.lmdk.course_management_system.services.CourseService;
 
+import com.lmdk.course_management_system.services.LessonService;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -24,6 +26,7 @@ public class ApiAdminAssignmentController {
     private final AssignmentService assignmentService;
     private final CourseService courseService;
     private final AdminAssignmentMapper adminAssignmentMapper;
+    private final LessonService lessonService;
 
     @Value("${assignments.page-size:10}")
     private int pageSize;
@@ -83,11 +86,16 @@ public class ApiAdminAssignmentController {
 
     @GetMapping("/options")
     public List<AdminAssignmentOptionResponse> getOptions(
-            @RequestParam Integer courseId
+            @RequestParam(required = false) Integer courseId
     ) {
-        return assignmentService
-                .getAssignmentsByCourse(courseId)
-                .stream()
+
+        List<Assignment> assignments =
+                courseId == null
+                        ? assignmentService.getAllAssignments()
+                        : assignmentService.getAssignmentsByCourse(courseId);
+
+
+        return assignments.stream()
                 .map(assignment ->
                         new AdminAssignmentOptionResponse(
                                 assignment.getId(),
@@ -135,6 +143,18 @@ public class ApiAdminAssignmentController {
         assignment.setStatus(
                 Assignment.AssignmentStatus.ACTIVE
         );
+
+        Lesson lesson =
+                lessonService.getLessonById(
+                        request.lessonId()
+                );
+
+        if (lesson == null)
+            throw new IllegalArgumentException(
+                    "Bài học không tồn tại!"
+            );
+
+        assignment.setLesson(lesson);
 
         assignmentService.addAssignment(assignment);
 

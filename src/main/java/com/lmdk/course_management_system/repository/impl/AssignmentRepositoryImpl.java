@@ -67,6 +67,30 @@ public class AssignmentRepositoryImpl implements AssignmentRepository {
     }
 
     @Override
+    public boolean existsByLessonId(Integer lessonId) {
+
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+
+        CriteriaQuery<Long> cq = cb.createQuery(Long.class);
+
+        Root<Assignment> root = cq.from(Assignment.class);
+
+        cq.select(cb.count(root))
+                .where(
+                        cb.equal(
+                                root.get("lesson").get("id"),
+                                lessonId
+                        )
+                );
+
+        Long count = entityManager
+                .createQuery(cq)
+                .getSingleResult();
+
+        return count > 0;
+    }
+
+    @Override
     public List<Assignment> getAssignmentsByCourse(Integer courseId) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Assignment> cq = cb.createQuery(Assignment.class);

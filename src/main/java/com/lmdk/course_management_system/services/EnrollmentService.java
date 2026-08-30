@@ -9,6 +9,8 @@ public interface EnrollmentService {
 
     Enrollment getEnrollmentById(Integer id);
 
+    Enrollment getEnrollmentByIdForUpdate(Integer id);
+
     Enrollment getEnrollment(Integer studentId, Integer classId);
 
     Enrollment addEnrollment(Enrollment enrollment);
@@ -37,4 +39,5 @@ public interface EnrollmentService {
 
     List<Enrollment> getEnrollmentsByStudent(Integer studentId);
 
+    long countOccupiedByClass(Integer classId);
 }

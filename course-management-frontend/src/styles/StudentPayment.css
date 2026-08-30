@@ -1,0 +1,297 @@
+.cm-payment-page {
+    min-height: calc(100vh - 78px);
+    padding: 45px 20px 80px;
+    background: var(--cm-surface);
+}
+
+
+.cm-payment-container {
+    max-width: 1100px;
+    margin: auto;
+}
+
+
+.cm-payment-heading {
+    margin-bottom: 30px;
+}
+
+
+.cm-payment-heading span {
+    color: var(--cm-primary);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+
+.cm-payment-heading h1 {
+    margin: 8px 0;
+    font-size: 32px;
+    font-weight: 800;
+}
+
+
+.cm-payment-heading p {
+    margin:0;
+    color:var(--cm-text-soft);
+}
+
+
+
+.cm-payment-card {
+    height:auto;
+    border:none !important;
+    border-radius:18px !important;
+    background:white;
+    box-shadow:0 5px 20px rgba(0,0,0,.05);
+}
+
+
+.cm-payment-card .card-body {
+    padding:28px;
+}
+
+
+.cm-payment-card h5 {
+    margin-bottom:22px;
+    font-size:18px;
+    font-weight:700;
+}
+
+
+
+.cm-payment-course {
+    display:flex;
+    align-items:center;
+    gap:20px;
+}
+
+
+.cm-payment-course img {
+    width:170px;
+    height:105px;
+    object-fit:cover;
+    border-radius:14px;
+}
+
+
+.cm-payment-course small {
+    color:var(--cm-primary);
+    font-size:12px;
+    font-weight:700;
+}
+
+
+.cm-payment-course h3 {
+    margin:8px 0;
+    font-size:22px;
+    font-weight:800;
+}
+
+
+.cm-payment-course p {
+    margin:0;
+    color:var(--cm-text-soft);
+}
+
+
+
+.cm-payment-info {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:15px;
+    margin-top:25px;
+}
+
+
+.cm-payment-info div {
+    background:var(--cm-surface-low);
+    padding:16px;
+    border-radius:14px;
+}
+
+
+.cm-payment-info span,
+.cm-payment-total span,
+.cm-transaction-box span {
+    display:block;
+    color:var(--cm-text-soft);
+    font-size:12px;
+    margin-bottom:5px;
+}
+
+
+.cm-payment-info strong {
+    font-size:14px;
+}
+
+
+
+.cm-payment-total {
+    background:var(--cm-primary-soft);
+    padding:22px;
+    border-radius:16px;
+}
+
+
+.cm-payment-total strong {
+    display:block;
+    margin-top:5px;
+    color:var(--cm-primary-dark);
+    font-size:30px;
+}
+
+
+
+.cm-payment-card .form-label {
+    font-weight:600;
+}
+
+
+.cm-payment-card .form-select,
+.cm-payment-card .form-control {
+    border-radius:12px;
+    padding:11px 14px;
+}
+
+
+.cm-payment-card button {
+    border-radius:12px;
+    padding:12px;
+    font-weight:700;
+}
+
+
+
+/* SUCCESS */
+
+.cm-payment-success {
+    max-width:650px;
+    margin:50px auto;
+    padding:45px;
+    background:white;
+    border-radius:22px;
+    text-align:center;
+    box-shadow:0 8px 25px rgba(0,0,0,.06);
+}
+
+
+.cm-payment-result-icon {
+    width:70px;
+    height:70px;
+    margin:auto;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:50%;
+    background:var(--cm-primary-soft);
+    color:var(--cm-primary);
+    font-size:35px;
+    font-weight:800;
+}
+
+
+.cm-payment-success span {
+    display:block;
+    margin-top:20px;
+    color:var(--cm-primary);
+    font-size:12px;
+    font-weight:800;
+}
+
+
+.cm-payment-success h2 {
+    margin:10px 0;
+    font-weight:800;
+}
+
+
+.cm-payment-success p {
+    color:var(--cm-text-soft);
+}
+
+
+
+.cm-transaction-box {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:15px;
+    margin:30px 0;
+}
+
+
+.cm-transaction-box div {
+    padding:16px;
+    border-radius:14px;
+    background:var(--cm-surface-low);
+    text-align:left;
+}
+
+
+.cm-transaction-box strong {
+    font-size:14px;
+}
+
+.cm-status {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:6px 14px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:700;
+}
+
+
+.cm-status.pending {
+    background:#fff0c2;
+    color:#9a6700;
+    border:1px solid #ffd666;
+}
+
+
+.cm-status.success {
+    background:#dff7ef;
+    color:#00796b;
+    border:1px solid #9ee6d3;
+}
+
+
+.cm-status.failed {
+    background:#ffe5e5;
+    color:#c62828;
+    border:1px solid #ffb3b3;
+}
+
+
+@media(max-width:767px){
+
+    .cm-payment-page {
+        padding:35px 15px;
+    }
+
+
+    .cm-payment-course {
+        flex-direction:column;
+        align-items:flex-start;
+    }
+
+
+    .cm-payment-course img {
+        width:100%;
+        height:auto;
+    }
+
+
+    .cm-payment-info,
+    .cm-transaction-box {
+        grid-template-columns:1fr;
+    }
+
+
+    .cm-payment-success {
+        padding:30px 20px;
+    }
+
+    
+
+}

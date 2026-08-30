@@ -18,6 +18,14 @@ public class AdminAssignmentMapper {
                 assignment.getCourse().getId(),
                 assignment.getCourse().getName(),
 
+                assignment.getLesson() != null
+                        ? assignment.getLesson().getId()
+                        : null,
+
+                assignment.getLesson() != null
+                        ? assignment.getLesson().getName()
+                        : null,
+
                 assignment.getType().name(),
                 assignment.getMaximumScore(),
                 assignment.getDurationMinutes(),

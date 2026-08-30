@@ -15,5 +15,9 @@ public class StudentModuleResponse {
 
     private Integer orderNumber;
 
+    private boolean locked;
+
+    private String status;
+
     private List<StudentLessonResponse> lessons;
 }

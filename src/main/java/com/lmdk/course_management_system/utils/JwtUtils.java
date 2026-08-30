@@ -8,6 +8,7 @@ import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -22,137 +23,62 @@ public class JwtUtils {
     @Value("${jwt.expiration}")
     private long expirationMs;
 
-    public String generateToken(
-            String email,
-            String role
-    ) throws Exception {
-
+    public String generateToken(String username, String role) throws Exception {
         JWSSigner signer = new MACSigner(secret);
-
         Date now = new Date();
+        Date expirationDate = new Date(now.getTime() + expirationMs);
 
-        Date expirationDate =
-                new Date(
-                        now.getTime() + expirationMs
-                );
+        JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                .subject(username)
+                .claim("role", role)
+                .issueTime(now)
+                .expirationTime(expirationDate)
+                .build();
 
-        JWTClaimsSet claimsSet =
-                new JWTClaimsSet.Builder()
-                        .subject(email)
-                        .claim("role", role)
-                        .issueTime(now)
-                        .expirationTime(expirationDate)
-                        .build();
-
-        SignedJWT signedJWT =
-                new SignedJWT(
-                        new JWSHeader(
-                                JWSAlgorithm.HS256
-                        ),
-                        claimsSet
-                );
-
+        SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claimsSet);
         signedJWT.sign(signer);
 
         return signedJWT.serialize();
     }
 
-    public String validateTokenAndGetEmail(
-            String token
-    ) throws Exception {
+    public String validateTokenAndGetUsername(String token) throws Exception {
+        SignedJWT signedJWT = SignedJWT.parse(token);
+        JWSVerifier verifier = new MACVerifier(secret);
 
-        SignedJWT signedJWT =
-                SignedJWT.parse(token);
-
-        JWSVerifier verifier =
-                new MACVerifier(secret);
-
-        // Kiểm tra chữ ký
-        boolean validSignature =
-                signedJWT.verify(verifier);
-
-        if (!validSignature) {
+        if(!signedJWT.verify(verifier))
             return null;
-        }
 
-        JWTClaimsSet claims =
-                signedJWT.getJWTClaimsSet();
+        JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
+        Date expiration = claims.getExpirationTime();
 
-        Date expiration =
-                claims.getExpirationTime();
-
-        // Token không có expiration
-        if (expiration == null) {
+        if(expiration == null || expiration.before(new Date()))
             return null;
-        }
 
-        // Token đã hết hạn
-        if (expiration.before(new Date())) {
+        String username = claims.getSubject();
+
+        if(username == null || username.isBlank())
             return null;
-        }
 
-        // Lấy email từ subject
-        return claims.getSubject();
+        return username;
     }
 
-    /**
-     * Lấy role từ token.
-     *
-     * Ví dụ:
-     * HOC_VIEN
-     * GIAO_VIEN
-     * QUAN_LY
-     * ADMIN
-     * PHU_HUYNH
-     *
-     * @param token JWT token
-     * @return role
-     */
-    public String getRoleFromToken(
-            String token
-    ) throws Exception {
-
-        SignedJWT signedJWT =
-                SignedJWT.parse(token);
-
-        return signedJWT
-                .getJWTClaimsSet()
-                .getStringClaim("role");
-    }
-
-    /**
-     * Lấy email từ token.
-     * Hàm này chỉ đọc dữ liệu,
-     * không thực hiện validate token.
-     */
-    public String getEmailFromToken(
-            String token
-    ) throws Exception {
-
-        SignedJWT signedJWT =
-                SignedJWT.parse(token);
-
-        return signedJWT
+    public String getUsernameFromToken(String token) throws Exception {
+        return SignedJWT.parse(token)
                 .getJWTClaimsSet()
                 .getSubject();
     }
 
-    /**
-     * Kiểm tra token còn hợp lệ hay không.
-     */
-    public boolean isTokenValid(
-            String token
-    ) {
+    public String getRoleFromToken(String token) throws Exception {
+        return SignedJWT.parse(token)
+                .getJWTClaimsSet()
+                .getStringClaim("role");
+    }
 
+    public boolean isTokenValid(String token) {
         try {
-
-            String email =
-                    validateTokenAndGetEmail(token);
-
-            return email != null
-                    && !email.isBlank();
-
-        } catch (Exception e) {
+            String username = validateTokenAndGetUsername(token);
+            return username != null && !username.isBlank();
+        } catch(Exception ex) {
             return false;
         }
     }

@@ -19,7 +19,7 @@ public class AssignedAssignmentHelper {
             AssignedAssignment assigned,
             AssignmentAttempt latest
     ) {
-        if(assigned.getStatus() == AssignedAssignment.AssignedStatus.COMPLETED)
+        if(assigned.getStatus() != AssignedAssignment.AssignedStatus.AVAILABLE)
             return false;
 
         Integer studentId = assigned.getStudent().getId();

@@ -3,8 +3,8 @@ package com.lmdk.course_management_system.configs;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import com.lmdk.course_management_system.filters.JwtFilter;
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -19,10 +19,16 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 @Configuration
-@RequiredArgsConstructor
 public class SpringSecurityConfigs {
 
-    private final JwtFilter jwtFilter;
+    @Value("${cloudinary.cloud-name:${CLOUDINARY_CLOUD_NAME:}}")
+    private String cloudinaryCloudName;
+
+    @Value("${cloudinary.api-key:${CLOUDINARY_API_KEY:}}")
+    private String cloudinaryApiKey;
+
+    @Value("${cloudinary.api-secret:${CLOUDINARY_API_SECRET:}}")
+    private String cloudinaryApiSecret;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -30,35 +36,34 @@ public class SpringSecurityConfigs {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            JwtFilter jwtFilter
+    ) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
                 .authorizeHttpRequests(auth -> auth
-
                         .requestMatchers(
                                 "/admin/login",
                                 "/login",
                                 "/css/**",
                                 "/js/**"
                         ).permitAll()
-                        .requestMatchers("/api/auth/**")
-                        .permitAll()
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/courses/**", "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/payment-transactions").hasRole("STUDENT")
+                        .requestMatchers(HttpMethod.GET, "/api/payment-transactions/me").hasRole("STUDENT")
+                        .requestMatchers(HttpMethod.GET, "/api/payment-transactions/*").hasAnyRole("STUDENT", "ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/payment-transactions/**").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers("/api/teacher/**")
-                        .hasAnyRole("TEACHER", "MANAGER", "ADMIN")
-                        .requestMatchers("/api/student/**")
-                        .hasRole("STUDENT")
-                        .requestMatchers("/api/parent/**")
-                        .hasRole("PARENT")
-                        .requestMatchers("/api/admin/**")
-                        .hasRole("ADMIN")
-                        .requestMatchers("/admin/**")
-                        .hasRole("ADMIN")
-
-                        .anyRequest()
-                        .authenticated()
+                        .requestMatchers("/api/teacher/grading/**").hasAnyRole("TEACHER", "MANAGER", "ADMIN")
+                        .requestMatchers("/api/teacher/classes/**").hasRole("TEACHER")
+                        .requestMatchers("/api/teacher/**").hasRole("TEACHER")
+                        .requestMatchers("/api/student/**").hasRole("STUDENT")
+                        .requestMatchers("/api/parent/**").hasRole("PARENT")
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex
                         .defaultAuthenticationEntryPointFor(
@@ -103,13 +108,17 @@ public class SpringSecurityConfigs {
 
     @Bean
     public Cloudinary cloudinary() {
-        Cloudinary cloudinary
-                = new Cloudinary(ObjectUtils.asMap(
-                "cloud_name", "dgpiotsmt",
-                "api_key", "641336261286631",
-                "api_secret", "9IM8MLY8s6Y4Pj6deAJZv6_FhJU",
-                "secure", true));
-        return cloudinary;
+        if(cloudinaryCloudName == null || cloudinaryCloudName.isBlank()
+                || cloudinaryApiKey == null || cloudinaryApiKey.isBlank()
+                || cloudinaryApiSecret == null || cloudinaryApiSecret.isBlank())
+            throw new IllegalStateException();
+
+        return new Cloudinary(ObjectUtils.asMap(
+                "cloud_name", cloudinaryCloudName,
+                "api_key", cloudinaryApiKey,
+                "api_secret", cloudinaryApiSecret,
+                "secure", true
+        ));
     }
 
     @Bean

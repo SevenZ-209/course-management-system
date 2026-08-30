@@ -5,6 +5,7 @@ public record TeacherStudentProgressResponse(
         String studentName,
         String username,
 
+        Integer studentLearningPathId,
         Integer learningPathId,
         String learningPathName,
         String learningPathStatus,

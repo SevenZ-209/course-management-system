@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -54,8 +55,21 @@ public class CourseRepositoryImpl implements CourseRepository {
 
         cq.select(root)
                 .distinct(true)
-                .where(predicates.toArray(new Predicate[0]))
-                .orderBy(cb.desc(root.get("id")));
+                .where(predicates.toArray(new Predicate[0]));
+
+        String sort = params.get("sort");
+
+        if("priceAsc".equals(sort))
+            cq.orderBy(cb.asc(root.get("tuitionFee")));
+
+        else if("priceDesc".equals(sort))
+            cq.orderBy(cb.desc(root.get("tuitionFee")));
+
+        else if("nameAsc".equals(sort))
+            cq.orderBy(cb.asc(root.get("name")));
+
+        else
+            cq.orderBy(cb.desc(root.get("id")));
 
         TypedQuery<Course> query = entityManager.createQuery(cq);
 
@@ -100,6 +114,8 @@ public class CourseRepositoryImpl implements CourseRepository {
         String kw = params.get("kw");
         String categoryId = params.get("categoryId");
         String status = params.get("status");
+        String minPrice = params.get("minPrice");
+        String maxPrice = params.get("maxPrice");
 
         if (kw != null && !kw.isBlank()) {
             String value = "%" + kw.trim().toLowerCase() + "%";
@@ -118,6 +134,24 @@ public class CourseRepositoryImpl implements CourseRepository {
                 ));
             } catch (NumberFormatException ignored) {
             }
+        }
+
+        if(minPrice != null && !minPrice.isBlank()) {
+            predicates.add(
+                    cb.greaterThanOrEqualTo(
+                            root.get("tuitionFee"),
+                            new BigDecimal(minPrice)
+                    )
+            );
+        }
+
+        if(maxPrice != null && !maxPrice.isBlank()) {
+            predicates.add(
+                    cb.lessThanOrEqualTo(
+                            root.get("tuitionFee"),
+                            new BigDecimal(maxPrice)
+                    )
+            );
         }
 
         if (status != null && !status.isBlank()) {

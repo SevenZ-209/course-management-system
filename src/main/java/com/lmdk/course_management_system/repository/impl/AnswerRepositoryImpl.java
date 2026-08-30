@@ -2,6 +2,7 @@ package com.lmdk.course_management_system.repository.impl;
 
 import com.lmdk.course_management_system.pojo.Answer;
 import com.lmdk.course_management_system.repository.AnswerRepository;
+import com.lmdk.course_management_system.pojo.Question;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -11,6 +12,7 @@ import jakarta.persistence.criteria.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -69,6 +71,22 @@ public class AnswerRepositoryImpl implements AnswerRepository {
         query.setMaxResults(pageSize);
 
         return query.getResultList();
+    }
+
+    @Override
+    public void deleteByQuestionId(Integer questionId) {
+
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+
+        CriteriaDelete<Answer> cd = cb.createCriteriaDelete(Answer.class);
+
+        Root<Answer> root = cd.from(Answer.class);
+
+        cd.where(
+                cb.equal(root.get("question").get("id"), questionId)
+        );
+
+        entityManager.createQuery(cd).executeUpdate();
     }
 
     @Override
@@ -239,8 +257,10 @@ public class AnswerRepositoryImpl implements AnswerRepository {
         if (type != null && !type.isBlank()) {
             try {
                 predicates.add(cb.equal(
-                        root.get("type"),
-                        Answer.AnswerType.valueOf(type)
+                        root.get("question").get("type"),
+                        Question.QuestionType.valueOf(
+                                type.trim().toUpperCase()
+                        )
                 ));
             } catch (IllegalArgumentException ignored) {
             }

@@ -45,6 +45,11 @@ public class OnlineSessionServiceImpl implements OnlineSessionService {
     }
 
     @Override
+    public List<OnlineSession> getEndedSessionsByStudent(Integer studentId) {
+        return sessionRepository.getEndedSessionsByStudent(studentId);
+    }
+
+    @Override
     public long countSessions(Map<String, String> params) {
         return sessionRepository.countSessions(params);
     }

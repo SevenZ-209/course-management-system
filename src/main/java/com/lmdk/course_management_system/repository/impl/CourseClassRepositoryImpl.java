@@ -4,6 +4,7 @@ import com.lmdk.course_management_system.pojo.CourseClass;
 import com.lmdk.course_management_system.repository.CourseClassRepository;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.*;
@@ -29,6 +30,11 @@ public class CourseClassRepositoryImpl implements CourseClassRepository {
     @Override
     public CourseClass getClassById(Integer id) {
         return entityManager.find(CourseClass.class, id);
+    }
+
+    @Override
+    public CourseClass getClassByIdForUpdate(Integer id) {
+        return entityManager.find(CourseClass.class, id, LockModeType.PESSIMISTIC_WRITE);
     }
 
     @Override

@@ -35,6 +35,9 @@ public class LearningPathDetail {
     @Column(name = "minimum_score", precision = 5, scale = 2, nullable = false)
     private BigDecimal minimumScore = BigDecimal.ZERO;
 
+    @Column(name = "minimum_time_seconds")
+    private Integer minimumTimeSeconds = 0;
+
     @Column(name = "max_attempts", nullable = false)
     private Integer maxAttempts = 1;
 }

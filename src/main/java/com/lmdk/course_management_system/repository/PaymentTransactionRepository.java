@@ -9,6 +9,8 @@ public interface PaymentTransactionRepository {
 
     PaymentTransaction getTransactionById(Integer id);
 
+    PaymentTransaction getTransactionByIdForUpdate(Integer id);
+
     PaymentTransaction getTransactionByCode(String transactionCode);
 
     PaymentTransaction addTransaction(PaymentTransaction transaction);
@@ -26,4 +28,6 @@ public interface PaymentTransactionRepository {
     boolean existsSuccessfulTransaction(Integer enrollmentId);
 
     boolean existsSuccessfulTransactionExceptId(Integer enrollmentId, Integer transactionId);
+
+    List<PaymentTransaction> getTransactionsByStudent(Integer studentId);
 }

@@ -76,6 +76,11 @@ public class LearningPathDetailServiceImpl implements LearningPathDetailService 
     }
 
     @Override
+    public List<LearningPathDetail> getDetailsByLearningPaths(List<Integer> learningPathIds) {
+        return detailRepository.getDetailsByLearningPaths(learningPathIds);
+    }
+
+    @Override
     public long countDetails(Map<String, String> params) {
         return detailRepository.countDetails(params);
     }
@@ -119,5 +124,17 @@ public class LearningPathDetailServiceImpl implements LearningPathDetailService 
                 learningPathId,
                 currentOrderNumber
         );
+    }
+
+    @Override
+    public LearningPathDetail getFirstDetail(Integer learningPathId) {
+
+        List<LearningPathDetail> details =
+                getDetailsByLearningPath(learningPathId);
+
+        if(details.isEmpty())
+            return null;
+
+        return details.get(0);
     }
 }

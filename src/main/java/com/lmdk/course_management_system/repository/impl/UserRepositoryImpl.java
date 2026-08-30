@@ -4,6 +4,7 @@ import com.lmdk.course_management_system.pojo.User;
 import com.lmdk.course_management_system.repository.UserRepository;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
@@ -30,6 +31,11 @@ public class UserRepositoryImpl implements UserRepository {
     @Override
     public User getUserById(Integer id) {
         return entityManager.find(User.class, id);
+    }
+
+    @Override
+    public User getUserByIdForUpdate(Integer id) {
+        return entityManager.find(User.class, id, LockModeType.PESSIMISTIC_WRITE);
     }
 
     @Override

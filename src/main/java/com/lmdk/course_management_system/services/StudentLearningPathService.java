@@ -1,6 +1,10 @@
 package com.lmdk.course_management_system.services;
 
+import com.lmdk.course_management_system.dto.student.assignment.CourseAssignmentResponse;
+import com.lmdk.course_management_system.pojo.Assignment;
+import com.lmdk.course_management_system.pojo.Course;
 import com.lmdk.course_management_system.pojo.StudentLearningPath;
+import com.lmdk.course_management_system.pojo.User;
 
 import java.util.List;
 import java.util.Map;
@@ -21,6 +25,8 @@ public interface StudentLearningPathService {
 
     List<StudentLearningPath> getStudentLearningPathsByStudent(Integer studentId);
 
+    List<StudentLearningPath> getStudentLearningPathsByStudentsAndCourse(List<Integer> studentIds, Integer courseId);
+
     List<StudentLearningPath> getStudentLearningPathsByLearningPath(Integer learningPathId);
 
     long countStudentLearningPaths(Map<String, String> params);
@@ -31,4 +37,17 @@ public interface StudentLearningPathService {
             Integer studentId,
             Integer learningPathDetailId
     );
+
+    Assignment getCurrentAssignment(Integer studentId, Integer courseId);
+
+    void createStudentLearningPath(User student, Course course);
+
+    boolean canAccessLesson(Integer studentId, Integer lessonId);
+
+    List<CourseAssignmentResponse> getCourseAssignments(
+            Integer studentId,
+            Integer courseId
+    );
+
+
 }

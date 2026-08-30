@@ -1,5 +1,6 @@
 package com.lmdk.course_management_system.helpers;
 
+import com.lmdk.course_management_system.exceptions.ForbiddenException;
 import com.lmdk.course_management_system.pojo.AssignmentAttempt;
 
 import org.springframework.stereotype.Component;
@@ -41,14 +42,14 @@ public class AssignmentAttemptHelper {
                 : dueAt;
     }
 
-    public long calculateRemainingSeconds(
+    public Long calculateRemainingSeconds(
             AssignmentAttempt attempt
     ) {
         LocalDateTime endTime =
                 calculateEndTime(attempt);
 
         if(endTime == null)
-            return -1;
+            return null;
 
         long seconds = Duration.between(
                 LocalDateTime.now(),
@@ -71,7 +72,7 @@ public class AssignmentAttemptHelper {
                 .getStudent()
                 .getId()
                 .equals(studentId))
-            throw new IllegalArgumentException(
+            throw new ForbiddenException(
                     "Bạn không có quyền truy cập bài làm này!"
             );
     }

@@ -1,5 +1,6 @@
 package com.lmdk.course_management_system.repository.impl;
 
+import com.lmdk.course_management_system.pojo.Enrollment;
 import com.lmdk.course_management_system.pojo.OnlineSession;
 import com.lmdk.course_management_system.repository.OnlineSessionRepository;
 
@@ -54,12 +55,16 @@ public class OnlineSessionRepositoryImpl implements OnlineSessionRepository {
                 .fetch("course", JoinType.LEFT);
         root.fetch("teacher", JoinType.LEFT);
 
-        List<Predicate> predicates = createPredicates(cb, root, params);
+        List<Predicate> predicates = createPredicates(cb, cq, root, params);
 
         cq.select(root)
                 .distinct(true)
-                .where(predicates.toArray(new Predicate[0]))
-                .orderBy(cb.desc(root.get("startTime")));
+                .where(predicates.toArray(new Predicate[0]));
+
+        if ("asc".equalsIgnoreCase(params.get("sort")))
+            cq.orderBy(cb.asc(root.get("startTime")));
+        else
+            cq.orderBy(cb.desc(root.get("startTime")));
 
         TypedQuery<OnlineSession> query = entityManager.createQuery(cq);
         int page = parsePage(params.get("page"));
@@ -86,12 +91,45 @@ public class OnlineSessionRepositoryImpl implements OnlineSessionRepository {
     }
 
     @Override
+    public List<OnlineSession> getEndedSessionsByStudent(Integer studentId) {
+        if (studentId == null)
+            return List.of();
+
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<OnlineSession> cq = cb.createQuery(OnlineSession.class);
+        Root<OnlineSession> root = cq.from(OnlineSession.class);
+
+        Subquery<Integer> subquery = cq.subquery(Integer.class);
+        Root<Enrollment> enrollment = subquery.from(Enrollment.class);
+
+        subquery.select(cb.literal(1))
+                .where(
+                        cb.equal(enrollment.get("student").get("id"), studentId),
+                        cb.equal(enrollment.get("status"), Enrollment.EnrollmentStatus.ACTIVE),
+                        cb.equal(
+                                enrollment.get("courseClass").get("id"),
+                                root.get("courseClass").get("id")
+                        )
+                );
+
+        cq.select(root)
+                .where(
+                        cb.exists(subquery),
+                        cb.isNotNull(root.get("endTime")),
+                        cb.lessThan(root.get("endTime"), LocalDateTime.now())
+                )
+                .orderBy(cb.asc(root.get("startTime")));
+
+        return entityManager.createQuery(cq).getResultList();
+    }
+
+    @Override
     public long countSessions(Map<String, String> params) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Long> cq = cb.createQuery(Long.class);
         Root<OnlineSession> root = cq.from(OnlineSession.class);
 
-        List<Predicate> predicates = createPredicates(cb, root, params);
+        List<Predicate> predicates = createPredicates(cb, cq, root, params);
 
         cq.select(cb.count(root))
                 .where(predicates.toArray(new Predicate[0]));
@@ -113,14 +151,20 @@ public class OnlineSessionRepositoryImpl implements OnlineSessionRepository {
         return entityManager.createQuery(cq).getResultList();
     }
 
-    private List<Predicate> createPredicates(CriteriaBuilder cb, Root<OnlineSession> root,
+    private List<Predicate> createPredicates(CriteriaBuilder cb,
+                                             CriteriaQuery<?> query,
+                                             Root<OnlineSession> root,
                                              Map<String, String> params) {
         List<Predicate> predicates = new ArrayList<>();
 
         String kw = params.get("kw");
         String classId = params.get("classId");
         String teacherId = params.get("teacherId");
+        String studentId = params.get("studentId");
         String date = params.get("date");
+        String from = params.get("from");
+        String to = params.get("to");
+        String includeEnded = params.get("includeEnded");
 
         if (kw != null && !kw.isBlank()) {
             String value = "%" + kw.trim().toLowerCase() + "%";
@@ -151,6 +195,28 @@ public class OnlineSessionRepositoryImpl implements OnlineSessionRepository {
             }
         }
 
+        if (studentId != null && !studentId.isBlank()) {
+            try {
+                Integer parsedStudentId = Integer.parseInt(studentId);
+
+                Subquery<Integer> subquery = query.subquery(Integer.class);
+                Root<Enrollment> enrollment = subquery.from(Enrollment.class);
+
+                subquery.select(cb.literal(1))
+                        .where(
+                                cb.equal(enrollment.get("student").get("id"), parsedStudentId),
+                                cb.equal(enrollment.get("status"), Enrollment.EnrollmentStatus.ACTIVE),
+                                cb.equal(
+                                        enrollment.get("courseClass").get("id"),
+                                        root.get("courseClass").get("id")
+                                )
+                        );
+
+                predicates.add(cb.exists(subquery));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
         if (date != null && !date.isBlank()) {
             try {
                 LocalDate selectedDate = LocalDate.parse(date);
@@ -163,6 +229,37 @@ public class OnlineSessionRepositoryImpl implements OnlineSessionRepository {
                 ));
             } catch (Exception ignored) {
             }
+        }
+
+        if (from != null && !from.isBlank()) {
+            try {
+                LocalDate selectedFrom = LocalDate.parse(from);
+                predicates.add(cb.greaterThanOrEqualTo(
+                        root.get("startTime"),
+                        selectedFrom.atStartOfDay()
+                ));
+            } catch (Exception ignored) {
+            }
+        }
+
+        if (to != null && !to.isBlank()) {
+            try {
+                LocalDate selectedTo = LocalDate.parse(to);
+                predicates.add(cb.lessThan(
+                        root.get("startTime"),
+                        selectedTo.plusDays(1).atStartOfDay()
+                ));
+            } catch (Exception ignored) {
+            }
+        }
+
+        if ("false".equalsIgnoreCase(includeEnded)) {
+            LocalDateTime now = LocalDateTime.now();
+
+            predicates.add(cb.or(
+                    cb.isNull(root.get("endTime")),
+                    cb.greaterThanOrEqualTo(root.get("endTime"), now)
+            ));
         }
 
         return predicates;

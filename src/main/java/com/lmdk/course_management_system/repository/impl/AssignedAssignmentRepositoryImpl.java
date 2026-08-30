@@ -5,6 +5,7 @@ import com.lmdk.course_management_system.pojo.Enrollment;
 import com.lmdk.course_management_system.repository.AssignedAssignmentRepository;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
@@ -33,6 +34,11 @@ public class AssignedAssignmentRepositoryImpl implements AssignedAssignmentRepos
     @Override
     public AssignedAssignment getAssignedAssignmentById(Integer id) {
         return entityManager.find(AssignedAssignment.class, id);
+    }
+
+    @Override
+    public AssignedAssignment getAssignedAssignmentByIdForUpdate(Integer id) {
+        return entityManager.find(AssignedAssignment.class, id, LockModeType.PESSIMISTIC_WRITE);
     }
 
     @Override
@@ -68,6 +74,50 @@ public class AssignedAssignmentRepositoryImpl implements AssignedAssignmentRepos
     public AssignedAssignment addAssignedAssignment(AssignedAssignment assignedAssignment) {
         entityManager.persist(assignedAssignment);
         return assignedAssignment;
+    }
+
+    @Override
+    public List<AssignedAssignment> getByStudentAndCourse(
+            Integer studentId,
+            Integer courseId
+    ) {
+
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+
+        CriteriaQuery<AssignedAssignment> cq =
+                cb.createQuery(AssignedAssignment.class);
+
+        Root<AssignedAssignment> root =
+                cq.from(AssignedAssignment.class);
+
+        root.fetch("assignment", JoinType.LEFT)
+                .fetch("course", JoinType.LEFT);
+
+        root.fetch("learningPathDetail", JoinType.LEFT);
+
+        cq.select(root)
+                .where(
+                        cb.equal(
+                                root.get("student").get("id"),
+                                studentId
+                        ),
+                        cb.equal(
+                                root.get("assignment")
+                                        .get("course")
+                                        .get("id"),
+                                courseId
+                        )
+                )
+                .orderBy(
+                        cb.asc(
+                                root.get("assignedAt")
+                        )
+                );
+
+
+        return entityManager
+                .createQuery(cq)
+                .getResultList();
     }
 
     @Override
@@ -155,7 +205,7 @@ public class AssignedAssignmentRepositoryImpl implements AssignedAssignmentRepos
 
         root.fetch("assignedBy", JoinType.LEFT);
 
-        List<Predicate> predicates = createPredicates(cb, root, params);
+        List<Predicate> predicates = createPredicates(cb, cq, root, params);
 
         cq.select(root)
                 .distinct(true)
@@ -225,7 +275,7 @@ public class AssignedAssignmentRepositoryImpl implements AssignedAssignmentRepos
         CriteriaQuery<Long> cq = cb.createQuery(Long.class);
         Root<AssignedAssignment> root = cq.from(AssignedAssignment.class);
 
-        List<Predicate> predicates = createPredicates(cb, root, params);
+        List<Predicate> predicates = createPredicates(cb, cq, root, params);
 
         cq.select(cb.count(root))
                 .where(predicates.toArray(new Predicate[0]));
@@ -254,7 +304,7 @@ public class AssignedAssignmentRepositoryImpl implements AssignedAssignmentRepos
         return entityManager.createQuery(cq).getSingleResult() > 0;
     }
 
-    private List<Predicate> createPredicates(CriteriaBuilder cb,
+    private List<Predicate> createPredicates(CriteriaBuilder cb, CommonAbstractCriteria query,
                                              Root<AssignedAssignment> root,
                                              Map<String, String> params) {
         List<Predicate> predicates = new ArrayList<>();
@@ -262,9 +312,11 @@ public class AssignedAssignmentRepositoryImpl implements AssignedAssignmentRepos
         String kw = params.get("kw");
         String studentId = params.get("studentId");
         String courseId = params.get("courseId");
+        String classId = params.get("classId");
         String learningPathId = params.get("learningPathId");
         String assignmentId = params.get("assignmentId");
         String status = params.get("status");
+        String source = params.get("source");
         String date = params.get("date");
 
         if (kw != null && !kw.isBlank()) {
@@ -294,6 +346,27 @@ public class AssignedAssignmentRepositoryImpl implements AssignedAssignmentRepos
                         root.get("assignment").get("course").get("id"),
                         Integer.parseInt(courseId)
                 ));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        if(classId != null && !classId.isBlank()) {
+            try {
+                Integer classIdValue = Integer.parseInt(classId);
+                Subquery<Integer> subquery = query.subquery(Integer.class);
+                Root<Enrollment> enrollment = subquery.from(Enrollment.class);
+
+                subquery.select(cb.literal(1)).where(
+                        cb.equal(enrollment.get("student").get("id"), root.get("student").get("id")),
+                        cb.equal(enrollment.get("courseClass").get("id"), classIdValue),
+                        cb.equal(enrollment.get("status"), Enrollment.EnrollmentStatus.ACTIVE),
+                        cb.equal(
+                                enrollment.get("courseClass").get("course").get("id"),
+                                root.get("assignment").get("course").get("id")
+                        )
+                );
+
+                predicates.add(cb.exists(subquery));
             } catch (NumberFormatException ignored) {
             }
         }
@@ -328,6 +401,13 @@ public class AssignedAssignmentRepositoryImpl implements AssignedAssignmentRepos
                 ));
             } catch (IllegalArgumentException ignored) {
             }
+        }
+
+        if (source != null && !source.isBlank()) {
+            if ("LEARNING_PATH".equals(source) || "PATH".equals(source))
+                predicates.add(cb.isNotNull(root.get("learningPathDetail")));
+            else if ("MANUAL".equals(source))
+                predicates.add(cb.isNull(root.get("learningPathDetail")));
         }
 
         if (date != null && !date.isBlank()) {

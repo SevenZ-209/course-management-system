@@ -153,7 +153,6 @@ public class ApiAuthController {
             user.setEmail(email);
             user.setUsername(username);
 
-            // addUser() sẽ encode
             user.setPasswordHash(password);
 
             user.setRole(userRole);
@@ -221,7 +220,7 @@ public class ApiAuthController {
             String message
     ) {
     }
-    
+
     public record RegisterResponse(
             Integer userId,
             String username,
