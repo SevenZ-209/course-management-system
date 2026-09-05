@@ -36,6 +36,11 @@ public interface AssignedAssignmentRepository {
             Integer learningPathDetailId
     );
 
+    boolean existsByStudentAndAssignmentForUpdate(
+            Integer studentId,
+            Integer assignmentId
+    );
+
     List<AssignedAssignment> getAssignedAssignmentsByClass(
             Integer classId
     );

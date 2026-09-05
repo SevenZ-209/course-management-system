@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -46,7 +47,7 @@ public class CourseClassController {
 
         model.addAttribute("classes", classService.getClasses(params));
         model.addAttribute("courses", courseService.getAllCourses());
-        model.addAttribute("teachers", userService.getUsersByRole(User.UserRole.TEACHER));
+        model.addAttribute("selectedTeacher", selectedTeacher(params.get("teacherId")));
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("totalRecords", totalRecords);
@@ -57,6 +58,22 @@ public class CourseClassController {
         model.addAttribute("today", LocalDate.now());
 
         return "admin/classes";
+    }
+
+    @GetMapping("/teachers")
+    @ResponseBody
+    public List<Map<String, Object>> searchTeachers(@RequestParam String q) {
+        if (q == null || q.trim().length() < 2)
+            return List.of();
+
+        return userService.searchUsersByRole(User.UserRole.TEACHER, q.trim(), 1, 20).stream()
+                .filter(user -> user.getStatus() == User.UserStatus.ACTIVE)
+                .map(user -> Map.<String, Object>of(
+                        "id", user.getId(),
+                        "username", user.getUsername(),
+                        "fullName", user.getFullName()
+                ))
+                .toList();
     }
 
     @PostMapping("/add")
@@ -154,15 +171,30 @@ public class CourseClassController {
             return "redirect:/admin/classes";
         }
 
-        try {
-            courseClass.setStatus(CourseClass.ClassStatus.valueOf(status));
-            classService.updateClass(courseClass);
-            redirectAttributes.addFlashAttribute("successMessage", "Cập nhật trạng thái thành công!");
-        } catch (IllegalArgumentException ex) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Trạng thái không hợp lệ!");
+        if (!CourseClass.ClassStatus.CANCELED.name().equalsIgnoreCase(status)) {
+            redirectAttributes.addFlashAttribute(
+                    "errorMessage",
+                    "Trạng thái Sắp mở / Đang học / Hoàn thành được tự động theo thời gian lớp học!"
+            );
+            return "redirect:/admin/classes";
         }
 
+        courseClass.setStatus(CourseClass.ClassStatus.CANCELED);
+        classService.updateClass(courseClass);
+        redirectAttributes.addFlashAttribute("successMessage", "Hủy lớp học thành công!");
+
         return "redirect:/admin/classes";
+    }
+
+    private User selectedTeacher(String teacherId) {
+        try {
+            if (teacherId == null || teacherId.isBlank())
+                return null;
+            User teacher = userService.getUserById(Integer.valueOf(teacherId));
+            return validTeacher(Integer.valueOf(teacherId), teacher) ? teacher : null;
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     private boolean validTeacher(Integer teacherId, User teacher) {

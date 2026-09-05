@@ -240,18 +240,6 @@ public class ApiStudentCourseController {
                     "Học viên chưa có lộ trình học cho khóa này!"
             );
 
-        System.out.println(
-                "CURRENT LP = "
-                        + progress.getLearningPath().getId()
-        );
-
-        System.out.println(
-                "CURRENT DETAIL = "
-                        + (progress.getCurrentDetail() != null
-                        ? progress.getCurrentDetail().getId()
-                        : "COMPLETED")
-        );
-
         return studentCourseMapper
                 .toDetailResponse(
                         enrollment,

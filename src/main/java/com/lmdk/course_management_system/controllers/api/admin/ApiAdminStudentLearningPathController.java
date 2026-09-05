@@ -178,10 +178,16 @@ public class ApiAdminStudentLearningPathController {
     }
 
     @GetMapping("/in-progress-options")
-    public List<AdminStudentLearningPathResponse> getInProgressOptions() {
-        return studentLearningPathService
-                .getInProgressStudentLearningPaths()
-                .stream()
+    public List<AdminStudentLearningPathResponse> getInProgressOptions(
+            @RequestParam(required = false) Integer studentId
+    ) {
+        if (studentId == null)
+            return List.of();
+
+        return studentLearningPathService.getStudentLearningPathsByStudent(studentId).stream()
+                .filter(progress -> progress.getStatus() == StudentLearningPath.ProgressStatus.IN_PROGRESS)
+                .filter(progress -> progress.getCurrentDetail() != null
+                        && progress.getCurrentDetail().getAssignment() != null)
                 .map(adminStudentLearningPathMapper::toResponse)
                 .toList();
     }

@@ -38,6 +38,9 @@ public class LearningPathDetailController {
         int page = parsePage(params.get("page"));
         params.put("page", String.valueOf(page));
 
+        Integer selectedCourseId = parseInteger(params.get("courseId"));
+        normalizePathFilter(params, selectedCourseId);
+
         long totalRecords = detailService.countDetails(params);
         int totalPages = Math.max((int) Math.ceil((double) totalRecords / pageSize), 1);
 
@@ -47,8 +50,10 @@ public class LearningPathDetailController {
         }
 
         model.addAttribute("details", detailService.getDetails(params));
-        model.addAttribute("learningPaths", learningPathService.getAllLearningPaths());
-        model.addAttribute("assignments", assignmentService.getAllAssignments());
+        model.addAttribute("learningPaths", selectedCourseId == null
+                ? List.of()
+                : learningPathService.getLearningPathsByCourse(selectedCourseId));
+        model.addAttribute("assignments", List.of());
         model.addAttribute("courses", courseService.getAllCourses());
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", totalPages);
@@ -58,6 +63,20 @@ public class LearningPathDetailController {
         model.addAttribute("learningPathId", params.getOrDefault("learningPathId", ""));
 
         return "admin/learning-path-details";
+    }
+
+    @GetMapping("/paths")
+    @ResponseBody
+    public List<Map<String, Object>> getPaths(@RequestParam Integer courseId) {
+        if (courseId == null)
+            return List.of();
+
+        return learningPathService.getLearningPathsByCourse(courseId).stream()
+                .map(path -> Map.<String, Object>of(
+                        "id", path.getId(),
+                        "name", path.getName()
+                ))
+                .toList();
     }
 
     @GetMapping("/assignments")
@@ -162,6 +181,24 @@ public class LearningPathDetailController {
         }
 
         return "redirect:/admin/learning-path-details";
+    }
+
+    private void normalizePathFilter(Map<String, String> params, Integer courseId) {
+        Integer pathId = parseInteger(params.get("learningPathId"));
+        if (courseId == null || pathId == null)
+            return;
+
+        LearningPath path = learningPathService.getLearningPathById(pathId);
+        if (path == null || path.getCourse() == null || !courseId.equals(path.getCourse().getId()))
+            params.remove("learningPathId");
+    }
+
+    private Integer parseInteger(String value) {
+        try {
+            return value == null || value.isBlank() ? null : Integer.valueOf(value);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     private int parsePage(String page) {

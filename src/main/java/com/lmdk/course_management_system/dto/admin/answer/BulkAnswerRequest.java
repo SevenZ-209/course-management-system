@@ -11,7 +11,6 @@ public class BulkAnswerRequest {
 
     private List<AnswerItem> answers;
 
-
     @Data
     public static class AnswerItem {
 

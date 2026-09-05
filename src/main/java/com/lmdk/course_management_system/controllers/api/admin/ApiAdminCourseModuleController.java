@@ -73,10 +73,14 @@ public class ApiAdminCourseModuleController {
     }
 
     @GetMapping("/options")
-    public List<AdminCourseModuleResponse> getModuleOptions() {
-        return moduleService
-                .getAllModules()
-                .stream()
+    public List<AdminCourseModuleResponse> getModuleOptions(
+            @RequestParam(required = false) Integer courseId
+    ) {
+        var modules = courseId == null
+                ? moduleService.getAllModules()
+                : moduleService.getModulesByCourse(courseId);
+
+        return modules.stream()
                 .map(adminCourseModuleMapper::toResponse)
                 .toList();
     }

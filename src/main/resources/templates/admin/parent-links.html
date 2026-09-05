@@ -1,450 +1,157 @@
 <!doctype html>
-<html lang="vi"
-      xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>Liên kết phụ huynh</title>
     <th:block th:replace="~{base :: css}"></th:block>
 </head>
-
 <body>
-
 <div th:replace="~{base :: header}"></div>
 
 <div class="container mt-4">
-
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h3 class="mb-1">Liên kết phụ huynh</h3>
-
-            <span class="text-muted">
-                Tổng cộng:
-                <strong th:text="${totalRecords}">0</strong>
-                mã liên kết
-            </span>
+            <span class="text-muted">Tổng cộng: <strong th:text="${totalRecords}">0</strong> mã liên kết</span>
         </div>
-
-        <button class="btn btn-primary"
-                data-bs-toggle="modal"
-                data-bs-target="#createLinkModal">
-            Tạo mã liên kết
-        </button>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createLinkModal">Tạo mã liên kết</button>
     </div>
 
-    <div th:if="${successMessage}"
-         class="alert alert-success"
-         th:text="${successMessage}">
-    </div>
+    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
 
-    <div th:if="${errorMessage}"
-         class="alert alert-danger"
-         th:text="${errorMessage}">
-    </div>
-
-    <!-- FILTER -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
-
-            <form method="get"
-                  th:action="@{/admin/parent-links}">
-
+            <form method="get" th:action="@{/admin/parent-links}">
                 <div class="row g-3">
-
                     <div class="col-md-3">
-                        <input type="text"
-                               class="form-control"
-                               name="kw"
-                               th:value="${kw}"
-                               placeholder="Mã, phụ huynh hoặc học viên">
+                        <input type="text" class="form-control" name="kw" th:value="${kw}" placeholder="Mã, phụ huynh hoặc học viên">
                     </div>
 
                     <div class="col-md-3">
-                        <select class="form-select"
-                                name="studentId">
+                        <div class="position-relative" data-async-user-lookup data-endpoint="/admin/users/student-options">
+                            <input type="text" class="form-control" data-async-user-input autocomplete="off"
+                                   th:value="${selectedStudent != null ? selectedStudent.fullName + ' (@' + selectedStudent.username + ')' : ''}"
+                                   placeholder="Tìm học viên...">
+                            <input type="hidden" name="studentId" data-async-user-id th:value="${studentId}">
+                            <div class="list-group position-absolute w-100 shadow-sm d-none cm-async-results" data-async-user-results
+                                ></div>
+                        </div>
+                    </div>
 
-                            <option value="">
-                                Tất cả học viên
-                            </option>
+                    <div class="col-md-2">
+                        <div class="position-relative" data-async-user-lookup data-endpoint="/admin/users/parent-options">
+                            <input type="text" class="form-control" data-async-user-input autocomplete="off"
+                                   th:value="${selectedParent != null ? selectedParent.fullName + ' (@' + selectedParent.username + ')' : ''}"
+                                   placeholder="Tìm phụ huynh...">
+                            <input type="hidden" name="parentId" data-async-user-id th:value="${parentId}">
+                            <div class="list-group position-absolute w-100 shadow-sm d-none cm-async-results" data-async-user-results
+                                ></div>
+                        </div>
+                    </div>
 
-                            <option th:each="student : ${students}"
-                                    th:value="${student.id}"
-                                    th:text="${student.fullName}"
-                                    th:selected="${studentId == student.id.toString()}">
-                            </option>
-
+                    <div class="col-md-2">
+                        <select class="form-select" name="status">
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="UNUSED" th:selected="${status == 'UNUSED'}">Chưa sử dụng</option>
+                            <option value="USED" th:selected="${status == 'USED'}">Đã liên kết</option>
+                            <option value="EXPIRED" th:selected="${status == 'EXPIRED'}">Hết hạn</option>
+                            <option value="UNLINKED" th:selected="${status == 'UNLINKED'}">Đã hủy liên kết</option>
                         </select>
                     </div>
 
                     <div class="col-md-2">
-                        <select class="form-select"
-                                name="parentId">
-
-                            <option value="">
-                                Tất cả phụ huynh
-                            </option>
-
-                            <option th:each="parent : ${parents}"
-                                    th:value="${parent.id}"
-                                    th:text="${parent.fullName}"
-                                    th:selected="${parentId == parent.id.toString()}">
-                            </option>
-
-                        </select>
+                        <button type="submit" class="btn btn-primary">Tìm</button>
+                        <a th:href="@{/admin/parent-links}" class="btn btn-outline-secondary">Làm mới</a>
                     </div>
-
-                    <div class="col-md-2">
-                        <select class="form-select"
-                                name="status">
-
-                            <option value="">
-                                Tất cả trạng thái
-                            </option>
-
-                            <option value="UNUSED"
-                                    th:selected="${status == 'UNUSED'}">
-                                Chưa sử dụng
-                            </option>
-
-                            <option value="USED"
-                                    th:selected="${status == 'USED'}">
-                                Đã liên kết
-                            </option>
-
-                            <option value="EXPIRED"
-                                    th:selected="${status == 'EXPIRED'}">
-                                Hết hạn
-                            </option>
-
-                        </select>
-                    </div>
-
-                    <div class="col-md-2">
-                        <button type="submit"
-                                class="btn btn-primary">
-                            Tìm
-                        </button>
-
-                        <a th:href="@{/admin/parent-links}"
-                           class="btn btn-outline-secondary">
-                            Làm mới
-                        </a>
-                    </div>
-
                 </div>
-
             </form>
-
         </div>
     </div>
 
-    <!-- TABLE -->
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
-
             <div class="table-responsive">
-
                 <table class="table table-hover align-middle mb-0">
-
                     <thead class="table-light">
-                    <tr>
-                        <th>ID</th>
-                        <th>Mã liên kết</th>
-                        <th>Học viên</th>
-                        <th>Phụ huynh</th>
-                        <th>Ngày tạo</th>
-                        <th>Hết hạn</th>
-                        <th>Trạng thái</th>
-                        <th>Thao tác</th>
-                    </tr>
+                    <tr><th>ID</th><th>Mã liên kết</th><th>Học viên</th><th>Phụ huynh</th><th>Ngày tạo</th><th>Hết hạn</th><th>Trạng thái</th><th>Thao tác</th></tr>
                     </thead>
-
                     <tbody>
-
                     <tr th:each="link : ${parentLinks}">
-
                         <td th:text="${link.id}"></td>
-
+                        <td><span class="fw-bold font-monospace" th:text="${link.verificationCode}"></span></td>
+                        <td><div class="fw-semibold" th:text="${link.student.fullName}"></div><small class="text-muted">@<span th:text="${link.student.username}"></span></small></td>
                         <td>
-                            <span class="fw-bold font-monospace fs-6"
-                                  th:text="${link.verificationCode}">
-                            </span>
+                            <div th:if="${link.parent != null}"><div class="fw-semibold" th:text="${link.parent.fullName}"></div><small class="text-muted">@<span th:text="${link.parent.username}"></span></small></div>
+                            <span th:unless="${link.parent != null}" class="text-muted">Chưa liên kết</span>
                         </td>
-
+                        <td th:text="${link.createdAt != null ? #temporals.format(link.createdAt,'dd/MM/yyyy HH:mm') : '-'}"></td>
+                        <td th:text="${link.expiresAt != null ? #temporals.format(link.expiresAt,'dd/MM/yyyy HH:mm') : '-'}"></td>
                         <td>
-                            <div class="fw-semibold"
-                                 th:text="${link.student.fullName}">
-                            </div>
-
-                            <small class="text-muted">
-                                @<span th:text="${link.student.username}"></span>
-                            </small>
+                            <span th:if="${link.status.name() == 'UNUSED'}" class="badge text-bg-warning">Chưa sử dụng</span>
+                            <span th:if="${link.status.name() == 'USED'}" class="badge text-bg-success">Đã liên kết</span>
+                            <span th:if="${link.status.name() == 'EXPIRED'}" class="badge text-bg-secondary">Hết hạn</span>
+                            <span th:if="${link.status.name() == 'UNLINKED'}" class="badge text-bg-danger">Đã hủy liên kết</span>
                         </td>
-
                         <td>
-                            <div th:if="${link.parent != null}">
-
-                                <div class="fw-semibold"
-                                     th:text="${link.parent.fullName}">
-                                </div>
-
-                                <small class="text-muted">
-                                    @<span th:text="${link.parent.username}"></span>
-                                </small>
-
-                            </div>
-
-                            <span th:unless="${link.parent != null}"
-                                  class="text-muted">
-                                Chưa liên kết
-                            </span>
-                        </td>
-
-                        <td>
-                            <span th:if="${link.createdAt != null}"
-                                  th:text="${#temporals.format(
-                                      link.createdAt,
-                                      'dd/MM/yyyy HH:mm'
-                                  )}">
-                            </span>
-                        </td>
-
-                        <td>
-                            <span th:text="${#temporals.format(
-                                link.expiresAt,
-                                'dd/MM/yyyy HH:mm'
-                            )}">
-                            </span>
-                        </td>
-
-                        <td>
-                            <span th:if="${link.status.name() == 'UNUSED'}"
-                                  class="badge text-bg-warning">
-                                Chưa sử dụng
-                            </span>
-
-                            <span th:if="${link.status.name() == 'USED'}"
-                                  class="badge text-bg-success">
-                                Đã liên kết
-                            </span>
-
-                            <span th:if="${link.status.name() == 'EXPIRED'}"
-                                  class="badge text-bg-secondary">
-                                Hết hạn
-                            </span>
-                        </td>
-
-                        <td>
-                            <form method="post"
-                                  th:if="${link.status.name() == 'UNUSED'}"
-                                  th:action="@{/admin/parent-links/expire}">
-
-                                <input type="hidden"
-                                       name="linkId"
-                                       th:value="${link.id}">
-
-                                <button type="submit"
-                                        class="btn btn-sm btn-outline-danger"
-                                        onclick="return confirm('Bạn có chắc muốn vô hiệu hóa mã này?')">
-                                    Vô hiệu hóa
-                                </button>
-
+                            <form method="post" th:if="${link.status.name() == 'UNUSED'}" th:action="@{/admin/parent-links/expire}">
+                                <input type="hidden" name="linkId" th:value="${link.id}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Bạn có chắc muốn vô hiệu hóa mã này?')">Vô hiệu hóa</button>
                             </form>
-
-                            <span th:unless="${link.status.name() == 'UNUSED'}"
-                                  class="text-muted">
-                                -
-                            </span>
-                        </td>
-
-                    </tr>
-
-                    <tr th:if="${#lists.isEmpty(parentLinks)}">
-                        <td colspan="8"
-                            class="text-center text-muted py-5">
-                            Chưa có mã liên kết.
+                            <span th:unless="${link.status.name() == 'UNUSED'}" class="text-muted">-</span>
                         </td>
                     </tr>
-
+                    <tr th:if="${#lists.isEmpty(parentLinks)}"><td colspan="8" class="text-center text-muted py-5">Chưa có mã liên kết.</td></tr>
                     </tbody>
-
                 </table>
-
             </div>
-
         </div>
     </div>
 
-    <!-- PAGINATION -->
-    <nav class="mt-4"
-         th:if="${totalPages > 1}">
-
+    <nav class="mt-4" th:if="${totalPages > 1}">
         <ul class="pagination justify-content-center">
-
-            <li class="page-item"
-                th:classappend="${currentPage == 1} ? 'disabled'">
-
-                <a class="page-link"
-                   th:href="@{/admin/parent-links(
-                        page=${currentPage - 1},
-                        kw=${kw},
-                        studentId=${studentId},
-                        parentId=${parentId},
-                        status=${status}
-                   )}">
-                    Trước
-                </a>
-            </li>
-
-            <li class="page-item"
-                th:each="pageNumber : ${#numbers.sequence(1, totalPages)}"
-                th:classappend="${pageNumber == currentPage} ? 'active'">
-
-                <a class="page-link"
-                   th:text="${pageNumber}"
-                   th:href="@{/admin/parent-links(
-                        page=${pageNumber},
-                        kw=${kw},
-                        studentId=${studentId},
-                        parentId=${parentId},
-                        status=${status}
-                   )}">
-                </a>
-            </li>
-
-            <li class="page-item"
-                th:classappend="${currentPage == totalPages} ? 'disabled'">
-
-                <a class="page-link"
-                   th:href="@{/admin/parent-links(
-                        page=${currentPage + 1},
-                        kw=${kw},
-                        studentId=${studentId},
-                        parentId=${parentId},
-                        status=${status}
-                   )}">
-                    Sau
-                </a>
-            </li>
-
+            <li class="page-item" th:classappend="${currentPage == 1} ? 'disabled'"><a class="page-link" th:href="@{/admin/parent-links(page=${currentPage - 1},kw=${kw},studentId=${studentId},parentId=${parentId},status=${status})}">Trước</a></li>
+            <li class="page-item" th:each="pageNumber : ${#numbers.sequence(1,totalPages)}" th:classappend="${pageNumber == currentPage} ? 'active'"><a class="page-link" th:text="${pageNumber}" th:href="@{/admin/parent-links(page=${pageNumber},kw=${kw},studentId=${studentId},parentId=${parentId},status=${status})}"></a></li>
+            <li class="page-item" th:classappend="${currentPage == totalPages} ? 'disabled'"><a class="page-link" th:href="@{/admin/parent-links(page=${currentPage + 1},kw=${kw},studentId=${studentId},parentId=${parentId},status=${status})}">Sau</a></li>
         </ul>
     </nav>
-
 </div>
 
-
-<!-- CREATE LINK -->
-<div class="modal fade"
-     id="createLinkModal"
-     tabindex="-1">
-
+<div class="modal fade" id="createLinkModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-
-            <form method="post"
-                  th:action="@{/admin/parent-links/create}">
-
-                <div class="modal-header">
-
-                    <h5 class="modal-title">
-                        Tạo mã liên kết
-                    </h5>
-
-                    <button type="button"
-                            class="btn-close"
-                            data-bs-dismiss="modal">
-                    </button>
-
-                </div>
-
+            <form method="post" th:action="@{/admin/parent-links/create}">
+                <div class="modal-header"><h5 class="modal-title">Tạo mã liên kết</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body">
-
                     <div class="mb-3">
-
-                        <label class="form-label">
-                            Học viên
-                        </label>
-
-                        <select class="form-select"
-                                name="studentId"
-                                required>
-
-                            <option value="">
-                                Chọn học viên
-                            </option>
-
-                            <option th:each="student : ${students}"
-                                    th:value="${student.id}"
-                                    th:text="${student.fullName + ' - @' + student.username}">
-                            </option>
-
-                        </select>
-
+                        <label class="form-label">Học viên</label>
+                        <div class="position-relative" data-async-user-lookup data-require-selection="true" data-endpoint="/admin/users/student-options">
+                            <input type="text" class="form-control" data-async-user-input autocomplete="off" placeholder="Gõ tên, username hoặc email..." required>
+                            <input type="hidden" name="studentId" data-async-user-id required>
+                            <div class="list-group position-absolute w-100 shadow-sm d-none cm-async-results" data-async-user-results
+                                ></div>
+                        </div>
+                        <small class="text-muted">Gõ ít nhất 2 ký tự. Hệ thống chỉ tải tối đa 20 kết quả.</small>
                     </div>
-
-                    <div class="mb-3">
-
-                        <label class="form-label">
-                            Thời gian hết hạn
-                        </label>
-
-                        <input type="datetime-local"
-                               class="form-control"
-                               id="linkExpiresAt"
-                               name="expiresAt"
-                               required>
-
-                        <small class="text-muted">
-                            Mã chỉ sử dụng được trước thời gian này.
-                        </small>
-
-                    </div>
-
-                    <div class="alert alert-info mb-0">
-                        Phụ huynh sẽ nhập mã này trên tài khoản của mình để liên kết với học viên.
-                    </div>
-
+                    <div class="mb-3"><label class="form-label">Thời gian hết hạn</label><input type="datetime-local" class="form-control" id="linkExpiresAt" name="expiresAt" required></div>
+                    <div class="alert alert-info mb-0">Một học viên có thể liên kết với nhiều phụ huynh; mỗi cặp phụ huynh–học viên chỉ có một liên kết đang hoạt động.</div>
                 </div>
-
-                <div class="modal-footer">
-
-                    <button type="button"
-                            class="btn btn-outline-secondary"
-                            data-bs-dismiss="modal">
-                        Hủy
-                    </button>
-
-                    <button type="submit"
-                            class="btn btn-primary">
-                        Tạo mã
-                    </button>
-
-                </div>
-
+                <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button><button type="submit" class="btn btn-primary">Tạo mã</button></div>
             </form>
-
         </div>
     </div>
 </div>
 
-
 <div th:replace="~{base :: footer}"></div>
-
-
+<script th:src="@{/js/admin-selection.js}"></script>
 <script>
     const expiresAt = document.getElementById("linkExpiresAt");
-
     function updateMinDateTime() {
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         expiresAt.min = now.toISOString().slice(0, 16);
     }
-
     updateMinDateTime();
-
-    document.getElementById("createLinkModal")
-        .addEventListener("show.bs.modal", updateMinDateTime);
+    document.getElementById("createLinkModal").addEventListener("show.bs.modal", updateMinDateTime);
 </script>
-
 </body>
 </html>

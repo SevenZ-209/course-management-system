@@ -1,6 +1,7 @@
 package com.lmdk.course_management_system.controllers.api.admin;
 
 import com.lmdk.course_management_system.dto.admin.attendance.*;
+import com.lmdk.course_management_system.helpers.AttendanceRosterHelper;
 import com.lmdk.course_management_system.mappers.admin.AdminAttendanceMapper;
 import com.lmdk.course_management_system.pojo.Attendance;
 import com.lmdk.course_management_system.pojo.Enrollment;
@@ -30,6 +31,7 @@ public class ApiAdminAttendanceController {
     private final UserService userService;
     private final EnrollmentService enrollmentService;
     private final AdminAttendanceMapper adminAttendanceMapper;
+    private final AttendanceRosterHelper attendanceRosterHelper;
 
     @Value("${attendances.page-size:10}")
     private int pageSize;
@@ -40,6 +42,7 @@ public class ApiAdminAttendanceController {
             @RequestParam(required = false) String kw,
             @RequestParam(required = false) Integer sessionId,
             @RequestParam(required = false) Integer classId,
+            @RequestParam(required = false) Integer courseId,
             @RequestParam(required = false) Boolean present
     ) {
         page = Math.max(page, 1);
@@ -55,6 +58,9 @@ public class ApiAdminAttendanceController {
 
         if(classId != null)
             params.put("classId", String.valueOf(classId));
+
+        if(courseId != null)
+            params.put("courseId", String.valueOf(courseId));
 
         if(present != null)
             params.put("present", String.valueOf(present));
@@ -147,6 +153,16 @@ public class ApiAdminAttendanceController {
                 attendanceId,
                 "Cập nhật điểm danh thành công!"
         );
+    }
+
+    @GetMapping("/roster")
+    public List<AdminAttendanceRosterResponse> getRoster(@RequestParam Integer sessionId) {
+        return attendanceRosterHelper.getRoster(sessionId);
+    }
+
+    @PutMapping("/bulk")
+    public List<AdminAttendanceRosterResponse> saveBulk(@RequestBody BulkAttendanceSaveRequest request) {
+        return attendanceRosterHelper.saveBulk(request);
     }
 
     @GetMapping("/students")

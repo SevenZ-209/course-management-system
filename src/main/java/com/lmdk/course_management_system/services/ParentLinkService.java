@@ -13,6 +13,8 @@ public interface ParentLinkService {
 
     ParentLink getParentLinkByCode(String verificationCode);
 
+    ParentLink getCurrentUnusedLinkByStudent(Integer studentId);
+
     ParentLink createParentLink(User student, LocalDateTime expiresAt);
 
     ParentLink useVerificationCode(String verificationCode, User parent);
@@ -30,5 +32,10 @@ public interface ParentLinkService {
     void unlinkParentLink(
             Integer linkId,
             User parent
+    );
+
+    void unlinkParentLinkByStudent(
+            Integer linkId,
+            User student
     );
 }

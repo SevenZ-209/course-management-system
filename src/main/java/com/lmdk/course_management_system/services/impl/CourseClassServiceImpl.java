@@ -33,12 +33,10 @@ public class CourseClassServiceImpl implements CourseClassService {
         if (courseClass.getEndDate().isBefore(LocalDate.now()))
             throw new IllegalArgumentException("Ngày kết thúc không được ở trong quá khứ!");
 
-        if (courseClass.getStatus() == null)
-            courseClass.setStatus(CourseClass.ClassStatus.UPCOMING);
+        courseClass.setStatus(courseClass.resolveStatus(LocalDate.now()));
 
         return classRepository.addClass(courseClass);
     }
-
 
     @Override
     public List<CourseClass> getClassesByTeacher(Integer teacherId) {
@@ -48,6 +46,10 @@ public class CourseClassServiceImpl implements CourseClassService {
     @Override
     public void updateClass(CourseClass courseClass) {
         validateClass(courseClass);
+
+        if (courseClass.getStatus() != CourseClass.ClassStatus.CANCELED)
+            courseClass.setStatus(courseClass.resolveStatus(LocalDate.now()));
+
         classRepository.updateClass(courseClass);
     }
 

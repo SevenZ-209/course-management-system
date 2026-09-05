@@ -77,24 +77,6 @@ public class StudentCourseContentMapper {
                         ? learningPath.getCurrentDetail().getOrderNumber()
                         : Integer.MAX_VALUE;
 
-
-        System.out.println(
-                "MAPPER CURRENT DETAIL = "
-                        + (learningPath.getCurrentDetail() != null
-                        ? learningPath.getCurrentDetail().getId()
-                        : "COMPLETED")
-        );
-
-        System.out.println(
-                "LESSON ID = "
-                        + lesson.getId()
-                        + " DETAIL ID = "
-                        + lessonDetail.getId()
-                        + " DETAIL ORDER = "
-                        + lessonOrder
-        );
-
-
         if (lessonOrder <= currentOrder) {
             return new StudentLessonResponse(
                     lesson.getId(),
@@ -106,9 +88,6 @@ public class StudentCourseContentMapper {
                             : "COMPLETED"
             );
         }
-
-
-        System.out.println("RESULT = LOCKED");
 
         return new StudentLessonResponse(
                 lesson.getId(),

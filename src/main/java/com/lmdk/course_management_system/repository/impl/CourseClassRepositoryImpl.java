@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -94,11 +95,15 @@ public class CourseClassRepositoryImpl implements CourseClassRepository {
 
         root.fetch("course", JoinType.LEFT);
 
+        LocalDate today = LocalDate.now();
+
         cq.select(root)
-                .where(root.get("status").in(
-                        CourseClass.ClassStatus.UPCOMING,
-                        CourseClass.ClassStatus.ACTIVE
-                ))
+                .where(
+                        cb.notEqual(root.get("status"), CourseClass.ClassStatus.CANCELED),
+                        cb.isNotNull(root.get("startDate")),
+                        cb.isNotNull(root.get("endDate")),
+                        cb.greaterThanOrEqualTo(root.get("endDate"), today)
+                )
                 .orderBy(cb.asc(root.get("startDate")));
 
         return entityManager.createQuery(cq).getResultList();
@@ -178,10 +183,32 @@ public class CourseClassRepositoryImpl implements CourseClassRepository {
 
         if (status != null && !status.isBlank()) {
             try {
-                predicates.add(cb.equal(
-                        root.get("status"),
-                        CourseClass.ClassStatus.valueOf(status)
-                ));
+                CourseClass.ClassStatus classStatus = CourseClass.ClassStatus.valueOf(status);
+                LocalDate today = LocalDate.now();
+                Predicate notCanceled = cb.notEqual(root.get("status"), CourseClass.ClassStatus.CANCELED);
+
+                switch (classStatus) {
+                    case CANCELED -> predicates.add(
+                            cb.equal(root.get("status"), CourseClass.ClassStatus.CANCELED)
+                    );
+                    case UPCOMING -> predicates.add(cb.and(
+                            notCanceled,
+                            cb.isNotNull(root.get("startDate")),
+                            cb.greaterThan(root.get("startDate"), today)
+                    ));
+                    case ACTIVE -> predicates.add(cb.and(
+                            notCanceled,
+                            cb.isNotNull(root.get("startDate")),
+                            cb.isNotNull(root.get("endDate")),
+                            cb.lessThanOrEqualTo(root.get("startDate"), today),
+                            cb.greaterThanOrEqualTo(root.get("endDate"), today)
+                    ));
+                    case COMPLETED -> predicates.add(cb.and(
+                            notCanceled,
+                            cb.isNotNull(root.get("endDate")),
+                            cb.lessThan(root.get("endDate"), today)
+                    ));
+                }
             } catch (IllegalArgumentException ignored) {
             }
         }

@@ -13,7 +13,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -57,11 +56,13 @@ public class AnswerRepositoryImpl implements AnswerRepository {
         List<Predicate> predicates = createPredicates(cb, root, params);
 
         cq.select(root)
-                .distinct(true)
                 .where(predicates.toArray(new Predicate[0]))
                 .orderBy(
-                        cb.asc(root.get("question").get("id")),
-                        cb.asc(root.get("orderNumber"))
+                        cb.asc(root.get("question").get("assignment").get("course").get("name")),
+                        cb.asc(root.get("question").get("assignment").get("name")),
+                        cb.asc(root.get("question").get("orderNumber")),
+                        cb.asc(root.get("orderNumber")),
+                        cb.asc(root.get("id"))
                 );
 
         TypedQuery<Answer> query = entityManager.createQuery(cq);

@@ -16,6 +16,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -29,6 +30,9 @@ public class SpringSecurityConfigs {
 
     @Value("${cloudinary.api-secret:${CLOUDINARY_API_SECRET:}}")
     private String cloudinaryApiSecret;
+
+    @Value("${cors.allowed-origins:${CORS_ALLOWED_ORIGINS:http://localhost:3000}}")
+    private String corsAllowedOrigins;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -61,6 +65,7 @@ public class SpringSecurityConfigs {
                         .requestMatchers("/api/teacher/**").hasRole("TEACHER")
                         .requestMatchers("/api/student/**").hasRole("STUDENT")
                         .requestMatchers("/api/parent/**").hasRole("PARENT")
+                        .requestMatchers("/api/manager/**").hasRole("MANAGER")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
@@ -111,7 +116,7 @@ public class SpringSecurityConfigs {
         if(cloudinaryCloudName == null || cloudinaryCloudName.isBlank()
                 || cloudinaryApiKey == null || cloudinaryApiKey.isBlank()
                 || cloudinaryApiSecret == null || cloudinaryApiSecret.isBlank())
-            throw new IllegalStateException();
+            throw new IllegalStateException("Thiếu cấu hình Cloudinary!");
 
         return new Cloudinary(ObjectUtils.asMap(
                 "cloud_name", cloudinaryCloudName,
@@ -124,7 +129,12 @@ public class SpringSecurityConfigs {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000"));
+        List<String> allowedOrigins = Arrays.stream(corsAllowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isBlank())
+                .toList();
+
+        config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         config.setExposedHeaders(List.of("Authorization"));

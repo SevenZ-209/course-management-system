@@ -123,7 +123,6 @@ public class ApiAuthController {
                         "Email đã tồn tại!"
                 );
 
-
             User.UserRole userRole;
 
             try {
@@ -142,10 +141,8 @@ public class ApiAuthController {
                         "Chỉ có thể đăng ký tài khoản học viên hoặc phụ huynh!"
                 );
 
-
             uploadResult =
                     cloudinaryService.uploadImage(avatar);
-
 
             User user = new User();
 
@@ -162,10 +159,8 @@ public class ApiAuthController {
                     uploadResult.url()
             );
 
-
             User savedUser =
                     userService.addUser(user);
-
 
             return ResponseEntity
                     .status(HttpStatus.CREATED)

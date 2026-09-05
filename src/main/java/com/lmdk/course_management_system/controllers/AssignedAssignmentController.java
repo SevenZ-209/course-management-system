@@ -52,16 +52,11 @@ public class AssignedAssignmentController {
                 "assignedAssignments",
                 assignedAssignmentService.getAssignedAssignments(params)
         );
-        model.addAttribute(
-                "progresses",
-                studentLearningPathService.getInProgressStudentLearningPaths()
-        );
-        model.addAttribute(
-                "students",
-                userService.getUsersByRole(User.UserRole.STUDENT)
-        );
+        Integer selectedCourseId = parseInteger(params.get("courseId"));
         model.addAttribute("courses", courseService.getAllCourses());
-        model.addAttribute("learningPaths", learningPathService.getAllLearningPaths());
+        model.addAttribute("learningPaths", selectedCourseId == null
+                ? List.of()
+                : learningPathService.getLearningPathsByCourse(selectedCourseId));
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("totalRecords", totalRecords);
@@ -72,6 +67,23 @@ public class AssignedAssignmentController {
         model.addAttribute("date", params.getOrDefault("date", ""));
 
         return "admin/assigned-assignments";
+    }
+
+    @GetMapping("/in-progress-options")
+    @ResponseBody
+    public List<Map<String, Object>> getInProgressOptions(@RequestParam Integer studentId) {
+        return studentLearningPathService.getStudentLearningPathsByStudent(studentId).stream()
+                .filter(progress -> progress.getStatus() == StudentLearningPath.ProgressStatus.IN_PROGRESS)
+                .filter(progress -> progress.getCurrentDetail() != null
+                        && progress.getCurrentDetail().getAssignment() != null)
+                .map(progress -> Map.<String, Object>of(
+                        "id", progress.getId(),
+                        "learningPathName", progress.getLearningPath().getName(),
+                        "courseName", progress.getLearningPath().getCourse().getName(),
+                        "orderNumber", progress.getCurrentDetail().getOrderNumber(),
+                        "assignmentName", progress.getCurrentDetail().getAssignment().getName()
+                ))
+                .toList();
     }
 
     @GetMapping("/available-assignments")
@@ -185,6 +197,14 @@ public class AssignedAssignmentController {
         }
 
         return "redirect:/admin/assigned-assignments";
+    }
+
+    private Integer parseInteger(String value) {
+        try {
+            return value == null || value.isBlank() ? null : Integer.valueOf(value);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     private int parsePage(String page) {

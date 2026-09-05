@@ -19,7 +19,6 @@ public interface AssignedAssignmentService {
             LocalDateTime dueAt
     );
 
-
     AssignedAssignment assignManual(
             Integer studentId,
             Integer assignmentId,

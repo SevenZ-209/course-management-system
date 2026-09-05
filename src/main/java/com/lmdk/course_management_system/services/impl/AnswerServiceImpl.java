@@ -95,9 +95,7 @@ public class AnswerServiceImpl implements AnswerService {
                     "Không tìm thấy câu hỏi!"
             );
 
-
         int correctCount = 0;
-
 
         for(var item : request.getAnswers()) {
 
@@ -106,7 +104,6 @@ public class AnswerServiceImpl implements AnswerService {
 
         }
 
-
         if(question.getType() == Question.QuestionType.MULTIPLE_CHOICE
                 && correctCount != 1)
 
@@ -114,11 +111,9 @@ public class AnswerServiceImpl implements AnswerService {
                     "Câu hỏi trắc nghiệm phải có đúng 1 đáp án đúng!"
             );
 
-
         answerRepository.deleteByQuestionId(
                 question.getId()
         );
-
 
         for(var item : request.getAnswers()) {
 

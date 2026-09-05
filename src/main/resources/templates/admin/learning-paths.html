@@ -42,7 +42,6 @@
          th:text="${errorMessage}">
     </div>
 
-    <!-- FILTER -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
 
@@ -116,7 +115,6 @@
         </div>
     </div>
 
-    <!-- TABLE -->
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
 
@@ -132,7 +130,7 @@
                         <th>Số bài/ngày</th>
                         <th>Trạng thái</th>
                         <th>Chỉnh sửa</th>
-                        <th style="width: 220px;">Đổi trạng thái</th>
+                        <th class="cm-col-220">Đổi trạng thái</th>
                     </tr>
                     </thead>
 
@@ -239,7 +237,6 @@
         </div>
     </div>
 
-    <!-- PAGINATION -->
     <nav class="mt-4"
          th:if="${totalPages > 1}">
 
@@ -295,8 +292,6 @@
 
 </div>
 
-
-<!-- ADD -->
 <div class="modal fade"
      id="addLearningPathModal"
      tabindex="-1">
@@ -402,8 +397,6 @@
 
 </div>
 
-
-<!-- EDIT -->
 <th:block th:each="path : ${learningPaths}">
 
     <div class="modal fade"
@@ -505,7 +498,6 @@
     </div>
 
 </th:block>
-
 
 <div th:replace="~{base :: footer}"></div>
 

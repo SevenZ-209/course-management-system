@@ -100,7 +100,6 @@ public class ApiStudentLessonController {
                             .orElse(null);
         }
 
-
         return studentLessonMapper
                 .toDetailResponse(
                         lesson,

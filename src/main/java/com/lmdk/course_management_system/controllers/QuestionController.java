@@ -35,6 +35,9 @@ public class QuestionController {
         int page = parsePage(params.get("page"));
         params.put("page", String.valueOf(page));
 
+        Integer selectedCourseId = parseInteger(params.get("courseId"));
+        normalizeAssignmentFilter(params, selectedCourseId);
+
         long totalRecords = questionService.countQuestions(params);
         int totalPages = Math.max(
                 (int) Math.ceil((double) totalRecords / pageSize),
@@ -47,7 +50,9 @@ public class QuestionController {
         }
 
         model.addAttribute("questions", questionService.getQuestions(params));
-        model.addAttribute("assignments", assignmentService.getAllAssignments());
+        model.addAttribute("assignments", selectedCourseId == null
+                ? List.of()
+                : assignmentService.getAssignmentsByCourse(selectedCourseId));
         model.addAttribute("courses", courseService.getAllCourses());
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", totalPages);
@@ -157,6 +162,24 @@ public class QuestionController {
         }
 
         return "redirect:/admin/questions";
+    }
+
+    private void normalizeAssignmentFilter(Map<String, String> params, Integer courseId) {
+        Integer assignmentId = parseInteger(params.get("assignmentId"));
+        if (courseId == null || assignmentId == null)
+            return;
+
+        Assignment assignment = assignmentService.getAssignmentById(assignmentId);
+        if (assignment == null || assignment.getCourse() == null || !courseId.equals(assignment.getCourse().getId()))
+            params.remove("assignmentId");
+    }
+
+    private Integer parseInteger(String value) {
+        try {
+            return value == null || value.isBlank() ? null : Integer.valueOf(value);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     private int parsePage(String page) {

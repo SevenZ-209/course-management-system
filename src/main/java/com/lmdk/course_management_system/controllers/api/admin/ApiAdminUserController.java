@@ -113,32 +113,77 @@ public class ApiAdminUserController {
     }
 
     @GetMapping("/teacher-options")
-    public List<AdminTeacherOptionResponse> getTeacherOptions() {
-        return userService
-                .getUsersByRole(User.UserRole.TEACHER)
-                .stream()
-                .filter(user ->
-                        user.getStatus()
-                                == User.UserStatus.ACTIVE
-                )
+    public List<AdminTeacherOptionResponse> getTeacherOptions(
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size
+    ) {
+        List<User> users = hasQuery(q)
+                ? userService.searchUsersByRole(User.UserRole.TEACHER, q.trim(), safePage(page), safeSize(size))
+                : List.of();
+
+        return users.stream()
                 .map(adminUserMapper::toTeacherOptionResponse)
                 .toList();
     }
 
     @GetMapping("/student-options")
-    public List<AdminStudentOptionResponse> getStudentOptions() {
-        return userService
-                .getUsersByRole(User.UserRole.STUDENT)
-                .stream()
-                .map(user ->
-                        new AdminStudentOptionResponse(
-                                user.getId(),
-                                user.getUsername(),
-                                user.getFullName(),
-                                user.getStatus().name()
-                        )
-                )
+    public List<AdminStudentOptionResponse> getStudentOptions(
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size
+    ) {
+        List<User> users = hasQuery(q)
+                ? userService.searchUsersByRole(User.UserRole.STUDENT, q.trim(), safePage(page), safeSize(size))
+                : List.of();
+
+        return users.stream()
+                .map(user -> new AdminStudentOptionResponse(
+                        user.getId(), user.getUsername(), user.getFullName(), user.getStatus().name()
+                ))
                 .toList();
+    }
+
+    @GetMapping("/parent-options")
+    public List<AdminStudentOptionResponse> getParentOptions(
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size
+    ) {
+        List<User> users = hasQuery(q)
+                ? userService.searchUsersByRole(User.UserRole.PARENT, q.trim(), safePage(page), safeSize(size))
+                : List.of();
+
+        return users.stream()
+                .map(user -> new AdminStudentOptionResponse(
+                        user.getId(), user.getUsername(), user.getFullName(), user.getStatus().name()
+                ))
+                .toList();
+    }
+
+    @GetMapping("/teacher-options/{userId}")
+    public AdminTeacherOptionResponse getTeacherOption(@PathVariable Integer userId) {
+        User user = userService.getUserById(userId);
+        if (user == null || user.getRole() != User.UserRole.TEACHER)
+            throw new IllegalArgumentException("Giáo viên không tồn tại!");
+        return adminUserMapper.toTeacherOptionResponse(user);
+    }
+
+    @GetMapping("/student-options/{userId}")
+    public AdminStudentOptionResponse getStudentOption(@PathVariable Integer userId) {
+        return getUserOption(userId, User.UserRole.STUDENT, "Học viên không tồn tại!");
+    }
+
+    @GetMapping("/parent-options/{userId}")
+    public AdminStudentOptionResponse getParentOption(@PathVariable Integer userId) {
+        return getUserOption(userId, User.UserRole.PARENT, "Phụ huynh không tồn tại!");
+    }
+
+    private AdminStudentOptionResponse getUserOption(Integer userId, User.UserRole role, String message) {
+        User user = userService.getUserById(userId);
+        if (user == null || user.getRole() != role)
+            throw new IllegalArgumentException(message);
+        return new AdminStudentOptionResponse(user.getId(), user.getUsername(), user.getFullName(), user.getStatus().name());
     }
 
     @PatchMapping("/{userId}/status")
@@ -180,6 +225,18 @@ public class ApiAdminUserController {
                 userId,
                 "Cập nhật trạng thái thành công!"
         );
+    }
+
+    private boolean hasQuery(String q) {
+        return q != null && !q.isBlank();
+    }
+
+    private int safePage(Integer page) {
+        return page == null ? 1 : Math.max(page, 1);
+    }
+
+    private int safeSize(Integer size) {
+        return size == null ? 20 : Math.min(Math.max(size, 1), 50);
     }
 
     private User requireUser(Integer userId) {

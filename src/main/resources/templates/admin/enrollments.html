@@ -1,433 +1,196 @@
 <!doctype html>
-<html lang="vi"
-      xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>Quản lý đăng ký lớp</title>
     <th:block th:replace="~{base :: css}"></th:block>
 </head>
-
 <body>
-
 <div th:replace="~{base :: header}"></div>
-
 <div class="container mt-4">
-
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h3 class="mb-1">Quản lý đăng ký lớp</h3>
-
-            <span class="text-muted">
-                Tổng cộng:
-                <strong th:text="${totalRecords}">0</strong>
-                đăng ký
-            </span>
-        </div>
-
-        <button class="btn btn-primary"
-                data-bs-toggle="modal"
-                data-bs-target="#addEnrollmentModal">
-            Thêm đăng ký
-        </button>
+        <div><h3 class="mb-1">Quản lý đăng ký lớp</h3><span class="text-muted">Tổng cộng: <strong th:text="${totalRecords}">0</strong> đăng ký</span></div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEnrollmentModal">Thêm đăng ký</button>
     </div>
 
-    <div th:if="${successMessage}"
-         class="alert alert-success"
-         th:text="${successMessage}">
-    </div>
+    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
 
-    <div th:if="${errorMessage}"
-         class="alert alert-danger"
-         th:text="${errorMessage}">
-    </div>
+    <div class="card border-0 shadow-sm mb-4"><div class="card-body">
+        <form method="get" th:action="@{/admin/enrollments}"><div class="row g-3">
+            <div class="col-md-3"><input type="text" class="form-control" name="kw" th:value="${kw}" placeholder="Tên, username hoặc email"></div>
+            <div class="col-md-3"><select class="form-select" id="filterCourseId" name="courseId"><option value="">Tất cả khóa học</option><option th:each="course : ${courses}" th:value="${course.id}" th:text="${course.name}" th:selected="${courseId == course.id.toString()}"></option></select></div>
+            <div class="col-md-2"><select class="form-select" id="filterClassId" name="classId" th:disabled="${#strings.isEmpty(courseId)}"><option value="">Tất cả lớp học</option><option th:each="courseClass : ${classes}" th:value="${courseClass.id}" th:text="${courseClass.name}" th:selected="${classId == courseClass.id.toString()}"></option></select></div>
+            <div class="col-md-2"><select class="form-select" name="status"><option value="">Tất cả trạng thái</option><option value="PENDING_PAYMENT" th:selected="${status == 'PENDING_PAYMENT'}">Chờ thanh toán</option><option value="ACTIVE" th:selected="${status == 'ACTIVE'}">Đang học</option><option value="CANCELED" th:selected="${status == 'CANCELED'}">Đã hủy</option></select></div>
+            <div class="col-md-2"><button type="submit" class="btn btn-primary">Tìm</button> <a th:href="@{/admin/enrollments}" class="btn btn-outline-secondary">Làm mới</a></div>
+        </div></form>
+    </div></div>
 
-    <!-- FILTER -->
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body">
+    <div class="card border-0 shadow-sm"><div class="card-body p-0"><div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light"><tr><th>ID</th><th>Học viên</th><th>Khóa học</th><th>Lớp học</th><th>Ngày đăng ký</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+            <tbody>
+            <tr th:each="enrollment : ${enrollments}">
+                <td th:text="${enrollment.id}"></td>
+                <td><div class="fw-semibold" th:text="${enrollment.student.fullName}"></div><small class="text-muted">@<span th:text="${enrollment.student.username}"></span> · ID <span th:text="${enrollment.student.id}"></span></small></td>
+                <td th:text="${enrollment.courseClass.course.name}"></td>
+                <td><span class="badge text-bg-light border" th:text="${enrollment.courseClass.name}"></span></td>
+                <td><span th:if="${enrollment.createdAt != null}" th:text="${#temporals.format(enrollment.createdAt, 'dd/MM/yyyy HH:mm')}"></span></td>
+                <td>
+                    <span th:if="${enrollment.status.name() == 'PENDING_PAYMENT'}" class="badge text-bg-warning">Chờ thanh toán</span>
+                    <span th:if="${enrollment.status.name() == 'ACTIVE'}" class="badge text-bg-success">Đang học</span>
+                    <span th:if="${enrollment.status.name() == 'CANCELED'}" class="badge text-bg-danger">Đã hủy</span>
+                </td>
+                <td>
+                    <form method="post" th:if="${enrollment.status.name() != 'CANCELED'}" th:action="@{/admin/enrollments/cancel}" onsubmit="return confirm('Bạn có chắc muốn hủy đăng ký này?');">
+                        <input type="hidden" name="enrollmentId" th:value="${enrollment.id}"><button type="submit" class="btn btn-sm btn-outline-danger">Hủy đăng ký</button>
+                    </form>
+                    <span th:if="${enrollment.status.name() == 'CANCELED'}" class="text-muted">Đã hủy</span>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(enrollments)}"><td colspan="7" class="text-center text-muted py-5">Chưa có đăng ký lớp học.</td></tr>
+            </tbody>
+        </table>
+    </div></div></div>
 
-            <form method="get"
-                  th:action="@{/admin/enrollments}">
+    <nav class="mt-4" th:if="${totalPages > 1}"><ul class="pagination justify-content-center">
+        <li class="page-item" th:classappend="${currentPage == 1} ? 'disabled'"><a class="page-link" th:href="@{/admin/enrollments(page=${currentPage - 1},kw=${kw},courseId=${courseId},classId=${classId},status=${status})}">Trước</a></li>
+        <li class="page-item" th:each="pageNumber : ${#numbers.sequence(1, totalPages)}" th:classappend="${pageNumber == currentPage} ? 'active'"><a class="page-link" th:text="${pageNumber}" th:href="@{/admin/enrollments(page=${pageNumber},kw=${kw},courseId=${courseId},classId=${classId},status=${status})}"></a></li>
+        <li class="page-item" th:classappend="${currentPage == totalPages} ? 'disabled'"><a class="page-link" th:href="@{/admin/enrollments(page=${currentPage + 1},kw=${kw},courseId=${courseId},classId=${classId},status=${status})}">Sau</a></li>
+    </ul></nav>
+</div>
 
-                <div class="row g-3">
-
-                    <div class="col-md-3">
-                        <input type="text"
-                               class="form-control"
-                               name="kw"
-                               th:value="${kw}"
-                               placeholder="Tên, username hoặc email">
-                    </div>
-
-                    <div class="col-md-3">
-                        <select class="form-select"
-                                name="courseId">
-
-                            <option value="">Tất cả khóa học</option>
-
-                            <option th:each="course : ${courses}"
-                                    th:value="${course.id}"
-                                    th:text="${course.name}"
-                                    th:selected="${courseId == course.id.toString()}">
-                            </option>
-
-                        </select>
-                    </div>
-
-                    <div class="col-md-2">
-                        <select class="form-select"
-                                name="classId">
-
-                            <option value="">Tất cả lớp học</option>
-
-                            <option th:each="courseClass : ${classes}"
-                                    th:value="${courseClass.id}"
-                                    th:text="${courseClass.name}"
-                                    th:selected="${classId == courseClass.id.toString()}">
-                            </option>
-
-                        </select>
-                    </div>
-
-                    <div class="col-md-2">
-                        <select class="form-select"
-                                name="status">
-
-                            <option value="">Tất cả trạng thái</option>
-
-                            <option value="PENDING_PAYMENT"
-                                    th:selected="${status == 'PENDING_PAYMENT'}">
-                                Chờ thanh toán
-                            </option>
-
-                            <option value="ACTIVE"
-                                    th:selected="${status == 'ACTIVE'}">
-                                Đang học
-                            </option>
-
-                            <option value="CANCELED"
-                                    th:selected="${status == 'CANCELED'}">
-                                Đã hủy
-                            </option>
-
-                        </select>
-                    </div>
-
-                    <div class="col-md-2">
-                        <button type="submit"
-                                class="btn btn-primary">
-                            Tìm
-                        </button>
-
-                        <a th:href="@{/admin/enrollments}"
-                           class="btn btn-outline-secondary">
-                            Làm mới
-                        </a>
-                    </div>
-
-                </div>
-
-            </form>
-
-        </div>
-    </div>
-
-    <!-- TABLE -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-body p-0">
-
-            <div class="table-responsive">
-
-                <table class="table table-hover align-middle mb-0">
-
-                    <thead class="table-light">
-                    <tr>
-                        <th>ID</th>
-                        <th>Học viên</th>
-                        <th>Khóa học</th>
-                        <th>Lớp học</th>
-                        <th>Ngày đăng ký</th>
-                        <th>Trạng thái</th>
-                        <th style="width: 230px;">Cập nhật</th>
-                    </tr>
-                    </thead>
-
-                    <tbody>
-
-                    <tr th:each="enrollment : ${enrollments}">
-
-                        <td th:text="${enrollment.id}"></td>
-
-                        <td>
-                            <div class="fw-semibold"
-                                 th:text="${enrollment.student.fullName}">
-                            </div>
-
-                            <small class="text-muted">
-                                @<span th:text="${enrollment.student.username}"></span>
-                            </small>
-                        </td>
-
-                        <td th:text="${enrollment.courseClass.course.name}">
-                        </td>
-
-                        <td>
-                            <span class="badge text-bg-light border"
-                                  th:text="${enrollment.courseClass.name}">
-                            </span>
-                        </td>
-
-                        <td>
-                            <span th:if="${enrollment.createdAt != null}"
-                                  th:text="${#temporals.format(
-                                      enrollment.createdAt,
-                                      'dd/MM/yyyy HH:mm'
-                                  )}">
-                            </span>
-                        </td>
-
-                        <td>
-
-                            <span th:if="${enrollment.status.name() == 'PENDING_PAYMENT'}"
-                                  class="badge text-bg-warning">
-                                Chờ thanh toán
-                            </span>
-
-                            <span th:if="${enrollment.status.name() == 'ACTIVE'}"
-                                  class="badge text-bg-success">
-                                Đang học
-                            </span>
-
-                            <span th:if="${enrollment.status.name() == 'CANCELED'}"
-                                  class="badge text-bg-danger">
-                                Đã hủy
-                            </span>
-
-                        </td>
-
-                        <td>
-
-                            <form method="post"
-                                  th:action="@{/admin/enrollments/update-status}"
-                                  class="d-flex gap-2">
-
-                                <input type="hidden"
-                                       name="enrollmentId"
-                                       th:value="${enrollment.id}">
-
-                                <select class="form-select form-select-sm"
-                                        name="status">
-
-                                    <option value="PENDING_PAYMENT"
-                                            th:selected="${enrollment.status.name() == 'PENDING_PAYMENT'}">
-                                        Chờ thanh toán
-                                    </option>
-
-                                    <option value="ACTIVE"
-                                            th:selected="${enrollment.status.name() == 'ACTIVE'}">
-                                        Đang học
-                                    </option>
-
-                                    <option value="CANCELED"
-                                            th:selected="${enrollment.status.name() == 'CANCELED'}">
-                                        Hủy
-                                    </option>
-
-                                </select>
-
-                                <button type="submit"
-                                        class="btn btn-sm btn-outline-primary">
-                                    Lưu
-                                </button>
-
-                            </form>
-
-                        </td>
-
-                    </tr>
-
-                    <tr th:if="${#lists.isEmpty(enrollments)}">
-
-                        <td colspan="7"
-                            class="text-center text-muted py-5">
-                            Chưa có đăng ký lớp học.
-                        </td>
-
-                    </tr>
-
-                    </tbody>
-
-                </table>
-
+<div class="modal fade" id="addEnrollmentModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+    <form method="post" th:action="@{/admin/enrollments/add}">
+        <div class="modal-header"><h5 class="modal-title">Thêm đăng ký lớp</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+            <div class="mb-3">
+                <label class="form-label">Khóa học</label>
+                <select class="form-select" id="addCourseId" required>
+                    <option value="">Chọn khóa học</option>
+                    <option th:each="course : ${courses}" th:value="${course.id}" th:text="${course.name}"></option>
+                </select>
             </div>
-
+            <div class="mb-3">
+                <label class="form-label">Lớp học</label>
+                <select class="form-select" id="addClassId" name="classId" required disabled>
+                    <option value="">Chọn khóa học trước</option>
+                </select>
+            </div>
+            <div class="mb-3 position-relative">
+                <label class="form-label">Học viên</label>
+                <input type="text" class="form-control" id="studentSearch" autocomplete="off" required
+                       placeholder="Gõ ít nhất 2 ký tự: tên, username hoặc email">
+                <input type="hidden" id="studentId" name="studentId">
+                <div id="studentSearchResults" class="list-group position-absolute w-100 shadow-sm d-none cm-async-results"
+                    ></div>
+                <div class="form-text">Chỉ tải tối đa 20 học viên phù hợp với từ khóa.</div>
+            </div>
         </div>
-    </div>
+        <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button><button type="submit" class="btn btn-primary">Thêm đăng ký</button></div>
+    </form>
+</div></div></div>
+<script>
+(() => {
+    const filterCourse = document.getElementById('filterCourseId');
+    const filterClass = document.getElementById('filterClassId');
+    const addCourse = document.getElementById('addCourseId');
+    const addClass = document.getElementById('addClassId');
+    const studentSearch = document.getElementById('studentSearch');
+    const studentId = document.getElementById('studentId');
+    const studentResults = document.getElementById('studentSearchResults');
+    const addForm = document.querySelector('#addEnrollmentModal form');
+    let studentTimer;
 
-    <!-- PAGINATION -->
-    <nav class="mt-4"
-         th:if="${totalPages > 1}">
+    async function loadClasses(courseId, target, availableOnly) {
+        target.innerHTML = '';
+        if(!courseId) {
+            const option = new Option(target === filterClass ? 'Tất cả lớp học' : 'Chọn khóa học trước', '');
+            target.appendChild(option);
+            target.disabled = true;
+            return;
+        }
 
-        <ul class="pagination justify-content-center">
+        target.disabled = true;
+        target.appendChild(new Option('Đang tải lớp học...', ''));
+        try {
+            const params = new URLSearchParams({ courseId });
+            if(availableOnly) params.set('availableOnly', 'true');
+            const response = await fetch(`/api/admin/classes/options?${params.toString()}`, { headers: { Accept: 'application/json' } });
+            if(!response.ok) throw new Error('Không thể tải lớp học');
+            const classes = await response.json();
+            target.innerHTML = '';
+            target.appendChild(new Option(target === filterClass ? 'Tất cả lớp học' : 'Chọn lớp học', ''));
+            classes.forEach(courseClass => target.appendChild(new Option(courseClass.name, courseClass.id)));
+            target.disabled = false;
+        } catch(error) {
+            target.innerHTML = '';
+            target.appendChild(new Option('Không thể tải lớp học', ''));
+            target.disabled = true;
+        }
+    }
 
-            <li class="page-item"
-                th:classappend="${currentPage == 1} ? 'disabled'">
+    filterCourse?.addEventListener('change', () => loadClasses(filterCourse.value, filterClass, false));
+    addCourse?.addEventListener('change', () => loadClasses(addCourse.value, addClass, true));
 
-                <a class="page-link"
-                   th:href="@{/admin/enrollments(
-                        page=${currentPage - 1},
-                        kw=${kw},
-                        courseId=${courseId},
-                        classId=${classId},
-                        status=${status}
-                   )}">
-                    Trước
-                </a>
-            </li>
+    function hideStudentResults() {
+        studentResults.classList.add('d-none');
+        studentResults.innerHTML = '';
+    }
 
-            <li class="page-item"
-                th:each="pageNumber : ${#numbers.sequence(1, totalPages)}"
-                th:classappend="${pageNumber == currentPage} ? 'active'">
+    studentSearch?.addEventListener('input', () => {
+        studentId.value = '';
+        studentSearch.setCustomValidity('');
+        clearTimeout(studentTimer);
+        const q = studentSearch.value.trim();
+        if(q.length < 2) {
+            hideStudentResults();
+            return;
+        }
 
-                <a class="page-link"
-                   th:text="${pageNumber}"
-                   th:href="@{/admin/enrollments(
-                        page=${pageNumber},
-                        kw=${kw},
-                        courseId=${courseId},
-                        classId=${classId},
-                        status=${status}
-                   )}">
-                </a>
+        studentTimer = setTimeout(async () => {
+            studentResults.innerHTML = '<div class="list-group-item text-muted">Đang tìm...</div>';
+            studentResults.classList.remove('d-none');
+            try {
+                const params = new URLSearchParams({ q, page: '1', size: '20' });
+                const response = await fetch(`/api/admin/users/student-options?${params.toString()}`, { headers: { Accept: 'application/json' } });
+                if(!response.ok) throw new Error('Không thể tìm học viên');
+                const students = await response.json();
+                studentResults.innerHTML = '';
+                if(students.length === 0) {
+                    studentResults.innerHTML = '<div class="list-group-item text-muted">Không tìm thấy học viên.</div>';
+                    return;
+                }
+                students.forEach(student => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'list-group-item list-group-item-action';
+                    button.textContent = `${student.fullName || student.username} · @${student.username} · ID ${student.id}`;
+                    button.addEventListener('click', () => {
+                        studentId.value = student.id;
+                        studentSearch.value = `${student.fullName || student.username} (@${student.username})`;
+                        studentSearch.setCustomValidity('');
+                        hideStudentResults();
+                    });
+                    studentResults.appendChild(button);
+                });
+            } catch(error) {
+                studentResults.innerHTML = '<div class="list-group-item text-danger">Không thể tải danh sách học viên.</div>';
+            }
+        }, 300);
+    });
 
-            </li>
+    addForm?.addEventListener('submit', event => {
+        if(!studentId.value) {
+            event.preventDefault();
+            studentSearch.setCustomValidity('Vui lòng chọn học viên từ danh sách tìm kiếm.');
+            studentSearch.reportValidity();
+        }
+    });
 
-            <li class="page-item"
-                th:classappend="${currentPage == totalPages} ? 'disabled'">
-
-                <a class="page-link"
-                   th:href="@{/admin/enrollments(
-                        page=${currentPage + 1},
-                        kw=${kw},
-                        courseId=${courseId},
-                        classId=${classId},
-                        status=${status}
-                   )}">
-                    Sau
-                </a>
-
-            </li>
-
-        </ul>
-
-    </nav>
-
-</div>
-
-
-<!-- ADD -->
-<div class="modal fade"
-     id="addEnrollmentModal"
-     tabindex="-1">
-
-    <div class="modal-dialog">
-        <div class="modal-content">
-
-            <form method="post"
-                  th:action="@{/admin/enrollments/add}">
-
-                <div class="modal-header">
-
-                    <h5 class="modal-title">
-                        Thêm đăng ký lớp
-                    </h5>
-
-                    <button type="button"
-                            class="btn-close"
-                            data-bs-dismiss="modal">
-                    </button>
-
-                </div>
-
-                <div class="modal-body">
-
-                    <div class="mb-3">
-
-                        <label class="form-label">
-                            Học viên
-                        </label>
-
-                        <select class="form-select"
-                                name="studentId"
-                                required>
-
-                            <option value="">
-                                Chọn học viên
-                            </option>
-
-                            <option th:each="student : ${students}"
-                                    th:value="${student.id}"
-                                    th:text="${student.fullName + ' - @' + student.username}">
-                            </option>
-
-                        </select>
-
-                    </div>
-
-                    <div class="mb-3">
-
-                        <label class="form-label">
-                            Lớp học
-                        </label>
-
-                        <select class="form-select"
-                                name="classId"
-                                required>
-
-                            <option value="">
-                                Chọn lớp học
-                            </option>
-
-                            <option th:each="courseClass : ${classes}"
-                                    th:value="${courseClass.id}"
-                                    th:text="${courseClass.course.name + ' - ' + courseClass.name}">
-                            </option>
-
-                        </select>
-
-                    </div>
-
-                    <div class="alert alert-info mb-0">
-                        Đăng ký mới sẽ ở trạng thái
-                        <strong>Chờ thanh toán</strong>.
-                    </div>
-
-                </div>
-
-                <div class="modal-footer">
-
-                    <button type="button"
-                            class="btn btn-outline-secondary"
-                            data-bs-dismiss="modal">
-                        Hủy
-                    </button>
-
-                    <button type="submit"
-                            class="btn btn-primary">
-                        Thêm đăng ký
-                    </button>
-
-                </div>
-
-            </form>
-
-        </div>
-    </div>
-
-</div>
-
-
+    document.addEventListener('click', event => {
+        if(studentSearch && studentResults && !studentSearch.parentElement.contains(event.target)) hideStudentResults();
+    });
+})();
+</script>
 <div th:replace="~{base :: footer}"></div>
-
-</body>
-</html>
+</body></html>

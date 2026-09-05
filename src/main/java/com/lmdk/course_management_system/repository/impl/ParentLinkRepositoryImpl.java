@@ -4,6 +4,7 @@ import com.lmdk.course_management_system.pojo.ParentLink;
 import com.lmdk.course_management_system.repository.ParentLinkRepository;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
@@ -34,6 +35,11 @@ public class ParentLinkRepositoryImpl implements ParentLinkRepository {
     }
 
     @Override
+    public ParentLink getParentLinkByIdForUpdate(Integer id) {
+        return entityManager.find(ParentLink.class, id, LockModeType.PESSIMISTIC_WRITE);
+    }
+
+    @Override
     public ParentLink getParentLinkByCode(String verificationCode) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<ParentLink> cq = cb.createQuery(ParentLink.class);
@@ -50,6 +56,45 @@ public class ParentLinkRepositoryImpl implements ParentLinkRepository {
         } catch (NoResultException ex) {
             return null;
         }
+    }
+
+    @Override
+    public ParentLink getParentLinkByCodeForUpdate(String verificationCode) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<ParentLink> cq = cb.createQuery(ParentLink.class);
+        Root<ParentLink> root = cq.from(ParentLink.class);
+
+        cq.select(root)
+                .where(cb.equal(root.get("verificationCode"), verificationCode));
+
+        try {
+            return entityManager.createQuery(cq)
+                    .setLockMode(LockModeType.PESSIMISTIC_WRITE)
+                    .getSingleResult();
+        } catch (NoResultException ex) {
+            return null;
+        }
+    }
+
+    @Override
+    public ParentLink getUnusedLinkByStudent(Integer studentId, LocalDateTime now) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<ParentLink> cq = cb.createQuery(ParentLink.class);
+        Root<ParentLink> root = cq.from(ParentLink.class);
+
+        cq.select(root)
+                .where(
+                        cb.equal(root.get("student").get("id"), studentId),
+                        cb.equal(root.get("status"), ParentLink.ParentLinkStatus.UNUSED),
+                        cb.greaterThan(root.get("expiresAt"), now)
+                )
+                .orderBy(cb.desc(root.get("id")));
+
+        List<ParentLink> links = entityManager.createQuery(cq)
+                .setMaxResults(1)
+                .getResultList();
+
+        return links.isEmpty() ? null : links.get(0);
     }
 
     @Override

@@ -15,6 +15,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -277,6 +279,39 @@ public class EnrollmentRepositoryImpl implements EnrollmentRepository {
     }
 
     @Override
+    public List<Enrollment> searchPendingEnrollments(String keyword, int page, int size) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Enrollment> cq = cb.createQuery(Enrollment.class);
+        Root<Enrollment> root = cq.from(Enrollment.class);
+
+        root.fetch("student", JoinType.LEFT);
+        root.fetch("courseClass", JoinType.LEFT).fetch("course", JoinType.LEFT);
+
+        List<Predicate> predicates = new ArrayList<>();
+        predicates.add(cb.equal(root.get("status"), Enrollment.EnrollmentStatus.PENDING_PAYMENT));
+
+        if (keyword != null && !keyword.isBlank()) {
+            String value = "%" + keyword.trim().toLowerCase() + "%";
+            predicates.add(cb.or(
+                    cb.like(cb.lower(root.get("student").get("fullName")), value),
+                    cb.like(cb.lower(root.get("student").get("username")), value),
+                    cb.like(cb.lower(root.get("student").get("email")), value),
+                    cb.like(cb.lower(root.get("courseClass").get("name")), value),
+                    cb.like(cb.lower(root.get("courseClass").get("course").get("name")), value)
+            ));
+        }
+
+        cq.select(root).distinct(true)
+                .where(predicates.toArray(new Predicate[0]))
+                .orderBy(cb.desc(root.get("createdAt")));
+
+        return entityManager.createQuery(cq)
+                .setFirstResult((Math.max(page, 1) - 1) * Math.max(size, 1))
+                .setMaxResults(Math.max(size, 1))
+                .getResultList();
+    }
+
+    @Override
     public List<Enrollment> getActiveEnrollmentsByStudent(Integer studentId) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Enrollment> cq = cb.createQuery(Enrollment.class);
@@ -352,6 +387,8 @@ public class EnrollmentRepositoryImpl implements EnrollmentRepository {
         String status = params.get("status");
         String progressCourseId = params.get("progressCourseId");
         String progressStatus = params.get("progressStatus");
+        String fromDate = params.get("fromDate");
+        String toDate = params.get("toDate");
 
         if (kw != null && !kw.isBlank()) {
             String value = "%" + kw.trim().toLowerCase() + "%";
@@ -393,28 +430,62 @@ public class EnrollmentRepositoryImpl implements EnrollmentRepository {
             }
         }
 
-        if(progressCourseId != null && !progressCourseId.isBlank()
-                && progressStatus != null && !progressStatus.isBlank()) {
-            try {
-                Integer courseIdValue = Integer.parseInt(progressCourseId);
-                StudentLearningPath.ProgressStatus statusValue =
-                        StudentLearningPath.ProgressStatus.valueOf(progressStatus);
+        addDateRangePredicates(cb, root, predicates, fromDate, toDate);
 
+        if(progressStatus != null && !progressStatus.isBlank()) {
+            try {
+                String normalizedProgressStatus = progressStatus.trim().toUpperCase();
                 Subquery<Integer> subquery = query.subquery(Integer.class);
                 Root<StudentLearningPath> progress = subquery.from(StudentLearningPath.class);
 
-                subquery.select(cb.literal(1)).where(
-                        cb.equal(progress.get("student").get("id"), root.get("student").get("id")),
-                        cb.equal(progress.get("learningPath").get("course").get("id"), courseIdValue),
-                        cb.equal(progress.get("status"), statusValue)
-                );
+                List<Predicate> progressPredicates = new ArrayList<>();
+                progressPredicates.add(cb.equal(
+                        progress.get("student").get("id"), root.get("student").get("id")
+                ));
+                progressPredicates.add(cb.equal(
+                        progress.get("learningPath").get("course").get("id"),
+                        root.get("courseClass").get("course").get("id")
+                ));
 
-                predicates.add(cb.exists(subquery));
-            } catch (IllegalArgumentException ignored) {
+                if(progressCourseId != null && !progressCourseId.isBlank()) {
+                    Integer courseIdValue = Integer.parseInt(progressCourseId);
+                    progressPredicates.add(cb.equal(
+                            progress.get("learningPath").get("course").get("id"), courseIdValue
+                    ));
+                }
+
+                if("NO_PATH".equals(normalizedProgressStatus)) {
+                    subquery.select(cb.literal(1))
+                            .where(progressPredicates.toArray(new Predicate[0]));
+                    predicates.add(cb.not(cb.exists(subquery)));
+                } else {
+                    StudentLearningPath.ProgressStatus statusValue =
+                            StudentLearningPath.ProgressStatus.valueOf(normalizedProgressStatus);
+                    progressPredicates.add(cb.equal(progress.get("status"), statusValue));
+                    subquery.select(cb.literal(1))
+                            .where(progressPredicates.toArray(new Predicate[0]));
+                    predicates.add(cb.exists(subquery));
+                }
+            } catch(IllegalArgumentException ignored) {
             }
         }
 
         return predicates;
+    }
+
+    private void addDateRangePredicates(CriteriaBuilder cb, Root<Enrollment> root,
+                                        List<Predicate> predicates, String fromDate, String toDate) {
+        try {
+            if(fromDate != null && !fromDate.isBlank()) {
+                LocalDateTime start = LocalDate.parse(fromDate).atStartOfDay();
+                predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), start));
+            }
+            if(toDate != null && !toDate.isBlank()) {
+                LocalDateTime end = LocalDate.parse(toDate).plusDays(1).atStartOfDay();
+                predicates.add(cb.lessThan(root.get("createdAt"), end));
+            }
+        } catch(Exception ignored) {
+        }
     }
 
     private int parsePage(String page) {

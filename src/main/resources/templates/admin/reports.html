@@ -3,15 +3,8 @@
 <head>
     <title>Báo cáo hệ thống</title>
     <th:block th:replace="~{base :: css}"></th:block>
-    <style>
-        .report-filter-card,.report-scope,.report-kpi,.report-chart,.report-dist{background:#fff;border:1px solid var(--cm-border);border-radius:14px;box-shadow:var(--cm-shadow)}
-        .report-filter-card{padding:16px}.report-scope{padding:12px 16px;background:#ecf9f6;border-color:#e0f2ee;font-size:13px}
-        .report-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.report-kpi{padding:18px}.report-kpi small{color:var(--cm-muted)}.report-kpi strong{display:block;margin:7px 0 4px;font-size:22px;color:#0d1513}
-        .report-chart{padding:18px;margin-top:16px}.report-chart-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.report-chart-title{font-size:18px;font-weight:800}.report-chip{padding:5px 10px;border-radius:999px;background:var(--cm-primary-soft);color:var(--cm-primary-dark);font-size:11px;font-weight:800}
-        #revenueChart{width:100%;height:320px;display:block;margin-top:10px}.chart-grid{stroke:#e5eeeb;stroke-width:1}.chart-line{fill:none;stroke:var(--cm-primary);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}.chart-dot{fill:var(--cm-primary);stroke:#fff;stroke-width:2}.chart-label{fill:#73817d;font-size:11px}.chart-axis{fill:#73817d;font-size:11px}
-        .report-distributions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:16px}.report-dist{padding:18px}.report-dist h5{font-size:17px;font-weight:800;margin-bottom:2px}.report-dist>small{color:var(--cm-muted)}.dist-row{margin-top:18px}.dist-head{display:flex;justify-content:space-between;gap:12px;font-size:13px}.dist-track{height:6px;background:#e8eeec;border-radius:99px;overflow:hidden;margin-top:7px}.dist-fill{height:100%;border-radius:99px}.fill-green{background:#1c9a63}.fill-blue{background:#1676e8}.fill-yellow{background:#f0ad00}.fill-red{background:#e54757}.fill-gray{background:#6e7976}.dist-rate{text-align:right;color:#899590;font-size:10px;margin-top:3px}
-        @media(max-width:992px){.report-kpis,.report-distributions{grid-template-columns:1fr 1fr}}@media(max-width:680px){.report-kpis,.report-distributions{grid-template-columns:1fr}}
-    </style>
+    <link th:href="@{/css/reports.css}" rel="stylesheet">
+
 </head>
 <body>
 <div th:replace="~{base :: header}"></div>
@@ -37,7 +30,7 @@
 
     <div class="report-chart">
         <div class="report-chart-head"><div><div class="report-chart-title">Doanh thu theo thời gian</div><small class="text-muted">Chỉ tính giao dịch SUCCESS trong khoảng đã chọn.</small></div><span class="report-chip" th:text="${report.revenueGranularity() == 'MONTH' ? 'Theo tháng' : 'Theo ngày'}">Theo ngày</span></div>
-        <div id="revenuePoints" hidden><span class="revenue-point" th:each="point : ${report.revenueTrend()}" th:data-label="${point.label()}" th:data-value="${point.amount()}"></span></div>
+        <div id="revenuePoints" hidden><span class="revenue-point" th:each="point : ${report.revenueTrend()}" th:data-label="${point.label()}" th:data-value="${point.revenue()}"></span></div>
         <svg id="revenueChart" viewBox="0 0 1000 320" preserveAspectRatio="none" aria-label="Biểu đồ doanh thu"></svg>
     </div>
 

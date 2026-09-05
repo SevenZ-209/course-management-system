@@ -40,6 +40,26 @@ public class CourseClass {
     @JoinColumn(name = "teacher_id")
     private User teacher;
 
+    public ClassStatus getStatus() {
+        return resolveStatus(LocalDate.now());
+    }
+
+    public ClassStatus resolveStatus(LocalDate today) {
+        if (status == ClassStatus.CANCELED)
+            return ClassStatus.CANCELED;
+
+        if (startDate == null || endDate == null || today == null)
+            return status == null ? ClassStatus.UPCOMING : status;
+
+        if (today.isBefore(startDate))
+            return ClassStatus.UPCOMING;
+
+        if (today.isAfter(endDate))
+            return ClassStatus.COMPLETED;
+
+        return ClassStatus.ACTIVE;
+    }
+
     public enum ClassStatus {
         UPCOMING, ACTIVE, COMPLETED, CANCELED
     }

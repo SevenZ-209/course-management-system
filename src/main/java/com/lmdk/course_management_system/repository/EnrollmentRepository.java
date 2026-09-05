@@ -39,6 +39,8 @@ public interface EnrollmentRepository {
 
     List<Enrollment> getPendingEnrollments();
 
+    List<Enrollment> searchPendingEnrollments(String keyword, int page, int size);
+
     List<Enrollment> getActiveEnrollmentsByStudent(Integer studentId);
 
     boolean existsActiveEnrollmentByStudentAndCourse(Integer studentId, Integer courseId);

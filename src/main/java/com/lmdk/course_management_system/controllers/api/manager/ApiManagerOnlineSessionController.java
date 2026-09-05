@@ -36,6 +36,7 @@ public class ApiManagerOnlineSessionController {
     public AdminOnlineSessionPageResponse getSessions(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(required = false) String kw,
+            @RequestParam(required = false) Integer courseId,
             @RequestParam(required = false) Integer classId,
             @RequestParam(required = false) Integer teacherId,
             @RequestParam(required = false) String date
@@ -44,6 +45,7 @@ public class ApiManagerOnlineSessionController {
         Map<String, String> params = new HashMap<>();
         params.put("page", String.valueOf(page));
         if(kw != null && !kw.isBlank()) params.put("kw", kw.trim());
+        if(courseId != null) params.put("courseId", String.valueOf(courseId));
         if(classId != null) params.put("classId", String.valueOf(classId));
         if(teacherId != null) params.put("teacherId", String.valueOf(teacherId));
         if(date != null && !date.isBlank()) params.put("date", date);
@@ -78,19 +80,26 @@ public class ApiManagerOnlineSessionController {
             @PathVariable Integer sessionId,
             @RequestBody OnlineSessionRequest request
     ) {
-        OnlineSession session = requireSession(sessionId);
+        requireSession(sessionId);
         CourseClass courseClass = requireClass(request.classId());
         User teacher = requireTeacher(request.teacherId());
 
-        apply(session, request, courseClass, teacher);
-        sessionService.updateSession(session);
+        OnlineSession candidate = new OnlineSession();
+        candidate.setId(sessionId);
+        apply(candidate, request, courseClass, teacher);
+        sessionService.updateSession(candidate);
 
         return new AdminOnlineSessionActionResponse(sessionId, "Cập nhật buổi học thành công!");
     }
 
     @GetMapping("/options")
-    public List<AdminOnlineSessionResponse> getSessionOptions() {
-        return sessionService.getAllSessions().stream().map(sessionMapper::toResponse).toList();
+    public List<AdminOnlineSessionResponse> getSessionOptions(
+            @RequestParam(required = false) Integer classId
+    ) {
+        var sessions = classId == null
+                ? sessionService.getAllSessions()
+                : sessionService.getSessionsByClass(classId);
+        return sessions.stream().map(sessionMapper::toResponse).toList();
     }
 
     private void apply(

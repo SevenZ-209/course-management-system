@@ -143,9 +143,16 @@ public class ApiAdminEnrollmentController {
     }
 
     @GetMapping("/pending-options")
-    public List<AdminPendingEnrollmentOptionResponse> getPendingOptions() {
+    public List<AdminPendingEnrollmentOptionResponse> getPendingOptions(
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size
+    ) {
+        if (q == null || q.isBlank())
+            return List.of();
+
         return enrollmentService
-                .getPendingEnrollments()
+                .searchPendingEnrollments(q.trim(), Math.max(page, 1), Math.min(Math.max(size, 1), 50))
                 .stream()
                 .map(adminEnrollmentMapper::toPendingOption)
                 .toList();

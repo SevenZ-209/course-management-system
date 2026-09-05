@@ -41,7 +41,6 @@
          th:text="${errorMessage}">
     </div>
 
-    <!-- FILTER -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
 
@@ -59,7 +58,7 @@
                     </div>
 
                     <div class="col-md-3">
-                        <select class="form-select"
+                        <select class="form-select" id="answerFilterCourse"
                                 name="courseId">
 
                             <option value="">
@@ -76,19 +75,11 @@
                     </div>
 
                     <div class="col-md-2">
-                        <select class="form-select"
-                                name="assignmentId">
-
-                            <option value="">
-                                Tất cả bài tập
-                            </option>
-
-                            <option th:each="assignment : ${assignments}"
-                                    th:value="${assignment.id}"
-                                    th:text="${assignment.name}"
-                                    th:selected="${assignmentId == assignment.id.toString()}">
-                            </option>
-
+                        <select class="form-select" name="assignmentId" data-dependent-select
+                                data-parent-id="answerFilterCourse" data-endpoint="/admin/answers/assignments" data-param="courseId"
+                                data-empty-label="Tất cả bài tập" data-waiting-label="Chọn khóa học trước"
+                                th:attr="data-selected=${assignmentId}">
+                            <option value="">Chọn khóa học trước</option>
                         </select>
                     </div>
 
@@ -137,7 +128,6 @@
         </div>
     </div>
 
-    <!-- TABLE -->
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
 
@@ -147,7 +137,6 @@
 
                     <thead class="table-light">
                     <tr>
-                        <th>ID</th>
                         <th>Bài tập</th>
                         <th>Câu hỏi</th>
                         <th>Thứ tự</th>
@@ -162,8 +151,6 @@
 
                     <tr th:each="answer : ${answers}">
 
-                        <td th:text="${answer.id}"></td>
-
                         <td>
                             <div class="fw-semibold"
                                  th:text="${answer.question.assignment.name}">
@@ -174,7 +161,7 @@
                             </small>
                         </td>
 
-                        <td style="max-width: 300px;">
+                        <td class="cm-cell-max-300">
                             <div>
                                 <span class="badge text-bg-light border me-1"
                                       th:text="${'#' + answer.question.orderNumber}">
@@ -191,7 +178,7 @@
                             </span>
                         </td>
 
-                        <td style="max-width: 350px;"
+                        <td class="cm-cell-max-350"
                             th:text="${answer.content}">
                         </td>
 
@@ -236,7 +223,7 @@
                     </tr>
 
                     <tr th:if="${#lists.isEmpty(answers)}">
-                        <td colspan="8"
+                        <td colspan="7"
                             class="text-center text-muted py-5">
                             Chưa có đáp án.
                         </td>
@@ -251,7 +238,6 @@
         </div>
     </div>
 
-    <!-- PAGINATION -->
     <nav class="mt-4"
          th:if="${totalPages > 1}">
 
@@ -312,8 +298,6 @@
 
 </div>
 
-
-<!-- ADD -->
 <div class="modal fade"
      id="addAnswerModal"
      tabindex="-1">
@@ -474,8 +458,6 @@
     </div>
 </div>
 
-
-<!-- EDIT -->
 <th:block th:each="answer : ${answers}">
 
     <div class="modal fade"
@@ -616,9 +598,9 @@
 
 </th:block>
 
-
 <div th:replace="~{base :: footer}"></div>
 
+<script th:src="@{/js/admin-selection.js}"></script>
 <script>
     const courseSelect = document.getElementById("answerCourse");
     const assignmentSelect = document.getElementById("answerAssignment");

@@ -42,7 +42,6 @@
          th:text="${errorMessage}">
     </div>
 
-    <!-- FILTER -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
 
@@ -126,7 +125,6 @@
         </div>
     </div>
 
-    <!-- TABLE -->
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
 
@@ -144,7 +142,7 @@
                         <th>Thời gian</th>
                         <th>Trạng thái</th>
                         <th>Thao tác</th>
-                        <th style="width: 210px;">Đổi trạng thái</th>
+                        <th class="cm-col-210">Đổi trạng thái</th>
                     </tr>
                     </thead>
 
@@ -270,7 +268,6 @@
         </div>
     </div>
 
-    <!-- PAGINATION -->
     <nav class="mt-4" th:if="${totalPages > 1}">
         <ul class="pagination justify-content-center">
 
@@ -325,8 +322,6 @@
 
 </div>
 
-
-<!-- ADD -->
 <div class="modal fade"
      id="addAssignmentModal"
      tabindex="-1">
@@ -360,7 +355,7 @@
                     <div class="mb-3">
                         <label class="form-label">Khóa học</label>
 
-                        <select class="form-select"
+                        <select class="form-select" id="addAssignmentCourse"
                                 name="courseId"
                                 required>
 
@@ -371,6 +366,15 @@
                                     th:text="${course.name}">
                             </option>
 
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Bài học</label>
+                        <select class="form-select" name="lessonId" required data-dependent-select
+                                data-parent-id="addAssignmentCourse" data-endpoint="/admin/assignments/lessons"
+                                data-param="courseId" data-empty-label="Chọn bài học" data-waiting-label="Chọn khóa học trước">
+                            <option value="">Chọn khóa học trước</option>
                         </select>
                     </div>
 
@@ -449,8 +453,6 @@
     </div>
 </div>
 
-
-<!-- EDIT -->
 <th:block th:each="assignment : ${assignments}">
 
     <div class="modal fade"
@@ -593,10 +595,9 @@
 
 </th:block>
 
-
 <div th:replace="~{base :: footer}"></div>
 
-
+<script th:src="@{/js/admin-selection.js}"></script>
 <script>
     document.querySelectorAll("form").forEach(form => {
         const type = form.querySelector(".assignment-type");

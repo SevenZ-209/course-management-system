@@ -1,6 +1,7 @@
 package com.lmdk.course_management_system.controllers.api.manager;
 
 import com.lmdk.course_management_system.dto.admin.attendance.*;
+import com.lmdk.course_management_system.helpers.AttendanceRosterHelper;
 import com.lmdk.course_management_system.mappers.admin.AdminAttendanceMapper;
 import com.lmdk.course_management_system.pojo.Attendance;
 import com.lmdk.course_management_system.pojo.Enrollment;
@@ -28,6 +29,7 @@ public class ApiManagerAttendanceController {
     private final UserService userService;
     private final EnrollmentService enrollmentService;
     private final AdminAttendanceMapper attendanceMapper;
+    private final AttendanceRosterHelper attendanceRosterHelper;
 
     @Value("${attendances.page-size:10}")
     private int pageSize;
@@ -38,6 +40,7 @@ public class ApiManagerAttendanceController {
             @RequestParam(required = false) String kw,
             @RequestParam(required = false) Integer sessionId,
             @RequestParam(required = false) Integer classId,
+            @RequestParam(required = false) Integer courseId,
             @RequestParam(required = false) Boolean present
     ) {
         page = Math.max(page, 1);
@@ -46,6 +49,7 @@ public class ApiManagerAttendanceController {
         if(kw != null && !kw.isBlank()) params.put("kw", kw.trim());
         if(sessionId != null) params.put("sessionId", String.valueOf(sessionId));
         if(classId != null) params.put("classId", String.valueOf(classId));
+        if(courseId != null) params.put("courseId", String.valueOf(courseId));
         if(present != null) params.put("present", String.valueOf(present));
 
         long totalRecords = attendanceService.countAttendances(params);
@@ -100,6 +104,16 @@ public class ApiManagerAttendanceController {
         attendanceService.updateAttendance(attendance);
 
         return new AdminAttendanceActionResponse(attendanceId, "Cập nhật điểm danh thành công!");
+    }
+
+    @GetMapping("/roster")
+    public List<AdminAttendanceRosterResponse> getRoster(@RequestParam Integer sessionId) {
+        return attendanceRosterHelper.getRoster(sessionId);
+    }
+
+    @PutMapping("/bulk")
+    public List<AdminAttendanceRosterResponse> saveBulk(@RequestBody BulkAttendanceSaveRequest request) {
+        return attendanceRosterHelper.saveBulk(request);
     }
 
     @GetMapping("/students")

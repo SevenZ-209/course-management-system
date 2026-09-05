@@ -14,9 +14,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -128,6 +131,58 @@ public class PaymentTransactionRepositoryImpl implements PaymentTransactionRepos
     }
 
     @Override
+    public BigDecimal sumTransactionAmounts(Map<String, String> params) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<BigDecimal> cq = cb.createQuery(BigDecimal.class);
+        Root<PaymentTransaction> root = cq.from(PaymentTransaction.class);
+
+        List<Predicate> predicates = createPredicates(cb, root, params);
+        Expression<BigDecimal> sum = cb.sum(root.<BigDecimal>get("amount"));
+
+        cq.select(cb.coalesce(sum, BigDecimal.ZERO))
+                .where(predicates.toArray(new Predicate[0]));
+
+        return entityManager.createQuery(cq).getSingleResult();
+    }
+
+    @Override
+    public List<Object[]> sumTransactionAmountsByPeriod(Map<String, String> params, String dateFormat) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Object[]> cq = cb.createQuery(Object[].class);
+        Root<PaymentTransaction> root = cq.from(PaymentTransaction.class);
+
+        List<Predicate> predicates = createPredicates(cb, root, params);
+        cq.multiselect(root.get("createdAt"), root.get("amount"))
+                .where(predicates.toArray(new Predicate[0]))
+                .orderBy(cb.asc(root.get("createdAt")));
+
+        return groupAmountsByPeriod(entityManager.createQuery(cq).getResultList(), dateFormat);
+    }
+
+    static List<Object[]> groupAmountsByPeriod(List<Object[]> rows, String dateFormat) {
+        DateTimeFormatter formatter = "%Y-%m".equals(dateFormat)
+                ? DateTimeFormatter.ofPattern("yyyy-MM")
+                : DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        Map<String, BigDecimal> totals = new LinkedHashMap<>();
+
+        if(rows != null) {
+            for(Object[] row : rows) {
+                if(row == null || row.length < 2 || !(row[0] instanceof LocalDateTime))
+                    continue;
+
+                LocalDateTime createdAt = (LocalDateTime) row[0];
+                BigDecimal amount = row[1] instanceof BigDecimal value
+                        ? value : row[1] == null ? BigDecimal.ZERO : new BigDecimal(String.valueOf(row[1]));
+                totals.merge(createdAt.format(formatter), amount, BigDecimal::add);
+            }
+        }
+
+        return totals.entrySet().stream()
+                .map(entry -> new Object[]{entry.getKey(), entry.getValue()})
+                .toList();
+    }
+
+    @Override
     public boolean existsByTransactionCode(String transactionCode) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Long> cq = cb.createQuery(Long.class);
@@ -206,6 +261,8 @@ public class PaymentTransactionRepositoryImpl implements PaymentTransactionRepos
         String courseId = params.get("courseId");
         String status = params.get("status");
         String date = params.get("date");
+        String fromDate = params.get("fromDate");
+        String toDate = params.get("toDate");
 
         if (kw != null && !kw.isBlank()) {
             String value = "%" + kw.trim().toLowerCase() + "%";
@@ -287,7 +344,23 @@ public class PaymentTransactionRepositoryImpl implements PaymentTransactionRepos
             }
         }
 
+        addDateRangePredicates(cb, root, predicates, fromDate, toDate);
         return predicates;
+    }
+
+    private void addDateRangePredicates(CriteriaBuilder cb, Root<PaymentTransaction> root,
+                                        List<Predicate> predicates, String fromDate, String toDate) {
+        try {
+            if(fromDate != null && !fromDate.isBlank()) {
+                LocalDateTime start = LocalDate.parse(fromDate).atStartOfDay();
+                predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), start));
+            }
+            if(toDate != null && !toDate.isBlank()) {
+                LocalDateTime end = LocalDate.parse(toDate).plusDays(1).atStartOfDay();
+                predicates.add(cb.lessThan(root.get("createdAt"), end));
+            }
+        } catch(Exception ignored) {
+        }
     }
 
     private int parsePage(String page) {

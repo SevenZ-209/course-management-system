@@ -175,6 +175,37 @@ public class UserRepositoryImpl implements UserRepository {
         return entityManager.createQuery(cq).getResultList();
     }
 
+    @Override
+    public List<User> searchUsersByRole(User.UserRole role, String keyword, int page, int size) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<User> cq = cb.createQuery(User.class);
+        Root<User> root = cq.from(User.class);
+
+        List<Predicate> predicates = new ArrayList<>();
+        predicates.add(cb.equal(root.get("role"), role));
+        predicates.add(cb.equal(root.get("status"), User.UserStatus.ACTIVE));
+
+        if(keyword != null && !keyword.isBlank()) {
+            String value = "%" + keyword.trim().toLowerCase() + "%";
+            predicates.add(cb.or(
+                    cb.like(cb.lower(root.get("username")), value),
+                    cb.like(cb.lower(root.get("fullName")), value),
+                    cb.like(cb.lower(root.get("email")), value)
+            ));
+        }
+
+        cq.select(root)
+                .where(predicates.toArray(new Predicate[0]))
+                .orderBy(cb.asc(root.get("fullName")), cb.asc(root.get("id")));
+
+        int safePage = Math.max(page, 1);
+        int safeSize = Math.min(Math.max(size, 1), 50);
+        TypedQuery<User> query = entityManager.createQuery(cq);
+        query.setFirstResult((safePage - 1) * safeSize);
+        query.setMaxResults(safeSize);
+        return query.getResultList();
+    }
+
     private List<Predicate> createPredicates(CriteriaBuilder cb, Root<User> root,
                                              Map<String, String> params) {
         List<Predicate> predicates = new ArrayList<>();

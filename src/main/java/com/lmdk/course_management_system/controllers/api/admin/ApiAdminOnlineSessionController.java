@@ -38,6 +38,7 @@ public class ApiAdminOnlineSessionController {
     public AdminOnlineSessionPageResponse getSessions(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(required = false) String kw,
+            @RequestParam(required = false) Integer courseId,
             @RequestParam(required = false) Integer classId,
             @RequestParam(required = false) Integer teacherId,
             @RequestParam(required = false) String date
@@ -49,6 +50,9 @@ public class ApiAdminOnlineSessionController {
 
         if(kw != null && !kw.isBlank())
             params.put("kw", kw.trim());
+
+        if(courseId != null)
+            params.put("courseId", String.valueOf(courseId));
 
         if(classId != null)
             params.put(
@@ -138,14 +142,16 @@ public class ApiAdminOnlineSessionController {
         User teacher =
                 requireTeacher(request.teacherId());
 
-        session.setTitle(request.title());
-        session.setCourseClass(courseClass);
-        session.setTeacher(teacher);
-        session.setStartTime(request.startTime());
-        session.setEndTime(request.endTime());
-        session.setMeetingUrl(request.meetingUrl());
+        OnlineSession candidate = new OnlineSession();
+        candidate.setId(sessionId);
+        candidate.setTitle(request.title());
+        candidate.setCourseClass(courseClass);
+        candidate.setTeacher(teacher);
+        candidate.setStartTime(request.startTime());
+        candidate.setEndTime(request.endTime());
+        candidate.setMeetingUrl(request.meetingUrl());
 
-        sessionService.updateSession(session);
+        sessionService.updateSession(candidate);
 
         return new AdminOnlineSessionActionResponse(
                 sessionId,
@@ -154,10 +160,14 @@ public class ApiAdminOnlineSessionController {
     }
 
     @GetMapping("/options")
-    public List<AdminOnlineSessionResponse> getSessionOptions() {
-        return sessionService
-                .getAllSessions()
-                .stream()
+    public List<AdminOnlineSessionResponse> getSessionOptions(
+            @RequestParam(required = false) Integer classId
+    ) {
+        var sessions = classId == null
+                ? sessionService.getAllSessions()
+                : sessionService.getSessionsByClass(classId);
+
+        return sessions.stream()
                 .map(adminOnlineSessionMapper::toResponse)
                 .toList();
     }

@@ -122,4 +122,9 @@ public class UserServiceImpl implements UserService {
     public List<User> getUsersByRole(User.UserRole role) {
         return userRepository.getUsersByRole(role);
     }
+
+    @Override
+    public List<User> searchUsersByRole(User.UserRole role, String keyword, int page, int size) {
+        return userRepository.searchUsersByRole(role, keyword, page, size);
+    }
 }

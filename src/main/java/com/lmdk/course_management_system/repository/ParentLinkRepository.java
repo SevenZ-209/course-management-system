@@ -10,7 +10,13 @@ public interface ParentLinkRepository {
 
     ParentLink getParentLinkById(Integer id);
 
+    ParentLink getParentLinkByIdForUpdate(Integer id);
+
     ParentLink getParentLinkByCode(String verificationCode);
+
+    ParentLink getParentLinkByCodeForUpdate(String verificationCode);
+
+    ParentLink getUnusedLinkByStudent(Integer studentId, LocalDateTime now);
 
     ParentLink addParentLink(ParentLink parentLink);
 

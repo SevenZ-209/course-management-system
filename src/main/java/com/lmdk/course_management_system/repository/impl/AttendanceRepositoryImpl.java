@@ -181,6 +181,7 @@ public class AttendanceRepositoryImpl implements AttendanceRepository {
         String kw = params.get("kw");
         String sessionId = params.get("sessionId");
         String classId = params.get("classId");
+        String courseId = params.get("courseId");
         String present = params.get("present");
 
         if (kw != null && !kw.isBlank()) {
@@ -210,6 +211,19 @@ public class AttendanceRepositoryImpl implements AttendanceRepository {
                                 .get("courseClass")
                                 .get("id"),
                         Integer.parseInt(classId)
+                ));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        if (courseId != null && !courseId.isBlank()) {
+            try {
+                predicates.add(cb.equal(
+                        root.get("onlineSession")
+                                .get("courseClass")
+                                .get("course")
+                                .get("id"),
+                        Integer.parseInt(courseId)
                 ));
             } catch (NumberFormatException ignored) {
             }

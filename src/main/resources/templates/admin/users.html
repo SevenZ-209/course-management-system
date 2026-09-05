@@ -99,8 +99,8 @@
             <th>Email</th>
             <th>Quyền</th>
             <th>Trạng thái</th>
-            <th style="width: 210px;">Đổi quyền</th>
-            <th style="width: 220px;">Đổi trạng thái</th>
+            <th class="cm-col-210">Đổi quyền</th>
+            <th class="cm-col-220">Đổi trạng thái</th>
           </tr>
           </thead>
 
@@ -121,8 +121,7 @@
                      alt="avatar">
 
                 <div th:unless="${user.avatar != null and !user.avatar.isBlank()}"
-                     class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center"
-                     style="width: 42px; height: 42px;">
+                     class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center cm-avatar-42">
                   <span th:text="${#strings.substring(user.username, 0, 1).toUpperCase()}"></span>
                 </div>
 

@@ -10,6 +10,10 @@ import java.time.LocalDateTime;
         name = "attendances",
         uniqueConstraints = @UniqueConstraint(
                 columnNames = {"online_session_id", "student_id"}
+        ),
+        indexes = @Index(
+                name = "idx_attendance_student_session",
+                columnList = "student_id,online_session_id"
         )
 )
 @Getter

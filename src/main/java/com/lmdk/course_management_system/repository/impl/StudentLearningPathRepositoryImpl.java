@@ -173,6 +173,31 @@ public class StudentLearningPathRepositoryImpl implements StudentLearningPathRep
     }
 
     @Override
+    public List<StudentLearningPath> getStudentLearningPathsByStudentsAndCourses(
+            List<Integer> studentIds, List<Integer> courseIds) {
+        if(studentIds == null || studentIds.isEmpty() || courseIds == null || courseIds.isEmpty())
+            return List.of();
+
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<StudentLearningPath> cq = cb.createQuery(StudentLearningPath.class);
+        Root<StudentLearningPath> root = cq.from(StudentLearningPath.class);
+
+        root.fetch("student", JoinType.LEFT);
+        root.fetch("learningPath", JoinType.LEFT).fetch("course", JoinType.LEFT);
+        root.fetch("currentDetail", JoinType.LEFT).fetch("assignment", JoinType.LEFT);
+
+        cq.select(root)
+                .distinct(true)
+                .where(
+                        root.get("student").get("id").in(studentIds),
+                        root.get("learningPath").get("course").get("id").in(courseIds)
+                )
+                .orderBy(cb.desc(root.get("startedAt")));
+
+        return entityManager.createQuery(cq).getResultList();
+    }
+
+    @Override
     public List<StudentLearningPath> getStudentLearningPathsByLearningPath(Integer learningPathId) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<StudentLearningPath> cq = cb.createQuery(StudentLearningPath.class);

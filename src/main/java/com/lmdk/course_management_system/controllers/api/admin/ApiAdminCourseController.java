@@ -217,7 +217,6 @@ public class ApiAdminCourseController {
         return course;
     }
 
-
     private Category requireCategory(Integer categoryId) {
         if(categoryId == null)
             throw new IllegalArgumentException(

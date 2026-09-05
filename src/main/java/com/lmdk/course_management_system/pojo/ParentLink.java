@@ -8,7 +8,14 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "parent_links")
+@Table(
+        name = "parent_links",
+        indexes = {
+                @Index(name = "idx_parent_link_student_status_expires", columnList = "student_id,status,expires_at"),
+                @Index(name = "idx_parent_link_parent_status", columnList = "parent_id,status"),
+                @Index(name = "idx_parent_link_status_expires", columnList = "status,expires_at")
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor

@@ -13,6 +13,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -49,6 +50,19 @@ public class LearningPathController {
         model.addAttribute("status", params.getOrDefault("status", ""));
 
         return "admin/learning-paths";
+    }
+
+    @GetMapping("/options")
+    @ResponseBody
+    public List<Map<String, Object>> getOptions(@RequestParam Integer courseId) {
+        return learningPathService.getLearningPathsByCourse(courseId).stream()
+                .map(path -> Map.<String, Object>of(
+                        "id", path.getId(),
+                        "name", path.getName(),
+                        "courseId", path.getCourse().getId(),
+                        "courseName", path.getCourse().getName()
+                ))
+                .toList();
     }
 
     @PostMapping("/add")

@@ -23,6 +23,8 @@ public interface StudentLearningPathRepository {
 
     List<StudentLearningPath> getStudentLearningPathsByStudentsAndCourse(List<Integer> studentIds, Integer courseId);
 
+    List<StudentLearningPath> getStudentLearningPathsByStudentsAndCourses(List<Integer> studentIds, List<Integer> courseIds);
+
     List<StudentLearningPath> getStudentLearningPathsByLearningPath(Integer learningPathId);
 
     long countStudentLearningPaths(Map<String, String> params);

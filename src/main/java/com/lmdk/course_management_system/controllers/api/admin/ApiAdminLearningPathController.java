@@ -75,10 +75,14 @@ public class ApiAdminLearningPathController {
     }
 
     @GetMapping("/options")
-    public List<AdminLearningPathResponse> getOptions() {
-        return learningPathService
-                .getAllLearningPaths()
-                .stream()
+    public List<AdminLearningPathResponse> getOptions(
+            @RequestParam(required = false) Integer courseId
+    ) {
+        var paths = courseId == null
+                ? learningPathService.getAllLearningPaths()
+                : learningPathService.getLearningPathsByCourse(courseId);
+
+        return paths.stream()
                 .map(adminLearningPathMapper::toResponse)
                 .toList();
     }

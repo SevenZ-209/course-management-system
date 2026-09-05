@@ -268,7 +268,6 @@ public class GradingResultServiceImpl implements GradingResultService {
     private void finishAttempt(AssignmentAttempt attempt,
                                BigDecimal totalScore) {
 
-
         AssignedAssignment assigned =
                 attempt.getAssignedAssignment();
 

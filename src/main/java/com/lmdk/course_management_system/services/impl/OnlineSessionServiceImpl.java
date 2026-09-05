@@ -1,5 +1,6 @@
 package com.lmdk.course_management_system.services.impl;
 
+import com.lmdk.course_management_system.pojo.CourseClass;
 import com.lmdk.course_management_system.pojo.OnlineSession;
 import com.lmdk.course_management_system.repository.OnlineSessionRepository;
 import com.lmdk.course_management_system.services.OnlineSessionService;
@@ -7,6 +8,7 @@ import com.lmdk.course_management_system.services.OnlineSessionService;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -23,12 +25,14 @@ public class OnlineSessionServiceImpl implements OnlineSessionService {
     }
 
     @Override
+    @Transactional
     public OnlineSession addSession(OnlineSession onlineSession) {
         validateSession(onlineSession);
         return sessionRepository.addSession(onlineSession);
     }
 
     @Override
+    @Transactional
     public void updateSession(OnlineSession onlineSession) {
         validateSession(onlineSession);
         sessionRepository.updateSession(onlineSession);
@@ -81,6 +85,20 @@ public class OnlineSessionServiceImpl implements OnlineSessionService {
 
         if (session.getMeetingUrl() == null || session.getMeetingUrl().trim().isBlank())
             throw new IllegalArgumentException("Link phòng học không được để trống!");
+
+        if (session.getCourseClass().getStatus() == CourseClass.ClassStatus.CANCELED)
+            throw new IllegalArgumentException("Không thể tạo buổi học cho lớp đã hủy!");
+
+        sessionRepository.lockScheduleResources(session.getCourseClass().getId(), session.getTeacher().getId());
+
+        Integer excludeSessionId = session.getId();
+        if (sessionRepository.existsClassScheduleConflict(
+                session.getCourseClass().getId(), session.getStartTime(), session.getEndTime(), excludeSessionId))
+            throw new IllegalArgumentException("Lớp học đã có buổi học khác trong khoảng thời gian này!");
+
+        if (sessionRepository.existsTeacherScheduleConflict(
+                session.getTeacher().getId(), session.getStartTime(), session.getEndTime(), excludeSessionId))
+            throw new IllegalArgumentException("Giáo viên đã có buổi học khác trong khoảng thời gian này!");
 
         session.setTitle(session.getTitle().trim());
         session.setMeetingUrl(session.getMeetingUrl().trim());

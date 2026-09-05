@@ -2,8 +2,11 @@ package com.lmdk.course_management_system.controllers;
 
 import com.lmdk.course_management_system.pojo.Assignment;
 import com.lmdk.course_management_system.pojo.Course;
+import com.lmdk.course_management_system.pojo.Lesson;
 import com.lmdk.course_management_system.services.AssignmentService;
 import com.lmdk.course_management_system.services.CourseService;
+import com.lmdk.course_management_system.services.CourseModuleService;
+import com.lmdk.course_management_system.services.LessonService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -14,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -23,6 +27,8 @@ public class AssignmentController {
 
     private final AssignmentService assignmentService;
     private final CourseService courseService;
+    private final CourseModuleService moduleService;
+    private final LessonService lessonService;
 
     @Value("${assignments.page-size:10}")
     private int pageSize;
@@ -53,17 +59,39 @@ public class AssignmentController {
         return "admin/assignments";
     }
 
+    @GetMapping("/lessons")
+    @ResponseBody
+    public List<Map<String, Object>> getLessons(@RequestParam Integer courseId) {
+        if (courseId == null)
+            return List.of();
+
+        return moduleService.getModulesByCourse(courseId).stream()
+                .flatMap(module -> lessonService.getLessonsByModule(module.getId()).stream()
+                        .map(lesson -> Map.<String, Object>of(
+                                "id", lesson.getId(),
+                                "name", module.getName() + " - " + lesson.getName()
+                        )))
+                .toList();
+    }
+
     @PostMapping("/add")
     public String addAssignment(@RequestParam String name,
                                 @RequestParam Integer courseId,
+                                @RequestParam Integer lessonId,
                                 @RequestParam String type,
                                 @RequestParam BigDecimal maximumScore,
                                 @RequestParam(required = false) Integer durationMinutes,
                                 RedirectAttributes redirectAttributes) {
         Course course = courseService.getCourseById(courseId);
+        Lesson lesson = lessonService.getLessonById(lessonId);
 
         if (course == null) {
             redirectAttributes.addFlashAttribute("errorMessage", "Khóa học không tồn tại!");
+            return "redirect:/admin/assignments";
+        }
+        if (lesson == null || lesson.getCourseModule() == null || lesson.getCourseModule().getCourse() == null
+                || !courseId.equals(lesson.getCourseModule().getCourse().getId())) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Bài học không thuộc khóa học đã chọn!");
             return "redirect:/admin/assignments";
         }
 
@@ -71,6 +99,7 @@ public class AssignmentController {
             Assignment assignment = new Assignment();
             assignment.setName(name);
             assignment.setCourse(course);
+            assignment.setLesson(lesson);
             assignment.setType(Assignment.AssignmentType.valueOf(type));
             assignment.setMaximumScore(maximumScore);
             assignment.setDurationMinutes(durationMinutes);

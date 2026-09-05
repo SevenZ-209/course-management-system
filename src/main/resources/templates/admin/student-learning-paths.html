@@ -42,7 +42,6 @@
          th:text="${errorMessage}">
     </div>
 
-    <!-- FILTER -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
 
@@ -61,6 +60,7 @@
 
                     <div class="col-md-3">
                         <select class="form-select"
+                                id="slpFilterCourse"
                                 name="courseId">
 
                             <option value="">Tất cả khóa học</option>
@@ -76,7 +76,9 @@
 
                     <div class="col-md-2">
                         <select class="form-select"
-                                name="learningPathId">
+                                id="slpFilterPath"
+                                name="learningPathId"
+                                th:disabled="${#strings.isEmpty(courseId)}">
 
                             <option value="">Tất cả lộ trình</option>
 
@@ -132,7 +134,6 @@
         </div>
     </div>
 
-    <!-- TABLE -->
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
 
@@ -291,7 +292,6 @@
         </div>
     </div>
 
-    <!-- PAGINATION -->
     <nav class="mt-4"
          th:if="${totalPages > 1}">
 
@@ -349,8 +349,6 @@
 
 </div>
 
-
-<!-- ASSIGN PATH -->
 <div class="modal fade"
      id="assignPathModal"
      tabindex="-1">
@@ -381,21 +379,15 @@
                             Học viên
                         </label>
 
-                        <select class="form-select"
-                                id="pathStudent"
-                                name="studentId"
-                                required>
-
-                            <option value="">
-                                Chọn học viên
-                            </option>
-
-                            <option th:each="student : ${students}"
-                                    th:value="${student.id}"
-                                    th:text="${student.fullName + ' - @' + student.username}">
-                            </option>
-
-                        </select>
+                        <div class="position-relative" id="pathStudentLookup"
+                             data-async-user-lookup data-require-selection="true" data-endpoint="/admin/users/student-options">
+                            <input type="text" class="form-control" data-async-user-input autocomplete="off"
+                                   placeholder="Gõ tên, username hoặc email..." required>
+                            <input type="hidden" id="pathStudent" name="studentId" data-async-user-id required>
+                            <div class="list-group position-absolute w-100 shadow-sm d-none cm-async-results" data-async-user-results
+                                ></div>
+                        </div>
+                        <small class="text-muted">Gõ ít nhất 2 ký tự. Hệ thống chỉ tải tối đa 20 kết quả.</small>
                     </div>
 
                     <div class="mb-3">
@@ -443,62 +435,77 @@
     </div>
 </div>
 
-
 <div th:replace="~{base :: footer}"></div>
 
-
+<script th:src="@{/js/admin-selection.js}"></script>
 <script>
-    const studentSelect = document.getElementById("pathStudent");
+    const filterCourse = document.getElementById("slpFilterCourse");
+    const filterPath = document.getElementById("slpFilterPath");
+    const studentLookup = document.getElementById("pathStudentLookup");
     const pathSelect = document.getElementById("availableLearningPath");
 
-    studentSelect.addEventListener("change", async function () {
-        const studentId = this.value;
+    async function loadFilterPaths(courseId) {
+        filterPath.disabled = true;
+        filterPath.innerHTML = '<option value="">Đang tải lộ trình...</option>';
 
-        pathSelect.disabled = true;
-        pathSelect.innerHTML = "";
-
-        if (!studentId) {
-            pathSelect.innerHTML =
-                '<option value="">Vui lòng chọn học viên trước</option>';
+        if (!courseId) {
+            filterPath.innerHTML = '<option value="">Chọn khóa học trước</option>';
             return;
         }
 
-        pathSelect.innerHTML =
-            '<option value="">Đang tải lộ trình...</option>';
+        try {
+            const response = await fetch(`/admin/learning-paths/options?courseId=${encodeURIComponent(courseId)}`);
+            if (!response.ok) throw new Error("load paths failed");
+            const paths = await response.json();
+            filterPath.innerHTML = '<option value="">Tất cả lộ trình</option>';
+            paths.forEach(path => {
+                const option = document.createElement("option");
+                option.value = path.id;
+                option.textContent = path.name;
+                filterPath.appendChild(option);
+            });
+            filterPath.disabled = false;
+        } catch (error) {
+            filterPath.innerHTML = '<option value="">Không thể tải lộ trình</option>';
+        }
+    }
+
+    filterCourse.addEventListener("change", () => loadFilterPaths(filterCourse.value));
+
+    async function loadAvailablePaths(studentId) {
+        pathSelect.disabled = true;
+        pathSelect.innerHTML = '<option value="">Đang tải lộ trình...</option>';
+
+        if (!studentId) {
+            pathSelect.innerHTML = '<option value="">Vui lòng chọn học viên trước</option>';
+            return;
+        }
 
         try {
-            const response = await fetch(
-                `/admin/student-learning-paths/available-paths?studentId=${studentId}`
-            );
-
+            const response = await fetch(`/admin/student-learning-paths/available-paths?studentId=${encodeURIComponent(studentId)}`);
+            if (!response.ok) throw new Error("load available paths failed");
             const paths = await response.json();
+            pathSelect.innerHTML = '<option value="">Chọn lộ trình</option>';
 
-            pathSelect.innerHTML =
-                '<option value="">Chọn lộ trình</option>';
-
-            if (paths.length === 0) {
-                pathSelect.innerHTML =
-                    '<option value="">Không có lộ trình phù hợp</option>';
+            if (!paths.length) {
+                pathSelect.innerHTML = '<option value="">Không có lộ trình phù hợp</option>';
                 return;
             }
 
             paths.forEach(path => {
                 const option = document.createElement("option");
-
                 option.value = path.id;
-                option.textContent =
-                    `${path.courseName} - ${path.name}`;
-
+                option.textContent = `${path.courseName} - ${path.name}`;
                 pathSelect.appendChild(option);
             });
-
             pathSelect.disabled = false;
-
         } catch (error) {
-            pathSelect.innerHTML =
-                '<option value="">Không thể tải lộ trình</option>';
+            pathSelect.innerHTML = '<option value="">Không thể tải lộ trình</option>';
         }
-    });
+    }
+
+    studentLookup.addEventListener("async-user-selected", event => loadAvailablePaths(event.detail.id));
+    studentLookup.addEventListener("async-user-cleared", () => loadAvailablePaths(null));
 </script>
 
 </body>

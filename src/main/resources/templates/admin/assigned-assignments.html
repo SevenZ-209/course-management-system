@@ -49,7 +49,6 @@
          th:text="${errorMessage}">
     </div>
 
-    <!-- FILTER -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
 
@@ -67,7 +66,7 @@
                     </div>
 
                     <div class="col-md-2">
-                        <select class="form-select" name="courseId">
+                        <select class="form-select" id="assignedFilterCourse" name="courseId">
                             <option value="">Tất cả khóa học</option>
 
                             <option th:each="course : ${courses}"
@@ -79,7 +78,7 @@
                     </div>
 
                     <div class="col-md-2">
-                        <select class="form-select" name="learningPathId">
+                        <select class="form-select" id="assignedFilterPath" name="learningPathId" th:disabled="${#strings.isEmpty(courseId)}">
                             <option value="">Tất cả lộ trình</option>
 
                             <option th:each="path : ${learningPaths}"
@@ -136,7 +135,6 @@
         </div>
     </div>
 
-    <!-- TABLE -->
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
 
@@ -321,7 +319,6 @@
         </div>
     </div>
 
-    <!-- PAGINATION -->
     <nav class="mt-4" th:if="${totalPages > 1}">
         <ul class="pagination justify-content-center">
 
@@ -379,8 +376,6 @@
 
 </div>
 
-
-<!-- RELEASE CURRENT DETAIL -->
 <div class="modal fade"
      id="releaseCurrentModal"
      tabindex="-1">
@@ -409,25 +404,20 @@
                             Học viên / bài hiện tại
                         </label>
 
-                        <select class="form-select"
-                                name="studentLearningPathId"
-                                required>
+                        <div class="position-relative mb-3" id="releaseStudentLookup"
+                             data-async-user-lookup data-require-selection="true" data-endpoint="/admin/users/student-options">
+                            <input type="text" class="form-control" data-async-user-input autocomplete="off"
+                                   placeholder="Gõ tên, username hoặc email...">
+                            <input type="hidden" id="releaseStudentId" data-async-user-id>
+                            <div class="list-group position-absolute w-100 shadow-sm d-none cm-async-results" data-async-user-results
+                                ></div>
+                        </div>
 
-                            <option value="">
-                                Chọn học viên
-                            </option>
-
-                            <option th:each="progress : ${progresses}"
-                                    th:value="${progress.id}"
-                                    th:text="${progress.student.fullName
-                                        + ' - '
-                                        + progress.learningPath.name
-                                        + ' - #' + progress.currentDetail.orderNumber
-                                        + ' '
-                                        + progress.currentDetail.assignment.name}">
-                            </option>
-
+                        <label class="form-label">Lộ trình / bài hiện tại</label>
+                        <select class="form-select" id="releaseProgress" name="studentLearningPathId" disabled required>
+                            <option value="">Vui lòng chọn học viên trước</option>
                         </select>
+                        <small class="text-muted">Chỉ tải lộ trình đang IN_PROGRESS của học viên đã chọn.</small>
                     </div>
 
                     <div class="row">
@@ -485,8 +475,6 @@
     </div>
 </div>
 
-
-<!-- MANUAL ASSIGNMENT -->
 <div class="modal fade"
      id="manualAssignmentModal"
      tabindex="-1">
@@ -515,21 +503,15 @@
                             Học viên
                         </label>
 
-                        <select class="form-select"
-                                id="manualStudent"
-                                name="studentId"
-                                required>
-
-                            <option value="">
-                                Chọn học viên
-                            </option>
-
-                            <option th:each="student : ${students}"
-                                    th:value="${student.id}"
-                                    th:text="${student.fullName + ' - @' + student.username}">
-                            </option>
-
-                        </select>
+                        <div class="position-relative" id="manualStudentLookup"
+                             data-async-user-lookup data-require-selection="true" data-endpoint="/admin/users/student-options">
+                            <input type="text" class="form-control" data-async-user-input autocomplete="off"
+                                   placeholder="Gõ tên, username hoặc email..." required>
+                            <input type="hidden" id="manualStudent" name="studentId" data-async-user-id required>
+                            <div class="list-group position-absolute w-100 shadow-sm d-none cm-async-results" data-async-user-results
+                                ></div>
+                        </div>
+                        <small class="text-muted">Gõ ít nhất 2 ký tự. Hệ thống chỉ tải tối đa 20 kết quả.</small>
                     </div>
 
                     <div class="mb-3">
@@ -605,62 +587,113 @@
     </div>
 </div>
 
-
 <div th:replace="~{base :: footer}"></div>
 
-
+<script th:src="@{/js/admin-selection.js}"></script>
 <script>
-    const studentSelect = document.getElementById("manualStudent");
+    const filterCourse = document.getElementById("assignedFilterCourse");
+    const filterPath = document.getElementById("assignedFilterPath");
+    const manualStudentLookup = document.getElementById("manualStudentLookup");
     const assignmentSelect = document.getElementById("manualAssignment");
+    const releaseStudentLookup = document.getElementById("releaseStudentLookup");
+    const releaseProgress = document.getElementById("releaseProgress");
 
-    studentSelect.addEventListener("change", async function () {
-        const studentId = this.value;
+    async function loadFilterPaths(courseId) {
+        filterPath.disabled = true;
+        filterPath.innerHTML = '<option value="">Đang tải lộ trình...</option>';
 
-        assignmentSelect.disabled = true;
-        assignmentSelect.innerHTML = "";
-
-        if (!studentId) {
-            assignmentSelect.innerHTML =
-                '<option value="">Vui lòng chọn học viên trước</option>';
+        if (!courseId) {
+            filterPath.innerHTML = '<option value="">Chọn khóa học trước</option>';
             return;
         }
 
-        assignmentSelect.innerHTML =
-            '<option value="">Đang tải bài tập...</option>';
+        try {
+            const response = await fetch(`/admin/learning-paths/options?courseId=${encodeURIComponent(courseId)}`);
+            if (!response.ok) throw new Error("load paths failed");
+            const paths = await response.json();
+            filterPath.innerHTML = '<option value="">Tất cả lộ trình</option>';
+            paths.forEach(path => {
+                const option = document.createElement("option");
+                option.value = path.id;
+                option.textContent = path.name;
+                filterPath.appendChild(option);
+            });
+            filterPath.disabled = false;
+        } catch (error) {
+            filterPath.innerHTML = '<option value="">Không thể tải lộ trình</option>';
+        }
+    }
+
+    filterCourse.addEventListener("change", () => loadFilterPaths(filterCourse.value));
+
+    async function loadAssignments(studentId) {
+        assignmentSelect.disabled = true;
+        assignmentSelect.innerHTML = '<option value="">Đang tải bài tập...</option>';
+
+        if (!studentId) {
+            assignmentSelect.innerHTML = '<option value="">Vui lòng chọn học viên trước</option>';
+            return;
+        }
 
         try {
-            const response = await fetch(
-                `/admin/assigned-assignments/available-assignments?studentId=${studentId}`
-            );
-
+            const response = await fetch(`/admin/assigned-assignments/available-assignments?studentId=${encodeURIComponent(studentId)}`);
+            if (!response.ok) throw new Error("load assignments failed");
             const assignments = await response.json();
+            assignmentSelect.innerHTML = '<option value="">Chọn bài tập</option>';
 
-            assignmentSelect.innerHTML =
-                '<option value="">Chọn bài tập</option>';
-
-            if (assignments.length === 0) {
-                assignmentSelect.innerHTML =
-                    '<option value="">Không có bài tập phù hợp</option>';
+            if (!assignments.length) {
+                assignmentSelect.innerHTML = '<option value="">Không có bài tập phù hợp</option>';
                 return;
             }
 
             assignments.forEach(assignment => {
                 const option = document.createElement("option");
-
                 option.value = assignment.id;
-                option.textContent =
-                    `${assignment.courseName} - ${assignment.name}`;
-
+                option.textContent = `${assignment.courseName} - ${assignment.name}`;
                 assignmentSelect.appendChild(option);
             });
-
             assignmentSelect.disabled = false;
-
         } catch (error) {
-            assignmentSelect.innerHTML =
-                '<option value="">Không thể tải bài tập</option>';
+            assignmentSelect.innerHTML = '<option value="">Không thể tải bài tập</option>';
         }
-    });
+    }
+
+    async function loadProgress(studentId) {
+        releaseProgress.disabled = true;
+        releaseProgress.innerHTML = '<option value="">Đang tải lộ trình...</option>';
+
+        if (!studentId) {
+            releaseProgress.innerHTML = '<option value="">Vui lòng chọn học viên trước</option>';
+            return;
+        }
+
+        try {
+            const response = await fetch(`/admin/assigned-assignments/in-progress-options?studentId=${encodeURIComponent(studentId)}`);
+            if (!response.ok) throw new Error("load progress failed");
+            const progresses = await response.json();
+            releaseProgress.innerHTML = '<option value="">Chọn lộ trình / bài hiện tại</option>';
+
+            if (!progresses.length) {
+                releaseProgress.innerHTML = '<option value="">Học viên không có lộ trình đang học</option>';
+                return;
+            }
+
+            progresses.forEach(progress => {
+                const option = document.createElement("option");
+                option.value = progress.id;
+                option.textContent = `${progress.courseName} - ${progress.learningPathName} - #${progress.orderNumber} ${progress.assignmentName}`;
+                releaseProgress.appendChild(option);
+            });
+            releaseProgress.disabled = false;
+        } catch (error) {
+            releaseProgress.innerHTML = '<option value="">Không thể tải tiến độ học</option>';
+        }
+    }
+
+    manualStudentLookup.addEventListener("async-user-selected", event => loadAssignments(event.detail.id));
+    manualStudentLookup.addEventListener("async-user-cleared", () => loadAssignments(null));
+    releaseStudentLookup.addEventListener("async-user-selected", event => loadProgress(event.detail.id));
+    releaseStudentLookup.addEventListener("async-user-cleared", () => loadProgress(null));
 </script>
 
 </body>

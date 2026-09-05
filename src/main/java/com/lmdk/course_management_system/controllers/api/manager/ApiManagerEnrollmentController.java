@@ -4,12 +4,15 @@ import com.lmdk.course_management_system.dto.admin.enrollment.*;
 import com.lmdk.course_management_system.mappers.admin.AdminEnrollmentMapper;
 import com.lmdk.course_management_system.pojo.CourseClass;
 import com.lmdk.course_management_system.pojo.Enrollment;
+import com.lmdk.course_management_system.pojo.PaymentTransaction;
 import com.lmdk.course_management_system.pojo.User;
 import com.lmdk.course_management_system.services.CourseClassService;
 import com.lmdk.course_management_system.services.EnrollmentService;
+import com.lmdk.course_management_system.services.PaymentTransactionService;
 import com.lmdk.course_management_system.services.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -23,6 +26,7 @@ public class ApiManagerEnrollmentController {
     private final EnrollmentService enrollmentService;
     private final CourseClassService classService;
     private final UserService userService;
+    private final PaymentTransactionService transactionService;
     private final AdminEnrollmentMapper enrollmentMapper;
 
     @Value("${enrollments.page-size:10}")
@@ -58,6 +62,7 @@ public class ApiManagerEnrollmentController {
     }
 
     @PostMapping
+    @Transactional
     public AdminEnrollmentActionResponse addEnrollment(@RequestBody CreateAdminEnrollmentRequest request) {
         User student = requireStudent(request.studentId());
         CourseClass courseClass = requireClass(request.classId());
@@ -68,15 +73,32 @@ public class ApiManagerEnrollmentController {
         enrollment.setStatus(Enrollment.EnrollmentStatus.PENDING_PAYMENT);
 
         Enrollment saved = enrollmentService.addEnrollment(enrollment);
-        return new AdminEnrollmentActionResponse(saved.getId(), "Đăng ký lớp học thành công!");
+
+        PaymentTransaction transaction = new PaymentTransaction();
+        transaction.setEnrollment(saved);
+        transaction.setAmount(saved.getCourseClass().getCourse().getTuitionFee());
+        transaction.setPaymentMethod("MANUAL");
+        transaction.setStatus(PaymentTransaction.TransactionStatus.PENDING);
+        transactionService.addTransaction(transaction);
+
+        return new AdminEnrollmentActionResponse(
+                saved.getId(),
+                "Đăng ký thành công, đã tạo giao dịch chờ thanh toán!"
+        );
     }
 
     @PatchMapping("/{enrollmentId}/cancel")
+    @Transactional
     public AdminEnrollmentActionResponse cancelEnrollment(@PathVariable Integer enrollmentId) {
         Enrollment enrollment = enrollmentService.getEnrollmentById(enrollmentId);
         if(enrollment == null) throw new IllegalArgumentException("Không tìm thấy đăng ký!");
         if(enrollment.getStatus() == Enrollment.EnrollmentStatus.CANCELED)
             throw new IllegalArgumentException("Đăng ký này đã bị hủy!");
+
+        transactionService.getTransactionsByEnrollment(enrollmentId).stream()
+                .filter(transaction -> transaction.getStatus() == PaymentTransaction.TransactionStatus.PENDING)
+                .forEach(transaction -> transactionService.updateTransactionStatus(
+                        transaction.getId(), PaymentTransaction.TransactionStatus.FAILED));
 
         enrollment.setStatus(Enrollment.EnrollmentStatus.CANCELED);
         enrollmentService.updateEnrollment(enrollment);

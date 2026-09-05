@@ -36,7 +36,6 @@ public class AssignmentAttemptServiceImpl implements AssignmentAttemptService {
     private final EnrollmentService enrollmentService;
     private final AssignmentAttemptHelper assignmentAttemptHelper;
 
-
     @Override
     public AssignmentAttempt getAttemptById(Integer id) {
         return assignmentAttemptRepository.getAttemptById(id);
@@ -199,10 +198,6 @@ public class AssignmentAttemptServiceImpl implements AssignmentAttemptService {
     private void validateCanStart(AssignedAssignment assigned,
                                   Integer studentId) {
 
-        System.out.println("===== START CHECK =====");
-        System.out.println("ASSIGNED = " + assigned);
-        System.out.println("STUDENT ID = " + studentId);
-
         if (assigned == null)
             throw new IllegalArgumentException(
                     "Bài được giao không tồn tại!"
@@ -213,28 +208,16 @@ public class AssignmentAttemptServiceImpl implements AssignmentAttemptService {
                     "Bạn không có quyền làm bài này!"
             );
 
-
-
         Integer courseId =
                 assigned.getAssignment()
                         .getCourse()
                         .getId();
-
-        System.out.println("===== COURSE CHECK =====");
-        System.out.println("COURSE ID = " + courseId);
-        System.out.println("STUDENT ID = " + studentId);
-
-        System.out.println("===== ENROLLMENT CHECK =====");
-        System.out.println("studentId = " + studentId);
-        System.out.println("courseId = " + courseId);
 
         boolean active =
                 enrollmentService.existsActiveEnrollmentByStudentAndCourse(
                         studentId,
                         courseId
                 );
-
-        System.out.println("ENROLLMENT RESULT = " + active);
 
         if (!active)
             throw new IllegalArgumentException(
@@ -266,18 +249,6 @@ public class AssignmentAttemptServiceImpl implements AssignmentAttemptService {
             throw new IllegalArgumentException(
                     "Bài tập đang bị khóa!"
             );
-
-
-        System.out.println(
-                "STATUS = " + assigned.getStatus()
-        );
-
-        System.out.println(
-                "COURSE ID = " +
-                        assigned.getAssignment()
-                                .getCourse()
-                                .getId()
-        );
     }
 
     private void validatePreviousAttempt(AssignmentAttempt latest) {

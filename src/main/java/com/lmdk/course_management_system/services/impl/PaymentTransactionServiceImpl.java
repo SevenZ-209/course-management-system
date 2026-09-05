@@ -100,6 +100,11 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
             throw new IllegalArgumentException("Trạng thái mới phải là SUCCESS hoặc FAILED!");
 
         if(newStatus == PaymentTransaction.TransactionStatus.SUCCESS
+                && lockedEnrollment.getStatus() != Enrollment.EnrollmentStatus.PENDING_PAYMENT)
+            throw new IllegalArgumentException(
+                    "Chỉ có thể xác nhận thanh toán cho đăng ký đang chờ thanh toán!");
+
+        if(newStatus == PaymentTransaction.TransactionStatus.SUCCESS
                 && transactionRepository.existsSuccessfulTransactionExceptId(
                 current.getEnrollment().getId(), current.getId()))
             throw new IllegalArgumentException("Đăng ký này đã có giao dịch thanh toán thành công!");
@@ -130,6 +135,16 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
     @Override
     public long countTransactions(Map<String, String> params) {
         return transactionRepository.countTransactions(params);
+    }
+
+    @Override
+    public BigDecimal sumTransactionAmounts(Map<String, String> params) {
+        return transactionRepository.sumTransactionAmounts(params);
+    }
+
+    @Override
+    public List<Object[]> sumTransactionAmountsByPeriod(Map<String, String> params, String dateFormat) {
+        return transactionRepository.sumTransactionAmountsByPeriod(params, dateFormat);
     }
 
     @Override

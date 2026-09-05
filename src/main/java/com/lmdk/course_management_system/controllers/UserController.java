@@ -13,6 +13,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -48,6 +49,24 @@ public class UserController {
         model.addAttribute("status", params.getOrDefault("status", ""));
 
         return "admin/users";
+    }
+
+    @GetMapping("/student-options")
+    @ResponseBody
+    public List<Map<String, Object>> getStudentOptions(
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size) {
+        return getUserOptions(User.UserRole.STUDENT, q, page, size);
+    }
+
+    @GetMapping("/parent-options")
+    @ResponseBody
+    public List<Map<String, Object>> getParentOptions(
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size) {
+        return getUserOptions(User.UserRole.PARENT, q, page, size);
     }
 
     @PostMapping("/update-role")
@@ -104,6 +123,20 @@ public class UserController {
         }
 
         return "redirect:/admin/users";
+    }
+
+    private List<Map<String, Object>> getUserOptions(User.UserRole role, String q, Integer page, Integer size) {
+        int safePage = page == null ? 1 : Math.max(page, 1);
+        int safeSize = size == null ? 20 : Math.min(Math.max(size, 1), 50);
+        String keyword = q == null ? "" : q.trim();
+
+        return userService.searchUsersByRole(role, keyword, safePage, safeSize).stream()
+                .map(user -> Map.<String, Object>of(
+                        "id", user.getId(),
+                        "username", user.getUsername(),
+                        "fullName", user.getFullName()
+                ))
+                .toList();
     }
 
     private int parsePage(String page) {

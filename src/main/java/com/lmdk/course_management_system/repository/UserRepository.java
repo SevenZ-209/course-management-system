@@ -32,4 +32,6 @@ public interface UserRepository {
     boolean existsByEmail(String email);
 
     List<User> getUsersByRole(User.UserRole role);
+
+    List<User> searchUsersByRole(User.UserRole role, String keyword, int page, int size);
 }

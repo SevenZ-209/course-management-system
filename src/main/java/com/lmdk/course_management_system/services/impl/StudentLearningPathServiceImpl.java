@@ -119,7 +119,6 @@ public class StudentLearningPathServiceImpl implements StudentLearningPathServic
                     ))
                 continue;
 
-
             AssignedAssignment assigned =
                     new AssignedAssignment();
 
@@ -228,6 +227,13 @@ public class StudentLearningPathServiceImpl implements StudentLearningPathServic
             List<Integer> studentIds, Integer courseId) {
         return studentLearningPathRepository
                 .getStudentLearningPathsByStudentsAndCourse(studentIds, courseId);
+    }
+
+    @Override
+    public List<StudentLearningPath> getStudentLearningPathsByStudentsAndCourses(
+            List<Integer> studentIds, List<Integer> courseIds) {
+        return studentLearningPathRepository
+                .getStudentLearningPathsByStudentsAndCourses(studentIds, courseIds);
     }
 
     @Override
@@ -349,7 +355,6 @@ public class StudentLearningPathServiceImpl implements StudentLearningPathServic
 
         studentLearningPathRepository.updateStudentLearningPath(progress);
 
-
         return progress;
     }
 
@@ -392,15 +397,6 @@ public class StudentLearningPathServiceImpl implements StudentLearningPathServic
         );
         progress.setStartedAt(LocalDateTime.now());
 
-        details.forEach(d ->
-                System.out.println(
-                        "DETAIL: "
-                                + d.getId()
-                                + " ORDER:"
-                                + d.getOrderNumber()
-                )
-        );
-
         LearningPathDetail firstDetail = details
                 .stream()
                 .min((a,b) ->
@@ -431,16 +427,7 @@ public class StudentLearningPathServiceImpl implements StudentLearningPathServic
                 detailService.getDetailsByLearningPath(
                         progress.getLearningPath().getId()
                 );
-        System.out.println(
-                "TOTAL DETAIL = " + details.size()
-        );
         for(LearningPathDetail detail : details){
-
-            System.out.println(
-                    "CREATE ASSIGNMENT: "
-                            + detail.getId()
-                            + " - "
-                            + detail.getAssignment().getId());
 
             if(detail.getAssignment() == null)
                 continue;
@@ -451,7 +438,6 @@ public class StudentLearningPathServiceImpl implements StudentLearningPathServic
                             detail.getId()
                     ))
                 continue;
-
 
             AssignedAssignment assigned =
                     new AssignedAssignment();
@@ -477,7 +463,6 @@ public class StudentLearningPathServiceImpl implements StudentLearningPathServic
             assigned.setAssignedAt(
                     LocalDateTime.now()
             );
-
 
             assignedAssignmentRepository
                     .addAssignedAssignment(assigned);
@@ -528,7 +513,6 @@ public class StudentLearningPathServiceImpl implements StudentLearningPathServic
                                 courseId
                         );
 
-
         Map<Integer, AssignmentAttempt> latestAttempts = assignmentAttemptRepository
                 .getLatestAttemptsByAssignedAssignmentIds(
                         assignments.stream().map(AssignedAssignment::getId).toList()
@@ -543,7 +527,6 @@ public class StudentLearningPathServiceImpl implements StudentLearningPathServic
                 .map(assigned -> {
 
                     AssignmentAttempt attempt = latestAttempts.get(assigned.getId());
-
 
                     Integer attemptId =
                             attempt == null
@@ -563,9 +546,7 @@ public class StudentLearningPathServiceImpl implements StudentLearningPathServic
                     boolean canStart = assignedAssignmentHelper
                             .canStart(assigned, attempt);
 
-
                     Integer orderNumber = null;
-
 
                     if (assigned.getLearningPathDetail() != null) {
 
@@ -574,7 +555,6 @@ public class StudentLearningPathServiceImpl implements StudentLearningPathServic
                                         .getOrderNumber();
 
                     }
-
 
                     String status;
 
@@ -592,7 +572,6 @@ public class StudentLearningPathServiceImpl implements StudentLearningPathServic
 
                         status = "AVAILABLE";
                     }
-
 
                     return new CourseAssignmentResponse(
                             assigned.getId(),

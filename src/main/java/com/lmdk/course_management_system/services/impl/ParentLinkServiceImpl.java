@@ -4,6 +4,7 @@ import com.lmdk.course_management_system.exceptions.ForbiddenException;
 import com.lmdk.course_management_system.pojo.ParentLink;
 import com.lmdk.course_management_system.pojo.User;
 import com.lmdk.course_management_system.repository.ParentLinkRepository;
+import com.lmdk.course_management_system.repository.UserRepository;
 import com.lmdk.course_management_system.services.ParentLinkService;
 
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ import java.util.Map;
 public class ParentLinkServiceImpl implements ParentLinkService {
 
     private final ParentLinkRepository parentLinkRepository;
+    private final UserRepository userRepository;
 
     private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -48,26 +50,41 @@ public class ParentLinkServiceImpl implements ParentLinkService {
     }
 
     @Override
+    public ParentLink getCurrentUnusedLinkByStudent(Integer studentId) {
+        if (studentId == null)
+            return null;
+
+        LocalDateTime now = LocalDateTime.now();
+        parentLinkRepository.expireUnusedLinks(now);
+        return parentLinkRepository.getUnusedLinkByStudent(studentId, now);
+    }
+
+    @Override
     public ParentLink createParentLink(User student, LocalDateTime expiresAt) {
         parentLinkRepository.expireUnusedLinks(LocalDateTime.now());
 
         if (student == null)
             throw new IllegalArgumentException("Học viên không tồn tại!");
 
-        if (student.getRole() != User.UserRole.STUDENT)
+        User lockedStudent = userRepository.getUserByIdForUpdate(student.getId());
+
+        if (lockedStudent == null)
+            throw new IllegalArgumentException("Học viên không tồn tại!");
+
+        if (lockedStudent.getRole() != User.UserRole.STUDENT)
             throw new IllegalArgumentException("Người dùng được chọn không phải học viên!");
 
-        if (student.getStatus() != User.UserStatus.ACTIVE)
+        if (lockedStudent.getStatus() != User.UserStatus.ACTIVE)
             throw new IllegalArgumentException("Tài khoản học viên không hoạt động!");
 
         if (expiresAt == null || !expiresAt.isAfter(LocalDateTime.now()))
             throw new IllegalArgumentException("Thời gian hết hạn phải ở trong tương lai!");
 
-        if (parentLinkRepository.existsUnusedLinkByStudent(student.getId()))
+        if (parentLinkRepository.existsUnusedLinkByStudent(lockedStudent.getId()))
             throw new IllegalArgumentException("Học viên này đang có mã liên kết còn hiệu lực!");
 
         ParentLink parentLink = new ParentLink();
-        parentLink.setStudent(student);
+        parentLink.setStudent(lockedStudent);
         parentLink.setParent(null);
         parentLink.setVerificationCode(generateCode());
         parentLink.setExpiresAt(expiresAt);
@@ -87,12 +104,14 @@ public class ParentLinkServiceImpl implements ParentLinkService {
         if (parent.getStatus() != User.UserStatus.ACTIVE)
             throw new IllegalArgumentException("Tài khoản phụ huynh không hoạt động!");
 
-        ParentLink parentLink = getParentLinkByCode(verificationCode);
+        String normalizedCode = verificationCode.trim().toUpperCase();
+        ParentLink parentLink = parentLinkRepository.getParentLinkByCodeForUpdate(normalizedCode);
 
         if (parentLink == null)
             throw new IllegalArgumentException("Mã liên kết không tồn tại!");
 
-        if(parentLink.getStatus() == ParentLink.ParentLinkStatus.EXPIRED)
+        if (!parentLink.getExpiresAt().isAfter(LocalDateTime.now())
+                || parentLink.getStatus() == ParentLink.ParentLinkStatus.EXPIRED)
             throw new IllegalArgumentException(
                     "Mã liên kết đã hết hạn!"
             );
@@ -128,7 +147,7 @@ public class ParentLinkServiceImpl implements ParentLinkService {
 
     @Override
     public void expireParentLink(Integer id) {
-        ParentLink parentLink = parentLinkRepository.getParentLinkById(id);
+        ParentLink parentLink = parentLinkRepository.getParentLinkByIdForUpdate(id);
 
         if (parentLink == null)
             throw new IllegalArgumentException("Không tìm thấy mã liên kết!");
@@ -158,7 +177,7 @@ public class ParentLinkServiceImpl implements ParentLinkService {
 
         ParentLink parentLink =
                 parentLinkRepository
-                        .getParentLinkById(linkId);
+                        .getParentLinkByIdForUpdate(linkId);
 
         if(parentLink == null)
             throw new IllegalArgumentException(
@@ -185,6 +204,33 @@ public class ParentLinkServiceImpl implements ParentLinkService {
 
         parentLinkRepository
                 .updateParentLink(parentLink);
+    }
+
+    @Override
+    public void unlinkParentLinkByStudent(
+            Integer linkId,
+            User student
+    ) {
+        if (student == null || student.getRole() != User.UserRole.STUDENT)
+            throw new IllegalArgumentException("Tài khoản không phải học viên!");
+
+        if (student.getStatus() != User.UserStatus.ACTIVE)
+            throw new IllegalArgumentException("Tài khoản học viên không hoạt động!");
+
+        ParentLink parentLink = parentLinkRepository.getParentLinkByIdForUpdate(linkId);
+
+        if (parentLink == null)
+            throw new IllegalArgumentException("Liên kết không tồn tại!");
+
+        if (parentLink.getStatus() != ParentLink.ParentLinkStatus.USED)
+            throw new IllegalArgumentException("Liên kết không còn hoạt động!");
+
+        if (parentLink.getStudent() == null
+                || !parentLink.getStudent().getId().equals(student.getId()))
+            throw new ForbiddenException("Bạn không có quyền hủy liên kết này!");
+
+        parentLink.setStatus(ParentLink.ParentLinkStatus.UNLINKED);
+        parentLinkRepository.updateParentLink(parentLink);
     }
 
     @Override

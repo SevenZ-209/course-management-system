@@ -2,20 +2,22 @@ package com.lmdk.course_management_system.controllers;
 
 import com.lmdk.course_management_system.pojo.CourseClass;
 import com.lmdk.course_management_system.pojo.Enrollment;
+import com.lmdk.course_management_system.pojo.PaymentTransaction;
 import com.lmdk.course_management_system.pojo.User;
 import com.lmdk.course_management_system.services.CourseClassService;
 import com.lmdk.course_management_system.services.CourseService;
 import com.lmdk.course_management_system.services.EnrollmentService;
+import com.lmdk.course_management_system.services.PaymentTransactionService;
 import com.lmdk.course_management_system.services.UserService;
-
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -27,6 +29,7 @@ public class EnrollmentController {
     private final CourseClassService classService;
     private final CourseService courseService;
     private final UserService userService;
+    private final PaymentTransactionService transactionService;
 
     @Value("${enrollments.page-size:10}")
     private int pageSize;
@@ -38,15 +41,16 @@ public class EnrollmentController {
 
         long totalRecords = enrollmentService.countEnrollments(params);
         int totalPages = Math.max((int) Math.ceil((double) totalRecords / pageSize), 1);
-
-        if (page > totalPages) {
+        if(page > totalPages) {
             page = totalPages;
             params.put("page", String.valueOf(page));
         }
 
+        Integer selectedCourseId = parseInteger(params.get("courseId"));
         model.addAttribute("enrollments", enrollmentService.getEnrollments(params));
-        model.addAttribute("students", userService.getUsersByRole(User.UserRole.STUDENT));
-        model.addAttribute("classes", classService.getAllClasses());
+        model.addAttribute("classes", selectedCourseId == null
+                ? List.of()
+                : classService.getClassesByCourse(selectedCourseId));
         model.addAttribute("courses", courseService.getAllCourses());
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", totalPages);
@@ -55,70 +59,79 @@ public class EnrollmentController {
         model.addAttribute("courseId", params.getOrDefault("courseId", ""));
         model.addAttribute("classId", params.getOrDefault("classId", ""));
         model.addAttribute("status", params.getOrDefault("status", ""));
-
         return "admin/enrollments";
     }
 
     @PostMapping("/add")
+    @Transactional
     public String addEnrollment(@RequestParam Integer studentId,
                                 @RequestParam Integer classId,
                                 RedirectAttributes redirectAttributes) {
         User student = userService.getUserById(studentId);
         CourseClass courseClass = classService.getClassById(classId);
-
-        if (student == null) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Học viên không tồn tại!");
-            return "redirect:/admin/enrollments";
-        }
-
-        if (courseClass == null) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Lớp học không tồn tại!");
-            return "redirect:/admin/enrollments";
-        }
+        if(student == null) return error(redirectAttributes, "Học viên không tồn tại!");
+        if(student.getRole() != User.UserRole.STUDENT)
+            return error(redirectAttributes, "Người dùng được chọn không phải học viên!");
+        if(courseClass == null) return error(redirectAttributes, "Lớp học không tồn tại!");
 
         try {
             Enrollment enrollment = new Enrollment();
             enrollment.setStudent(student);
             enrollment.setCourseClass(courseClass);
             enrollment.setStatus(Enrollment.EnrollmentStatus.PENDING_PAYMENT);
+            Enrollment saved = enrollmentService.addEnrollment(enrollment);
 
-            enrollmentService.addEnrollment(enrollment);
-            redirectAttributes.addFlashAttribute("successMessage", "Đăng ký lớp học thành công!");
-        } catch (IllegalArgumentException ex) {
+            PaymentTransaction transaction = new PaymentTransaction();
+            transaction.setEnrollment(saved);
+            transaction.setAmount(saved.getCourseClass().getCourse().getTuitionFee());
+            transaction.setPaymentMethod("MANUAL");
+            transaction.setStatus(PaymentTransaction.TransactionStatus.PENDING);
+            transactionService.addTransaction(transaction);
+
+            redirectAttributes.addFlashAttribute(
+                    "successMessage", "Đăng ký thành công, đã tạo giao dịch chờ thanh toán!");
+        } catch(IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
         }
-
         return "redirect:/admin/enrollments";
     }
 
-    @PostMapping("/update-status")
-    public String updateStatus(@RequestParam Integer enrollmentId,
-                               @RequestParam String status,
-                               RedirectAttributes redirectAttributes) {
+    @PostMapping("/cancel")
+    @Transactional
+    public String cancelEnrollment(@RequestParam Integer enrollmentId,
+                                   RedirectAttributes redirectAttributes) {
         Enrollment enrollment = enrollmentService.getEnrollmentById(enrollmentId);
-
-        if (enrollment == null) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Không tìm thấy đăng ký!");
-            return "redirect:/admin/enrollments";
-        }
+        if(enrollment == null) return error(redirectAttributes, "Không tìm thấy đăng ký!");
+        if(enrollment.getStatus() == Enrollment.EnrollmentStatus.CANCELED)
+            return error(redirectAttributes, "Đăng ký này đã bị hủy!");
 
         try {
-            enrollment.setStatus(Enrollment.EnrollmentStatus.valueOf(status));
-            enrollmentService.updateEnrollment(enrollment);
+            transactionService.getTransactionsByEnrollment(enrollmentId).stream()
+                    .filter(transaction -> transaction.getStatus() == PaymentTransaction.TransactionStatus.PENDING)
+                    .forEach(transaction -> transactionService.updateTransactionStatus(
+                            transaction.getId(), PaymentTransaction.TransactionStatus.FAILED));
 
-            redirectAttributes.addFlashAttribute("successMessage", "Cập nhật trạng thái thành công!");
-        } catch (IllegalArgumentException ex) {
+            enrollment.setStatus(Enrollment.EnrollmentStatus.CANCELED);
+            enrollmentService.updateEnrollment(enrollment);
+            redirectAttributes.addFlashAttribute("successMessage", "Hủy đăng ký thành công!");
+        } catch(IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
         }
-
         return "redirect:/admin/enrollments";
+    }
+
+    private String error(RedirectAttributes redirectAttributes, String message) {
+        redirectAttributes.addFlashAttribute("errorMessage", message);
+        return "redirect:/admin/enrollments";
+    }
+
+    private Integer parseInteger(String value) {
+        try { return value == null || value.isBlank() ? null : Integer.valueOf(value); }
+        catch(Exception ex) { return null; }
     }
 
     private int parsePage(String page) {
-        try {
-            return Math.max(Integer.parseInt(page), 1);
-        } catch (Exception ex) {
-            return 1;
-        }
+        try { return Math.max(Integer.parseInt(page), 1); }
+        catch(Exception ex) { return 1; }
     }
 }

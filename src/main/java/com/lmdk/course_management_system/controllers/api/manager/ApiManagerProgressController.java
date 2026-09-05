@@ -112,8 +112,10 @@ public class ApiManagerProgressController {
 
     private String normalizeStatus(String status) {
         if(status == null || status.isBlank()) return null;
+        String normalized = status.trim().toUpperCase();
+        if("NO_PATH".equals(normalized)) return normalized;
         try {
-            return StudentLearningPath.ProgressStatus.valueOf(status.trim().toUpperCase()).name();
+            return StudentLearningPath.ProgressStatus.valueOf(normalized).name();
         } catch(IllegalArgumentException ex) {
             throw new IllegalArgumentException("Trạng thái tiến độ không hợp lệ!");
         }

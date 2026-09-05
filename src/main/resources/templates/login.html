@@ -2,20 +2,20 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 
 <head>
-    <title>Đăng nhập</title>
+    <title>Đăng nhập quản trị</title>
     <th:block th:replace="~{base :: css}"></th:block>
 </head>
 
-<body>
+<body class="cm-auth-page">
 
 <div th:replace="~{base :: header}"></div>
 
-<section class="container mt-5" style="max-width: 500px;">
-
-    <div class="card shadow-sm border-0">
-        <div class="card-body p-4">
-
-            <h3 class="text-center mb-4">Đăng nhập quản trị</h3>
+<section class="cm-login-wrap">
+    <div class="card cm-login-card">
+        <div class="card-body">
+            <div class="cm-login-eyebrow">CourseHub Admin</div>
+            <h3 class="cm-login-title">Đăng nhập quản trị</h3>
+            <p class="cm-login-note">Truy cập khu vực quản trị hệ thống CourseHub.</p>
 
             <div th:if="${param.error}" class="alert alert-danger">
                 Tên đăng nhập hoặc mật khẩu không chính xác.
@@ -26,7 +26,6 @@
             </div>
 
             <form method="post" th:action="@{/login}">
-
                 <div class="form-floating mb-3">
                     <input type="text"
                            class="form-control"
@@ -35,7 +34,6 @@
                            placeholder="Tên đăng nhập"
                            required
                            autofocus>
-
                     <label for="username">Tên đăng nhập</label>
                 </div>
 
@@ -46,19 +44,15 @@
                            name="password"
                            placeholder="Mật khẩu"
                            required>
-
                     <label for="password">Mật khẩu</label>
                 </div>
 
-                <button type="submit" class="btn btn-primary w-100">
+                <button type="submit" class="btn btn-primary w-100 cm-login-submit">
                     Đăng nhập
                 </button>
-
             </form>
-
         </div>
     </div>
-
 </section>
 
 <div th:replace="~{base :: footer}"></div>

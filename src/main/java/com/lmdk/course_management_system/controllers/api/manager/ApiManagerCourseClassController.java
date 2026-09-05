@@ -100,17 +100,18 @@ public class ApiManagerCourseClassController {
             @RequestBody UpdateCourseClassStatusRequest request
     ) {
         CourseClass courseClass = requireClass(classId);
+
         if(request.status() == null || request.status().isBlank())
             throw new IllegalArgumentException("Trạng thái không được để trống!");
 
-        try {
-            courseClass.setStatus(CourseClass.ClassStatus.valueOf(request.status().trim().toUpperCase()));
-        } catch(IllegalArgumentException ex) {
-            throw new IllegalArgumentException("Trạng thái không hợp lệ!");
-        }
+        if(!CourseClass.ClassStatus.CANCELED.name().equalsIgnoreCase(request.status().trim()))
+            throw new IllegalArgumentException(
+                    "Trạng thái Sắp mở / Đang học / Hoàn thành được tự động theo thời gian lớp học!"
+            );
 
+        courseClass.setStatus(CourseClass.ClassStatus.CANCELED);
         classService.updateClass(courseClass);
-        return new AdminCourseClassActionResponse(classId, "Cập nhật trạng thái thành công!");
+        return new AdminCourseClassActionResponse(classId, "Hủy lớp học thành công!");
     }
 
     private CourseClass requireClass(Integer classId) {

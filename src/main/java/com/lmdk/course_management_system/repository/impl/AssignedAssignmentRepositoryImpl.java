@@ -2,6 +2,7 @@ package com.lmdk.course_management_system.repository.impl;
 
 import com.lmdk.course_management_system.pojo.AssignedAssignment;
 import com.lmdk.course_management_system.pojo.Enrollment;
+import com.lmdk.course_management_system.pojo.User;
 import com.lmdk.course_management_system.repository.AssignedAssignmentRepository;
 
 import jakarta.persistence.EntityManager;
@@ -113,7 +114,6 @@ public class AssignedAssignmentRepositoryImpl implements AssignedAssignmentRepos
                                 root.get("assignedAt")
                         )
                 );
-
 
         return entityManager
                 .createQuery(cq)
@@ -299,6 +299,33 @@ public class AssignedAssignmentRepositoryImpl implements AssignedAssignmentRepos
                                 root.get("learningPathDetail").get("id"),
                                 learningPathDetailId
                         )
+                );
+
+        return entityManager.createQuery(cq).getSingleResult() > 0;
+    }
+
+    @Override
+    public boolean existsByStudentAndAssignmentForUpdate(
+            Integer studentId,
+            Integer assignmentId) {
+
+        User student = entityManager.find(
+                User.class,
+                studentId,
+                LockModeType.PESSIMISTIC_WRITE
+        );
+
+        if (student == null)
+            return false;
+
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Long> cq = cb.createQuery(Long.class);
+        Root<AssignedAssignment> root = cq.from(AssignedAssignment.class);
+
+        cq.select(cb.count(root))
+                .where(
+                        cb.equal(root.get("student").get("id"), studentId),
+                        cb.equal(root.get("assignment").get("id"), assignmentId)
                 );
 
         return entityManager.createQuery(cq).getSingleResult() > 0;

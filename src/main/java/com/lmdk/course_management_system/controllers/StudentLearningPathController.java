@@ -3,12 +3,10 @@ package com.lmdk.course_management_system.controllers;
 import com.lmdk.course_management_system.pojo.Enrollment;
 import com.lmdk.course_management_system.pojo.LearningPath;
 import com.lmdk.course_management_system.pojo.StudentLearningPath;
-import com.lmdk.course_management_system.pojo.User;
 import com.lmdk.course_management_system.services.CourseService;
 import com.lmdk.course_management_system.services.EnrollmentService;
 import com.lmdk.course_management_system.services.LearningPathService;
 import com.lmdk.course_management_system.services.StudentLearningPathService;
-import com.lmdk.course_management_system.services.UserService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -30,7 +28,6 @@ public class StudentLearningPathController {
     private final StudentLearningPathService studentLearningPathService;
     private final LearningPathService learningPathService;
     private final EnrollmentService enrollmentService;
-    private final UserService userService;
     private final CourseService courseService;
 
     @Value("${student-learning-paths.page-size:10}")
@@ -53,8 +50,10 @@ public class StudentLearningPathController {
                 "studentLearningPaths",
                 studentLearningPathService.getStudentLearningPaths(params)
         );
-        model.addAttribute("students", userService.getUsersByRole(User.UserRole.STUDENT));
-        model.addAttribute("learningPaths", learningPathService.getAllLearningPaths());
+        Integer selectedCourseId = parseInteger(params.get("courseId"));
+        model.addAttribute("learningPaths", selectedCourseId == null
+                ? List.of()
+                : learningPathService.getLearningPathsByCourse(selectedCourseId));
         model.addAttribute("courses", courseService.getAllCourses());
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", totalPages);
@@ -146,6 +145,14 @@ public class StudentLearningPathController {
         }
 
         return "redirect:/admin/student-learning-paths";
+    }
+
+    private Integer parseInteger(String value) {
+        try {
+            return value == null || value.isBlank() ? null : Integer.valueOf(value);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     private int parsePage(String page) {

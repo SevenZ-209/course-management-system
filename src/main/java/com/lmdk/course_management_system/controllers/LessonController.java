@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -37,6 +38,9 @@ public class LessonController {
         int page = parsePage(params.get("page"));
         params.put("page", String.valueOf(page));
 
+        Integer selectedCourseId = parseInteger(params.get("courseId"));
+        normalizeModuleFilter(params, selectedCourseId);
+
         long totalRecords = lessonService.countLessons(params);
         int totalPages = Math.max((int) Math.ceil((double) totalRecords / pageSize), 1);
 
@@ -47,7 +51,9 @@ public class LessonController {
 
         model.addAttribute("lessons", lessonService.getLessons(params));
         model.addAttribute("courses", courseService.getAllCourses());
-        model.addAttribute("modules", moduleService.getAllModules());
+        model.addAttribute("modules", selectedCourseId == null
+                ? List.of()
+                : moduleService.getModulesByCourse(selectedCourseId));
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("totalRecords", totalRecords);
@@ -56,6 +62,21 @@ public class LessonController {
         model.addAttribute("moduleId", params.getOrDefault("moduleId", ""));
 
         return "admin/lessons";
+    }
+
+    @GetMapping("/modules")
+    @ResponseBody
+    public List<Map<String, Object>> getModules(@RequestParam Integer courseId) {
+        if (courseId == null)
+            return List.of();
+
+        return moduleService.getModulesByCourse(courseId).stream()
+                .map(module -> Map.<String, Object>of(
+                        "id", module.getId(),
+                        "name", module.getName(),
+                        "orderNumber", module.getOrderNumber()
+                ))
+                .toList();
     }
 
     @PostMapping("/add")
@@ -162,51 +183,30 @@ public class LessonController {
             return "redirect:/admin/lessons";
         }
 
-        String oldPublicId =
-                lesson.getFilePublicId();
-
-        String oldFileUrl =
-                lesson.getFileUrl();
-
-        String oldFileName =
-                lesson.getFileName();
-
+        String oldPublicId = lesson.getFilePublicId();
         CloudinaryUploadResult newUpload = null;
 
         try {
-
-            lesson.setName(name);
-            lesson.setCourseModule(module);
-            lesson.setOrderNumber(orderNumber);
+            Lesson updatedLesson = new Lesson();
+            updatedLesson.setId(lesson.getId());
+            updatedLesson.setName(name);
+            updatedLesson.setCourseModule(module);
+            updatedLesson.setOrderNumber(orderNumber);
+            updatedLesson.setFilePublicId(lesson.getFilePublicId());
+            updatedLesson.setFileUrl(lesson.getFileUrl());
+            updatedLesson.setFileName(lesson.getFileName());
 
             if(file != null && !file.isEmpty()) {
-
-                newUpload =
-                        cloudinaryService.uploadPdf(file);
-
-                lesson.setFilePublicId(
-                        newUpload.publicId()
-                );
-
-                lesson.setFileUrl(
-                        newUpload.url()
-                );
-
-                lesson.setFileName(
-                        newUpload.fileName()
-                );
+                newUpload = cloudinaryService.uploadPdf(file);
+                updatedLesson.setFilePublicId(newUpload.publicId());
+                updatedLesson.setFileUrl(newUpload.url());
+                updatedLesson.setFileName(newUpload.fileName());
             }
 
-            lessonService.updateLesson(lesson);
+            lessonService.updateLesson(updatedLesson);
 
-            if(newUpload != null
-                    && oldPublicId != null
-                    && !oldPublicId.isBlank()) {
-
-                cloudinaryService.deletePdf(
-                        oldPublicId
-                );
-            }
+            if(newUpload != null && oldPublicId != null && !oldPublicId.isBlank())
+                cloudinaryService.deletePdf(oldPublicId);
 
             redirectAttributes.addFlashAttribute(
                     "successMessage",
@@ -214,17 +214,8 @@ public class LessonController {
             );
 
         } catch (IllegalArgumentException ex) {
-
-            if(newUpload != null) {
-
-                cloudinaryService.deletePdf(
-                        newUpload.publicId()
-                );
-
-                lesson.setFilePublicId(oldPublicId);
-                lesson.setFileUrl(oldFileUrl);
-                lesson.setFileName(oldFileName);
-            }
+            if(newUpload != null)
+                cloudinaryService.deletePdf(newUpload.publicId());
 
             redirectAttributes.addFlashAttribute(
                     "errorMessage",
@@ -233,6 +224,24 @@ public class LessonController {
         }
 
         return "redirect:/admin/lessons";
+    }
+
+    private void normalizeModuleFilter(Map<String, String> params, Integer courseId) {
+        Integer moduleId = parseInteger(params.get("moduleId"));
+        if (courseId == null || moduleId == null)
+            return;
+
+        CourseModule module = moduleService.getModuleById(moduleId);
+        if (module == null || module.getCourse() == null || !courseId.equals(module.getCourse().getId()))
+            params.remove("moduleId");
+    }
+
+    private Integer parseInteger(String value) {
+        try {
+            return value == null || value.isBlank() ? null : Integer.valueOf(value);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     private int parsePage(String page) {

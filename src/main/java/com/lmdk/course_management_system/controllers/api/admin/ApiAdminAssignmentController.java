@@ -94,7 +94,6 @@ public class ApiAdminAssignmentController {
                         ? assignmentService.getAllAssignments()
                         : assignmentService.getAssignmentsByCourse(courseId);
 
-
         return assignments.stream()
                 .map(assignment ->
                         new AdminAssignmentOptionResponse(

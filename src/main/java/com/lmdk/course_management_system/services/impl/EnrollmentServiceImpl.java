@@ -162,6 +162,15 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     }
 
     @Override
+    public List<Enrollment> searchPendingEnrollments(String keyword, int page, int size) {
+        return enrollmentRepository.searchPendingEnrollments(
+                keyword == null ? "" : keyword.trim(),
+                Math.max(page, 1),
+                Math.min(Math.max(size, 1), 50)
+        );
+    }
+
+    @Override
     public List<Enrollment> getActiveEnrollmentsByStudent(Integer studentId) {
         return enrollmentRepository.getActiveEnrollmentsByStudent(studentId);
     }

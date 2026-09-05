@@ -42,7 +42,6 @@
          th:text="${errorMessage}">
     </div>
 
-    <!-- FILTER -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
 
@@ -60,7 +59,7 @@
                     </div>
 
                     <div class="col-md-3">
-                        <select class="form-select"
+                        <select class="form-select" id="pathDetailFilterCourse"
                                 name="courseId">
 
                             <option value="">
@@ -77,19 +76,11 @@
                     </div>
 
                     <div class="col-md-3">
-                        <select class="form-select"
-                                name="learningPathId">
-
-                            <option value="">
-                                Tất cả lộ trình
-                            </option>
-
-                            <option th:each="path : ${learningPaths}"
-                                    th:value="${path.id}"
-                                    th:text="${path.name}"
-                                    th:selected="${learningPathId == path.id.toString()}">
-                            </option>
-
+                        <select class="form-select" name="learningPathId" data-dependent-select
+                                data-parent-id="pathDetailFilterCourse" data-endpoint="/admin/learning-path-details/paths"
+                                data-param="courseId" data-empty-label="Tất cả lộ trình"
+                                data-waiting-label="Chọn khóa học trước" th:attr="data-selected=${learningPathId}">
+                            <option value="">Chọn khóa học trước</option>
                         </select>
                     </div>
 
@@ -112,7 +103,6 @@
         </div>
     </div>
 
-    <!-- TABLE -->
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
 
@@ -122,9 +112,8 @@
 
                     <thead class="table-light">
                     <tr>
-                        <th>ID</th>
-                        <th>Lộ trình</th>
                         <th>Khóa học</th>
+                        <th>Lộ trình</th>
                         <th>Bài tập</th>
                         <th>Thứ tự</th>
                         <th>Điểm đạt</th>
@@ -137,17 +126,15 @@
 
                     <tr th:each="detail : ${details}">
 
-                        <td th:text="${detail.id}"></td>
-
                         <td>
-                            <span class="fw-semibold"
-                                  th:text="${detail.learningPath.name}">
+                            <span class="badge text-bg-light border"
+                                  th:text="${detail.learningPath.course.name}">
                             </span>
                         </td>
 
                         <td>
-                            <span class="badge text-bg-light border"
-                                  th:text="${detail.learningPath.course.name}">
+                            <span class="fw-semibold"
+                                  th:text="${detail.learningPath.name}">
                             </span>
                         </td>
 
@@ -178,7 +165,7 @@
                     </tr>
 
                     <tr th:if="${#lists.isEmpty(details)}">
-                        <td colspan="8"
+                        <td colspan="7"
                             class="text-center text-muted py-5">
                             Chưa có chi tiết lộ trình.
                         </td>
@@ -270,44 +257,28 @@
                 <div class="modal-body">
 
                     <div class="mb-3">
-                        <label class="form-label">
-                            Lộ trình
-                        </label>
-
-                        <select class="form-select"
-                                name="learningPathId"
-                                required>
-
-                            <option value="">
-                                Chọn lộ trình
-                            </option>
-
-                            <option th:each="path : ${learningPaths}"
-                                    th:value="${path.id}"
-                                    th:text="${path.name + ' - ' + path.course.name}">
-                            </option>
-
+                        <label class="form-label">Khóa học</label>
+                        <select class="form-select" id="addPathDetailCourse" required>
+                            <option value="">Chọn khóa học</option>
+                            <option th:each="course : ${courses}" th:value="${course.id}" th:text="${course.name}"></option>
                         </select>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">
-                            Bài tập
-                        </label>
+                        <label class="form-label">Lộ trình</label>
+                        <select class="form-select" id="addPathDetailPath" name="learningPathId" required data-dependent-select
+                                data-parent-id="addPathDetailCourse" data-endpoint="/admin/learning-path-details/paths"
+                                data-param="courseId" data-empty-label="Chọn lộ trình" data-waiting-label="Chọn khóa học trước">
+                            <option value="">Chọn khóa học trước</option>
+                        </select>
+                    </div>
 
-                        <select class="form-select"
-                                name="assignmentId"
-                                required>
-
-                            <option value="">
-                                Chọn bài tập
-                            </option>
-
-                            <option th:each="assignment : ${assignments}"
-                                    th:value="${assignment.id}"
-                                    th:text="${assignment.name + ' - ' + assignment.course.name}">
-                            </option>
-
+                    <div class="mb-3">
+                        <label class="form-label">Bài tập</label>
+                        <select class="form-select" name="assignmentId" required data-dependent-select
+                                data-parent-id="addPathDetailPath" data-endpoint="/admin/learning-path-details/assignments"
+                                data-param="learningPathId" data-empty-label="Chọn bài tập" data-waiting-label="Chọn lộ trình trước">
+                            <option value="">Chọn lộ trình trước</option>
                         </select>
                     </div>
 
@@ -413,21 +384,15 @@
                                    disabled>
                         </div>
 
+                        <input type="hidden" th:id="'editPathDetailPath' + ${detail.id}" th:value="${detail.learningPath.id}">
+
                         <div class="mb-3">
-                            <label class="form-label">
-                                Bài tập
-                            </label>
-
-                            <select class="form-select"
-                                    name="assignmentId"
-                                    required>
-
-                                <option th:each="assignment : ${assignments}"
-                                        th:value="${assignment.id}"
-                                        th:text="${assignment.name}"
-                                        th:selected="${assignment.id == detail.assignment.id}">
-                                </option>
-
+                            <label class="form-label">Bài tập</label>
+                            <select class="form-select" name="assignmentId" required data-dependent-select
+                                    data-endpoint="/admin/learning-path-details/assignments" data-param="learningPathId"
+                                    data-empty-label="Chọn bài tập" data-waiting-label="Đang tải..."
+                                    th:attr="data-parent-id=${'editPathDetailPath' + detail.id},data-selected=${detail.assignment.id}">
+                                <option value="">Đang tải...</option>
                             </select>
                         </div>
 
@@ -496,6 +461,7 @@
 </th:block>
 
 <div th:replace="~{base :: footer}"></div>
+<script th:src="@{/js/admin-selection.js}"></script>
 
 </body>
 </html>

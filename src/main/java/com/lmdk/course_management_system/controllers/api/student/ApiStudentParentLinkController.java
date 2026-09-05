@@ -1,6 +1,8 @@
 package com.lmdk.course_management_system.controllers.api.student;
 
+import com.lmdk.course_management_system.dto.parent.ParentLinkActionResponse;
 import com.lmdk.course_management_system.dto.parent.ParentLinkCodeResponse;
+import com.lmdk.course_management_system.dto.student.dashboard.StudentLinkedParentResponse;
 import com.lmdk.course_management_system.exceptions.ForbiddenException;
 import com.lmdk.course_management_system.helpers.CurrentUserHelper;
 import com.lmdk.course_management_system.mappers.parent.ParentLinkMapper;
@@ -12,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/student/parent-links")
@@ -37,14 +40,32 @@ public class ApiStudentParentLinkController {
     public ParentLinkCodeResponse getCurrentLink(Authentication authentication) {
         User student = currentUserHelper.getCurrentStudent(authentication);
 
-        ParentLink parentLink = parentLinkService.getParentLinksByStudent(student.getId())
-                .stream()
-                .filter(link -> link.getStatus() == ParentLink.ParentLinkStatus.UNUSED
-                        && link.getExpiresAt().isAfter(LocalDateTime.now()))
-                .findFirst()
-                .orElse(null);
-
+        ParentLink parentLink = parentLinkService.getCurrentUnusedLinkByStudent(student.getId());
         return parentLink == null ? null : parentLinkMapper.toCodeResponse(parentLink);
+    }
+
+    @GetMapping("/linked-parents")
+    public List<StudentLinkedParentResponse> getLinkedParents(Authentication authentication) {
+        User student = currentUserHelper.getCurrentStudent(authentication);
+
+        return parentLinkService.getParentLinksByStudent(student.getId())
+                .stream()
+                .map(parentLinkMapper::toLinkedParentResponse)
+                .toList();
+    }
+
+    @DeleteMapping("/linked-parents/{linkId}")
+    public ParentLinkActionResponse unlinkParent(
+            @PathVariable Integer linkId,
+            Authentication authentication
+    ) {
+        User student = currentUserHelper.getCurrentStudent(authentication);
+        parentLinkService.unlinkParentLinkByStudent(linkId, student);
+
+        return new ParentLinkActionResponse(
+                linkId,
+                "Đã hủy quyền theo dõi của phụ huynh!"
+        );
     }
 
     @DeleteMapping("/{linkId}")

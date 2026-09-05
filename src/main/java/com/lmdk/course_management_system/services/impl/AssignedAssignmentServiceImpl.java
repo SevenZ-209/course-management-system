@@ -122,7 +122,6 @@ public class AssignedAssignmentServiceImpl implements AssignedAssignmentService 
                         )
                         .toList();
 
-
         for(LearningPathDetail detail : details){
 
             if(assignedAssignmentRepository
@@ -131,7 +130,6 @@ public class AssignedAssignmentServiceImpl implements AssignedAssignmentService 
                             detail.getId()
                     ))
                 continue;
-
 
             AssignedAssignment assigned =
                     new AssignedAssignment();
@@ -193,6 +191,14 @@ public class AssignedAssignmentServiceImpl implements AssignedAssignmentService 
         ))
             throw new IllegalArgumentException(
                     "Học viên không tham gia khóa học chứa bài tập này!"
+            );
+
+        if (assignedAssignmentRepository.existsByStudentAndAssignmentForUpdate(
+                studentId,
+                assignmentId
+        ))
+            throw new IllegalArgumentException(
+                    "Bài tập này đã được giao cho học viên!"
             );
 
         validateAssignedBy(assignedBy);

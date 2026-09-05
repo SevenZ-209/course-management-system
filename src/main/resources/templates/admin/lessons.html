@@ -56,7 +56,7 @@
                     </div>
 
                     <div class="col-md-3">
-                        <select class="form-select" name="courseId">
+                        <select class="form-select" id="lessonFilterCourse" name="courseId">
                             <option value="">Tất cả khóa học</option>
 
                             <option th:each="course : ${courses}"
@@ -68,14 +68,12 @@
                     </div>
 
                     <div class="col-md-3">
-                        <select class="form-select" name="moduleId">
-                            <option value="">Tất cả module</option>
-
-                            <option th:each="module : ${modules}"
-                                    th:value="${module.id}"
-                                    th:text="${module.course.name + ' - ' + module.name}"
-                                    th:selected="${moduleId == module.id.toString()}">
-                            </option>
+                        <select class="form-select" id="lessonFilterModule" name="moduleId"
+                                data-dependent-select data-parent-id="lessonFilterCourse"
+                                data-endpoint="/admin/lessons/modules" data-param="courseId"
+                                data-empty-label="Tất cả module" data-waiting-label="Chọn khóa học trước"
+                                th:attr="data-selected=${moduleId}">
+                            <option value="">Chọn khóa học trước</option>
                         </select>
                     </div>
 
@@ -110,7 +108,7 @@
                         <th>Khóa học</th>
                         <th>Thứ tự</th>
                         <th>Tài liệu PDF</th>
-                        <th style="width: 120px;">Thao tác</th>
+                        <th class="cm-col-120">Thao tác</th>
                     </tr>
                     </thead>
 
@@ -236,7 +234,6 @@
 
 </div>
 
-
 <div class="modal fade" id="addLessonModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -266,19 +263,20 @@
                     </div>
 
                     <div class="mb-3">
+                        <label class="form-label">Khóa học</label>
+                        <select class="form-select" id="addLessonCourse" required>
+                            <option value="">Chọn khóa học</option>
+                            <option th:each="course : ${courses}" th:value="${course.id}" th:text="${course.name}"></option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
                         <label class="form-label">Module</label>
-
-                        <select class="form-select"
-                                name="moduleId"
-                                required>
-
-                            <option value="">Chọn module</option>
-
-                            <option th:each="module : ${modules}"
-                                    th:value="${module.id}"
-                                    th:text="${module.course.name + ' - ' + module.name}">
-                            </option>
-
+                        <select class="form-select" id="addLessonModule" name="moduleId" required
+                                data-dependent-select data-parent-id="addLessonCourse"
+                                data-endpoint="/admin/lessons/modules" data-param="courseId"
+                                data-empty-label="Chọn module" data-waiting-label="Chọn khóa học trước">
+                            <option value="">Chọn khóa học trước</option>
                         </select>
                     </div>
 
@@ -332,8 +330,6 @@
     </div>
 </div>
 
-
-<!-- EDIT -->
 <th:block th:each="lesson : ${lessons}">
 
     <div class="modal fade"
@@ -373,18 +369,20 @@
                         </div>
 
                         <div class="mb-3">
+                            <label class="form-label">Khóa học</label>
+                            <select class="form-select" th:id="'editLessonCourse' + ${lesson.id}" required>
+                                <option th:each="course : ${courses}" th:value="${course.id}" th:text="${course.name}"
+                                        th:selected="${course.id == lesson.courseModule.course.id}"></option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
                             <label class="form-label">Module</label>
-
-                            <select class="form-select"
-                                    name="moduleId"
-                                    required>
-
-                                <option th:each="module : ${modules}"
-                                        th:value="${module.id}"
-                                        th:text="${module.course.name + ' - ' + module.name}"
-                                        th:selected="${module.id == lesson.courseModule.id}">
-                                </option>
-
+                            <select class="form-select" name="moduleId" required data-dependent-select
+                                    data-endpoint="/admin/lessons/modules" data-param="courseId"
+                                    data-empty-label="Chọn module" data-waiting-label="Chọn khóa học trước"
+                                    th:attr="data-parent-id=${'editLessonCourse' + lesson.id},data-selected=${lesson.courseModule.id}">
+                                <option value="">Đang tải...</option>
                             </select>
                         </div>
 
@@ -467,6 +465,7 @@
 </th:block>
 
 <div th:replace="~{base :: footer}"></div>
+<script th:src="@{/js/admin-selection.js}"></script>
 
 </body>
 </html>

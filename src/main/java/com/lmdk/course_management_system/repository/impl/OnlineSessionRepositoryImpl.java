@@ -1,10 +1,13 @@
 package com.lmdk.course_management_system.repository.impl;
 
+import com.lmdk.course_management_system.pojo.CourseClass;
 import com.lmdk.course_management_system.pojo.Enrollment;
 import com.lmdk.course_management_system.pojo.OnlineSession;
+import com.lmdk.course_management_system.pojo.User;
 import com.lmdk.course_management_system.repository.OnlineSessionRepository;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.*;
@@ -46,6 +49,60 @@ public class OnlineSessionRepositoryImpl implements OnlineSessionRepository {
     }
 
     @Override
+    public void lockScheduleResources(Integer classId, Integer teacherId) {
+        if (classId != null)
+            entityManager.find(CourseClass.class, classId, LockModeType.PESSIMISTIC_WRITE);
+        if (teacherId != null)
+            entityManager.find(User.class, teacherId, LockModeType.PESSIMISTIC_WRITE);
+    }
+
+    @Override
+    public boolean existsClassScheduleConflict(Integer classId, LocalDateTime startTime, LocalDateTime endTime, Integer excludeSessionId) {
+        if (classId == null || startTime == null || endTime == null)
+            return false;
+
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Long> cq = cb.createQuery(Long.class);
+        Root<OnlineSession> root = cq.from(OnlineSession.class);
+        List<Predicate> predicates = new ArrayList<>();
+
+        predicates.add(cb.equal(root.get("courseClass").get("id"), classId));
+        predicates.add(cb.lessThan(root.get("startTime"), endTime));
+        predicates.add(cb.greaterThan(root.get("endTime"), startTime));
+        predicates.add(cb.notEqual(root.get("courseClass").get("status"),
+                CourseClass.ClassStatus.CANCELED));
+
+        if (excludeSessionId != null)
+            predicates.add(cb.notEqual(root.get("id"), excludeSessionId));
+
+        cq.select(cb.count(root)).where(predicates.toArray(new Predicate[0]));
+        return entityManager.createQuery(cq).getSingleResult() > 0;
+    }
+
+    @Override
+    public boolean existsTeacherScheduleConflict(Integer teacherId, LocalDateTime startTime, LocalDateTime endTime, Integer excludeSessionId) {
+        if (teacherId == null || startTime == null || endTime == null)
+            return false;
+
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Long> cq = cb.createQuery(Long.class);
+        Root<OnlineSession> root = cq.from(OnlineSession.class);
+        List<Predicate> predicates = new ArrayList<>();
+
+        predicates.add(cb.equal(root.get("teacher").get("id"), teacherId));
+        predicates.add(cb.lessThan(root.get("startTime"), endTime));
+        predicates.add(cb.greaterThan(root.get("endTime"), startTime));
+        predicates.add(cb.notEqual(root.get("courseClass").get("status"),
+                CourseClass.ClassStatus.CANCELED));
+
+        if (excludeSessionId != null)
+            predicates.add(cb.notEqual(root.get("id"), excludeSessionId));
+
+        cq.select(cb.count(root)).where(predicates.toArray(new Predicate[0]));
+        return entityManager.createQuery(cq).getSingleResult() > 0;
+    }
+
+    @Override
     public List<OnlineSession> getSessions(Map<String, String> params) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<OnlineSession> cq = cb.createQuery(OnlineSession.class);
@@ -64,7 +121,7 @@ public class OnlineSessionRepositoryImpl implements OnlineSessionRepository {
         if ("asc".equalsIgnoreCase(params.get("sort")))
             cq.orderBy(cb.asc(root.get("startTime")));
         else
-            cq.orderBy(cb.desc(root.get("startTime")));
+            cq.orderBy(cb.desc(root.get("id")));
 
         TypedQuery<OnlineSession> query = entityManager.createQuery(cq);
         int page = parsePage(params.get("page"));
@@ -158,6 +215,7 @@ public class OnlineSessionRepositoryImpl implements OnlineSessionRepository {
         List<Predicate> predicates = new ArrayList<>();
 
         String kw = params.get("kw");
+        String courseId = params.get("courseId");
         String classId = params.get("classId");
         String teacherId = params.get("teacherId");
         String studentId = params.get("studentId");
@@ -173,6 +231,16 @@ public class OnlineSessionRepositoryImpl implements OnlineSessionRepository {
                     cb.like(cb.lower(root.get("title")), value),
                     cb.like(cb.lower(root.get("meetingUrl")), value)
             ));
+        }
+
+        if (courseId != null && !courseId.isBlank()) {
+            try {
+                predicates.add(cb.equal(
+                        root.get("courseClass").get("course").get("id"),
+                        Integer.parseInt(courseId)
+                ));
+            } catch (NumberFormatException ignored) {
+            }
         }
 
         if (classId != null && !classId.isBlank()) {

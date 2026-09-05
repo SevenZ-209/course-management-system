@@ -142,42 +142,38 @@ public class ApiAdminCourseClassController {
             @PathVariable Integer classId,
             @RequestBody UpdateCourseClassStatusRequest request
     ) {
-        CourseClass courseClass =
-                requireClass(classId);
+        CourseClass courseClass = requireClass(classId);
 
-        if(request.status() == null
-                || request.status().isBlank())
+        if (request.status() == null || request.status().isBlank())
+            throw new IllegalArgumentException("Trạng thái không được để trống!");
+
+        if (!CourseClass.ClassStatus.CANCELED.name().equalsIgnoreCase(request.status().trim()))
             throw new IllegalArgumentException(
-                    "Trạng thái không được để trống!"
+                    "Trạng thái Sắp mở / Đang học / Hoàn thành được tự động theo thời gian lớp học!"
             );
 
-        try {
-            courseClass.setStatus(
-                    CourseClass.ClassStatus.valueOf(
-                            request.status()
-                                    .trim()
-                                    .toUpperCase()
-                    )
-            );
-        } catch(IllegalArgumentException ex) {
-            throw new IllegalArgumentException(
-                    "Trạng thái không hợp lệ!"
-            );
-        }
-
+        courseClass.setStatus(CourseClass.ClassStatus.CANCELED);
         classService.updateClass(courseClass);
 
         return new AdminCourseClassActionResponse(
                 classId,
-                "Cập nhật trạng thái thành công!"
+                "Hủy lớp học thành công!"
         );
     }
 
     @GetMapping("/options")
-    public List<AdminCourseClassResponse> getClassOptions() {
-        return classService
-                .getAllClasses()
-                .stream()
+    public List<AdminCourseClassResponse> getClassOptions(
+            @RequestParam(required = false) Integer courseId,
+            @RequestParam(defaultValue = "false") boolean availableOnly
+    ) {
+        List<CourseClass> classes = courseId == null
+                ? classService.getAllClasses()
+                : classService.getClassesByCourse(courseId);
+
+        return classes.stream()
+                .filter(courseClass -> !availableOnly
+                        || (courseClass.getStatus() != CourseClass.ClassStatus.COMPLETED
+                        && courseClass.getStatus() != CourseClass.ClassStatus.CANCELED))
                 .map(adminCourseClassMapper::toResponse)
                 .toList();
     }
@@ -210,7 +206,6 @@ public class ApiAdminCourseClassController {
 
         return course;
     }
-
 
     private User getTeacher(Integer teacherId) {
         if(teacherId == null)

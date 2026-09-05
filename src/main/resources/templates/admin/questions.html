@@ -42,7 +42,6 @@
          th:text="${errorMessage}">
     </div>
 
-    <!-- FILTER -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
 
@@ -60,7 +59,7 @@
                     </div>
 
                     <div class="col-md-3">
-                        <select class="form-select"
+                        <select class="form-select" id="questionFilterCourse"
                                 name="courseId">
 
                             <option value="">
@@ -77,19 +76,11 @@
                     </div>
 
                     <div class="col-md-2">
-                        <select class="form-select"
-                                name="assignmentId">
-
-                            <option value="">
-                                Tất cả bài tập
-                            </option>
-
-                            <option th:each="assignment : ${assignments}"
-                                    th:value="${assignment.id}"
-                                    th:text="${assignment.name}"
-                                    th:selected="${assignmentId == assignment.id.toString()}">
-                            </option>
-
+                        <select class="form-select" name="assignmentId" data-dependent-select
+                                data-parent-id="questionFilterCourse" data-endpoint="/admin/questions/assignments" data-param="courseId"
+                                data-empty-label="Tất cả bài tập" data-waiting-label="Chọn khóa học trước"
+                                th:attr="data-selected=${assignmentId}">
+                            <option value="">Chọn khóa học trước</option>
                         </select>
                     </div>
 
@@ -138,7 +129,6 @@
         </div>
     </div>
 
-    <!-- TABLE -->
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
 
@@ -180,7 +170,7 @@
                             </span>
                         </td>
 
-                        <td style="max-width: 400px;">
+                        <td class="cm-cell-max-400">
                             <div th:text="${question.content}"></div>
                         </td>
 
@@ -232,7 +222,6 @@
         </div>
     </div>
 
-    <!-- PAGINATION -->
     <nav class="mt-4"
          th:if="${totalPages > 1}">
 
@@ -290,8 +279,6 @@
 
 </div>
 
-
-<!-- ADD -->
 <div class="modal fade"
      id="addQuestionModal"
      tabindex="-1">
@@ -446,8 +433,6 @@
     </div>
 </div>
 
-
-<!-- EDIT -->
 <th:block th:each="question : ${questions}">
 
     <div class="modal fade"
@@ -590,9 +575,9 @@
 
 </th:block>
 
-
 <div th:replace="~{base :: footer}"></div>
 
+<script th:src="@{/js/admin-selection.js}"></script>
 <script>
     const courseSelect = document.getElementById("questionCourse");
     const assignmentSelect = document.getElementById("questionAssignment");

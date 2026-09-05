@@ -61,10 +61,10 @@ public class LearningPathDetailRepositoryImpl implements LearningPathDetailRepos
         cq.select(root)
                 .where(predicates.toArray(new Predicate[0]))
                 .orderBy(
-                        cb.asc(
-                                root.get("learningPath").get("name")
-                        ),
-                        cb.asc(root.get("orderNumber"))
+                        cb.asc(root.get("learningPath").get("course").get("name")),
+                        cb.asc(root.get("learningPath").get("name")),
+                        cb.asc(root.get("orderNumber")),
+                        cb.asc(root.get("id"))
                 );
 
         TypedQuery<LearningPathDetail> query =

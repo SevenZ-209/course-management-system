@@ -92,33 +92,6 @@ public class ApiPaymentTransactionController {
                 .toResponse(saved);
     }
 
-//    @PutMapping("/{id}/status")
-//    public PaymentTransactionResponse updateStatus(
-//            @PathVariable Integer id,
-//            @RequestParam String status
-//    ) {
-//        PaymentTransaction.TransactionStatus newStatus;
-//
-//        try {
-//            newStatus =
-//                    PaymentTransaction.TransactionStatus
-//                            .valueOf(status.toUpperCase());
-//        } catch(IllegalArgumentException ex) {
-//            throw new IllegalArgumentException(
-//                    "Trạng thái giao dịch không hợp lệ!"
-//            );
-//        }
-//
-//        PaymentTransaction updated =
-//                transactionService
-//                        .updateTransactionStatus(
-//                                id,
-//                                newStatus
-//                        );
-//
-//        return paymentTransactionMapper
-//                .toResponse(updated);
-//    }
 
     @GetMapping("/me")
     public PaymentTransactionPageResponse getMyTransactions(

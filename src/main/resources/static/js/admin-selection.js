@@ -109,8 +109,66 @@
         }
     };
 
+
+    const initDependentSelect = select => {
+        if (select.dataset.dependentInitialized === "true") return;
+        select.dataset.dependentInitialized = "true";
+
+        const parent = document.getElementById(select.dataset.parentId);
+        const endpoint = select.dataset.endpoint;
+        const param = select.dataset.param || "parentId";
+        const emptyLabel = select.dataset.emptyLabel || "Tất cả";
+        const waitingLabel = select.dataset.waitingLabel || "Chọn mục phía trước";
+        if (!parent || !endpoint) return;
+
+        const load = async preserveSelection => {
+            const parentValue = parent.value;
+            const selected = preserveSelection ? (select.dataset.selected || select.value) : "";
+
+            select.disabled = true;
+            select.innerHTML = `<option value="">${parentValue ? "Đang tải..." : waitingLabel}</option>`;
+
+            if (!parentValue) {
+                select.dataset.selected = "";
+                return;
+            }
+
+            try {
+                const separator = endpoint.includes("?") ? "&" : "?";
+                const response = await fetch(`${endpoint}${separator}${encodeURIComponent(param)}=${encodeURIComponent(parentValue)}`);
+                if (!response.ok) throw new Error("dependent lookup failed");
+                const data = await response.json();
+                const items = Array.isArray(data) ? data : [];
+
+                select.innerHTML = `<option value="">${emptyLabel}</option>`;
+                items.forEach(item => {
+                    const option = document.createElement("option");
+                    option.value = item.id ?? item.value ?? "";
+                    option.textContent = item.name ?? item.title ?? item.label ?? `ID ${option.value}`;
+                    select.appendChild(option);
+                });
+
+                if (selected && items.some(item => String(item.id ?? item.value) === String(selected)))
+                    select.value = selected;
+                else
+                    select.value = "";
+
+                select.dataset.selected = "";
+                select.disabled = false;
+                select.dispatchEvent(new CustomEvent("dependent-options-loaded", { detail: items }));
+            } catch (error) {
+                select.innerHTML = '<option value="">Không thể tải dữ liệu</option>';
+            }
+        };
+
+        parent.addEventListener("change", () => load(false));
+        load(true);
+    };
+
     const initAll = root => {
-        (root || document).querySelectorAll("[data-async-user-lookup]").forEach(initAsyncUserLookup);
+        const scope = root || document;
+        scope.querySelectorAll("[data-async-user-lookup]").forEach(initAsyncUserLookup);
+        scope.querySelectorAll("[data-dependent-select]").forEach(initDependentSelect);
     };
 
     document.addEventListener("click", event => {
@@ -119,6 +177,6 @@
         });
     });
 
-    window.AdminSelection = { initAll, initAsyncUserLookup };
+    window.AdminSelection = { initAll, initAsyncUserLookup, initDependentSelect };
     document.addEventListener("DOMContentLoaded", () => initAll(document));
 })();

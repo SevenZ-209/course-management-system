@@ -11,6 +11,10 @@ import java.time.LocalDateTime;
         name = "student_learning_paths",
         uniqueConstraints = @UniqueConstraint(
                 columnNames = {"student_id", "learning_path_id"}
+        ),
+        indexes = @Index(
+                name = "idx_student_path_learning_status",
+                columnList = "learning_path_id,status"
         )
 )
 @Getter

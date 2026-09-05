@@ -2,6 +2,7 @@ package com.lmdk.course_management_system.controllers.api.admin;
 
 import com.lmdk.course_management_system.dto.admin.lesson.AdminLessonActionResponse;
 import com.lmdk.course_management_system.dto.admin.lesson.AdminLessonPageResponse;
+import com.lmdk.course_management_system.dto.admin.lesson.AdminLessonOptionResponse;
 import com.lmdk.course_management_system.dto.cloudinary.CloudinaryUploadResult;
 import com.lmdk.course_management_system.mappers.admin.AdminLessonMapper;
 import com.lmdk.course_management_system.pojo.CourseModule;
@@ -18,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/lessons")
@@ -75,6 +77,19 @@ public class ApiAdminLessonController {
         );
     }
 
+    @GetMapping("/options")
+    public List<AdminLessonOptionResponse> getLessonOptions(@RequestParam Integer courseId) {
+        if (courseId == null)
+            return List.of();
+
+        return moduleService.getModulesByCourse(courseId).stream()
+                .flatMap(module -> lessonService.getLessonsByModule(module.getId()).stream()
+                        .map(lesson -> new AdminLessonOptionResponse(
+                                lesson.getId(), lesson.getName(), module.getId(), module.getName()
+                        )))
+                .toList();
+    }
+
     @PostMapping
     public AdminLessonActionResponse addLesson(
             @RequestParam String name,
@@ -122,29 +137,28 @@ public class ApiAdminLessonController {
         CourseModule module = requireModule(moduleId);
 
         String oldPublicId = lesson.getFilePublicId();
-        String oldFileUrl = lesson.getFileUrl();
-        String oldFileName = lesson.getFileName();
-
         CloudinaryUploadResult newUpload = null;
 
         try {
-            lesson.setName(name);
-            lesson.setCourseModule(module);
-            lesson.setOrderNumber(orderNumber);
+            Lesson updatedLesson = new Lesson();
+            updatedLesson.setId(lesson.getId());
+            updatedLesson.setName(name);
+            updatedLesson.setCourseModule(module);
+            updatedLesson.setOrderNumber(orderNumber);
+            updatedLesson.setFilePublicId(lesson.getFilePublicId());
+            updatedLesson.setFileUrl(lesson.getFileUrl());
+            updatedLesson.setFileName(lesson.getFileName());
 
             if(file != null && !file.isEmpty()) {
                 newUpload = cloudinaryService.uploadPdf(file);
-
-                lesson.setFilePublicId(newUpload.publicId());
-                lesson.setFileUrl(newUpload.url());
-                lesson.setFileName(newUpload.fileName());
+                updatedLesson.setFilePublicId(newUpload.publicId());
+                updatedLesson.setFileUrl(newUpload.url());
+                updatedLesson.setFileName(newUpload.fileName());
             }
 
-            lessonService.updateLesson(lesson);
+            lessonService.updateLesson(updatedLesson);
 
-            if(newUpload != null
-                    && oldPublicId != null
-                    && !oldPublicId.isBlank())
+            if(newUpload != null && oldPublicId != null && !oldPublicId.isBlank())
                 cloudinaryService.deletePdf(oldPublicId);
 
             return new AdminLessonActionResponse(
@@ -152,12 +166,8 @@ public class ApiAdminLessonController {
                     "Cập nhật bài học thành công!"
             );
         } catch(IllegalArgumentException ex) {
-            if(newUpload != null) {
+            if(newUpload != null)
                 cloudinaryService.deletePdf(newUpload.publicId());
-                lesson.setFilePublicId(oldPublicId);
-                lesson.setFileUrl(oldFileUrl);
-                lesson.setFileName(oldFileName);
-            }
 
             throw ex;
         }

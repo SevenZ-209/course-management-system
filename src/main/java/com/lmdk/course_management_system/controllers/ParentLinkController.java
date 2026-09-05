@@ -41,8 +41,8 @@ public class ParentLinkController {
         }
 
         model.addAttribute("parentLinks", parentLinkService.getParentLinks(params));
-        model.addAttribute("students", userService.getUsersByRole(User.UserRole.STUDENT));
-        model.addAttribute("parents", userService.getUsersByRole(User.UserRole.PARENT));
+        model.addAttribute("selectedStudent", selectedUser(params.get("studentId"), User.UserRole.STUDENT));
+        model.addAttribute("selectedParent", selectedUser(params.get("parentId"), User.UserRole.PARENT));
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("totalRecords", totalRecords);
@@ -99,6 +99,15 @@ public class ParentLinkController {
         }
 
         return "redirect:/admin/parent-links";
+    }
+
+    private User selectedUser(String id, User.UserRole role) {
+        try {
+            User user = userService.getUserById(Integer.valueOf(id));
+            return user != null && user.getRole() == role ? user : null;
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     private int parsePage(String page) {

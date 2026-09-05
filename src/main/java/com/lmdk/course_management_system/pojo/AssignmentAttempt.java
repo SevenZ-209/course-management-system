@@ -10,6 +10,10 @@ import java.time.LocalDateTime;
         name = "assignment_attempts",
         uniqueConstraints = @UniqueConstraint(
                 columnNames = {"assigned_assignment_id", "attempt_number"}
+        ),
+        indexes = @Index(
+                name = "idx_attempt_status_submitted",
+                columnList = "status,submitted_at"
         )
 )
 @Getter
