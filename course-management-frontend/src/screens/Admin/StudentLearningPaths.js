@@ -1,16 +1,19 @@
 import { useEffect, useState } from "react";
 import { Alert, Badge, Button, Card, Col, Form, Modal, Pagination, Row, Table } from "react-bootstrap";
 import { useSearchParams } from "react-router-dom";
+import useExplicitSearchFilters from "../../hooks/useExplicitSearchFilters";
 import { authApis, endpoints } from "../../configs/Apis";
 import MySpinner from "../../components/MySpinner";
+import AsyncUserSelect from "../../components/AsyncUserSelect";
 
 const StudentLearningPaths = () => {
     const [q, setQ] = useSearchParams();
+    const { draft: draftFilters, setFilter: setDraftFilter, resetFilters: resetDraftFilters } = useExplicitSearchFilters(q, ["courseId", "learningPathId", "status"]);
 
     const [items, setItems] = useState([]);
     const [courses, setCourses] = useState([]);
     const [paths, setPaths] = useState([]);
-    const [students, setStudents] = useState([]);
+    const [selectedStudent, setSelectedStudent] = useState(null);
     const [availablePaths, setAvailablePaths] = useState([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -31,8 +34,6 @@ const StudentLearningPaths = () => {
     const getId = x => x.id ?? x.studentLearningPathId;
     const getCourseId = x => x.id ?? x.courseId;
     const getPathId = x => x.id ?? x.learningPathId;
-    const getStudentId = x => x.id ?? x.studentId ?? x.userId;
-    const getPathCourseId = x => x.courseId ?? x.course?.id;
 
     const loadItems = async () => {
         try {
@@ -61,27 +62,34 @@ const StudentLearningPaths = () => {
 
     const loadOptions = async () => {
         try {
-            const [courseRes, pathRes, studentRes] = await Promise.all([
-                authApis().get(endpoints.adminCourseOptions),
-                authApis().get(endpoints.adminLearningPathOptions),
-                authApis().get(endpoints.adminStudentOptions)
-            ]);
-
+            const courseRes = await authApis().get(endpoints.adminCourseOptions);
             setCourses(Array.isArray(courseRes.data) ? courseRes.data : []);
-            setPaths(Array.isArray(pathRes.data) ? pathRes.data : []);
-            setStudents(
-                Array.isArray(studentRes.data)
-                    ? studentRes.data.filter(s => !s.status || s.status === "ACTIVE")
-                    : []
-            );
         } catch (ex) {
             console.error("Load options error:", ex);
+        }
+    };
+
+    const loadFilterPaths = async selectedCourseId => {
+        setPaths([]);
+        if (!selectedCourseId) return;
+
+        try {
+            const res = await authApis().get(endpoints.adminLearningPathOptions, {
+                params: { courseId: selectedCourseId }
+            });
+            setPaths(Array.isArray(res.data) ? res.data : []);
+        } catch (ex) {
+            console.error("Load learning path options error:", ex);
         }
     };
 
     useEffect(() => {
         loadOptions();
     }, []);
+
+    useEffect(() => {
+        loadFilterPaths(draftFilters.courseId);
+    }, [draftFilters.courseId]);
 
     useEffect(() => {
         loadItems();
@@ -92,27 +100,21 @@ const StudentLearningPaths = () => {
 
         const params = { page: "1" };
         if (kw.trim()) params.kw = kw.trim();
-        if (courseId) params.courseId = courseId;
-        if (learningPathId) params.learningPathId = learningPathId;
-        if (status) params.status = status;
+        if (draftFilters.courseId) params.courseId = draftFilters.courseId;
+        if (draftFilters.learningPathId) params.learningPathId = draftFilters.learningPathId;
+        if (draftFilters.status) params.status = draftFilters.status;
 
         setQ(params);
     };
 
     const changeFilter = (name, value) => {
-        const params = Object.fromEntries(q);
-
-        if (value) params[name] = value;
-        else delete params[name];
-
-        if (name === "courseId") delete params.learningPathId;
-
-        params.page = "1";
-        setQ(params);
+        const resetKeys = name === "courseId" ? ["learningPathId"] : [];
+        setDraftFilter(name, value, resetKeys);
     };
 
     const clearFilters = () => {
         setKw("");
+        resetDraftFilters();
         setQ({ page: "1" });
     };
 
@@ -124,6 +126,7 @@ const StudentLearningPaths = () => {
 
     const openAssignModal = () => {
         setForm({ studentId: "", learningPathId: "" });
+        setSelectedStudent(null);
         setAvailablePaths([]);
         setShowModal(true);
     };
@@ -131,10 +134,13 @@ const StudentLearningPaths = () => {
     const closeModal = () => {
         setShowModal(false);
         setForm({ studentId: "", learningPathId: "" });
+        setSelectedStudent(null);
         setAvailablePaths([]);
     };
 
-    const changeStudent = async studentId => {
+    const changeStudent = async student => {
+        const studentId = student?.id || "";
+        setSelectedStudent(student || null);
         setForm({ studentId, learningPathId: "" });
         setAvailablePaths([]);
 
@@ -247,10 +253,6 @@ const StudentLearningPaths = () => {
     const formatDateTime = value =>
         value ? new Date(value).toLocaleString("vi-VN") : "-";
 
-    const filteredPaths = courseId
-        ? paths.filter(p => String(getPathCourseId(p)) === String(courseId))
-        : paths;
-
     return (
         <>
             <div className="d-flex justify-content-between align-items-center mb-4">
@@ -286,7 +288,7 @@ const StudentLearningPaths = () => {
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={courseId}
+                                <Form.Select value={draftFilters.courseId}
                                     onChange={e => changeFilter("courseId", e.target.value)}>
                                     <option value="">Tất cả khóa học</option>
 
@@ -299,11 +301,12 @@ const StudentLearningPaths = () => {
                             </Col>
 
                             <Col lg={3}>
-                                <Form.Select value={learningPathId}
+                                <Form.Select value={draftFilters.learningPathId}
+                                    disabled={!draftFilters.courseId}
                                     onChange={e => changeFilter("learningPathId", e.target.value)}>
-                                    <option value="">Tất cả lộ trình</option>
+                                    <option value="">{draftFilters.courseId ? "Tất cả lộ trình" : "Chọn khóa học trước"}</option>
 
-                                    {filteredPaths.map(p => (
+                                    {paths.map(p => (
                                         <option key={getPathId(p)} value={getPathId(p)}>
                                             {p.name}
                                         </option>
@@ -312,7 +315,7 @@ const StudentLearningPaths = () => {
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={status}
+                                <Form.Select value={draftFilters.status}
                                     onChange={e => changeFilter("status", e.target.value)}>
                                     <option value="">Tất cả trạng thái</option>
                                     <option value="IN_PROGRESS">Đang học</option>
@@ -439,17 +442,10 @@ const StudentLearningPaths = () => {
                         <Form.Group className="mb-3">
                             <Form.Label>Học viên</Form.Label>
 
-                            <Form.Select value={form.studentId}
-                                onChange={e => changeStudent(e.target.value)}
-                                required>
-                                <option value="">-- Chọn học viên --</option>
-
-                                {students.map(s => (
-                                    <option key={getStudentId(s)} value={getStudentId(s)}>
-                                        {s.fullName} ({s.username})
-                                    </option>
-                                ))}
-                            </Form.Select>
+                            <AsyncUserSelect endpoint={endpoints.adminStudentOptions}
+                                value={selectedStudent}
+                                onChange={changeStudent}
+                                placeholder="Tìm tên, username hoặc email..." required />
                         </Form.Group>
 
                         <Form.Group>

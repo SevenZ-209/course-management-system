@@ -14,7 +14,6 @@ const LessonDetail = () => {
     const [loading,setLoading] = useState(true);
     const [err,setErr] = useState("");
 
-
     const loadLesson = async () => {
 
         try {
@@ -44,11 +43,9 @@ const LessonDetail = () => {
 
     };
 
-
     useEffect(()=>{
         loadLesson();
     },[lessonId]);
-
 
     if(loading)
         return (
@@ -58,7 +55,6 @@ const LessonDetail = () => {
                 </div>
             </div>
         );
-
 
     if(err)
         return (
@@ -80,13 +76,11 @@ const LessonDetail = () => {
             </div>
         );
 
-
     return (
 
         <div className="cm-portal-page">
 
             <div className="cm-portal-container">
-
 
                 <Button
                     size="sm"
@@ -97,21 +91,17 @@ const LessonDetail = () => {
                     ← Quay lại
                 </Button>
 
-
                 <Card className="cm-portal-card">
 
                     <Card.Body className="p-4">
-
 
                         <span className="cm-portal-label">
                             BÀI HỌC
                         </span>
 
-
                         <h2 className="cm-portal-title mt-2">
                             {lesson.lessonName}
                         </h2>
-
 
                         <div className="mt-4">
 
@@ -130,7 +120,6 @@ const LessonDetail = () => {
                                     />
 
                                     
-                                    
 
                                 ) : (
 
@@ -141,13 +130,11 @@ const LessonDetail = () => {
                                 )
                             }
 
-
                         </div>
 
                     </Card.Body>
 
                 </Card>
-
 
             </div>
 
@@ -156,6 +143,5 @@ const LessonDetail = () => {
     );
 
 };
-
 
 export default LessonDetail;

@@ -1,16 +1,21 @@
 import { useEffect, useState } from "react";
 import { Alert, Badge, Button, Card, Col, Form, Modal, Pagination, Row, Table } from "react-bootstrap";
 import { useSearchParams } from "react-router-dom";
+import useExplicitSearchFilters from "../../hooks/useExplicitSearchFilters";
 import { authApis, endpoints } from "../../configs/Apis";
 import MySpinner from "../../components/MySpinner";
+import AsyncUserSelect from "../../components/AsyncUserSelect";
 
 const Enrollments = () => {
     const [q, setQ] = useSearchParams();
+    const { draft: draftFilters, setFilter: setDraftFilter, resetFilters: resetDraftFilters } = useExplicitSearchFilters(q, ["courseId", "classId", "status"]);
 
     const [enrollments, setEnrollments] = useState([]);
     const [courses, setCourses] = useState([]);
-    const [classes, setClasses] = useState([]);
-    const [students, setStudents] = useState([]);
+    const [filterClasses, setFilterClasses] = useState([]);
+    const [modalClasses, setModalClasses] = useState([]);
+    const [filterClassesLoading, setFilterClassesLoading] = useState(false);
+    const [modalClassesLoading, setModalClassesLoading] = useState(false);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState("");
@@ -20,7 +25,7 @@ const Enrollments = () => {
     const [kw, setKw] = useState(q.get("kw") || "");
 
     const [showModal, setShowModal] = useState(false);
-    const [form, setForm] = useState({ studentId: "", classId: "" });
+    const [form, setForm] = useState({ studentId: "", courseId: "", classId: "" });
 
     const page = Number(q.get("page")) || 1;
     const courseId = q.get("courseId") || "";
@@ -30,8 +35,6 @@ const Enrollments = () => {
     const getEnrollmentId = e => e.id ?? e.enrollmentId;
     const getCourseId = c => c.id ?? c.courseId;
     const getClassId = c => c.id ?? c.classId;
-    const getStudentId = s => s.id ?? s.studentId ?? s.userId;
-    const getClassCourseId = c => c.courseId ?? c.course?.id;
 
     const loadEnrollments = async () => {
         try {
@@ -60,27 +63,43 @@ const Enrollments = () => {
 
     const loadOptions = async () => {
         try {
-            const [courseRes, classRes, studentRes] = await Promise.all([
-                authApis().get(endpoints.adminCourseOptions),
-                authApis().get(endpoints.adminClassOptions),
-                authApis().get(endpoints.adminStudentOptions)
-            ]);
-
+            const courseRes = await authApis().get(endpoints.adminCourseOptions);
             setCourses(Array.isArray(courseRes.data) ? courseRes.data : []);
-            setClasses(Array.isArray(classRes.data) ? classRes.data : []);
-            setStudents(
-                Array.isArray(studentRes.data)
-                    ? studentRes.data.filter(s => s.status === "ACTIVE")
-                    : []
-            );
         } catch (ex) {
             console.error("Load enrollment options error:", ex);
+        }
+    };
+
+    const loadClassOptions = async (selectedCourseId, target = "filter", availableOnly = false) => {
+        const setItems = target === "modal" ? setModalClasses : setFilterClasses;
+        const setBusy = target === "modal" ? setModalClassesLoading : setFilterClassesLoading;
+
+        if (!selectedCourseId) {
+            setItems([]);
+            return;
+        }
+
+        try {
+            setBusy(true);
+            const res = await authApis().get(endpoints.adminClassOptions, {
+                params: { courseId: selectedCourseId, availableOnly }
+            });
+            setItems(Array.isArray(res.data) ? res.data : []);
+        } catch (ex) {
+            console.error("Load class options error:", ex);
+            setItems([]);
+        } finally {
+            setBusy(false);
         }
     };
 
     useEffect(() => {
         loadOptions();
     }, []);
+
+    useEffect(() => {
+        loadClassOptions(draftFilters.courseId, "filter", false);
+    }, [courseId]);
 
     useEffect(() => {
         loadEnrollments();
@@ -91,27 +110,21 @@ const Enrollments = () => {
 
         const params = { page: "1" };
         if (kw.trim()) params.kw = kw.trim();
-        if (courseId) params.courseId = courseId;
-        if (classId) params.classId = classId;
-        if (status) params.status = status;
+        if (draftFilters.courseId) params.courseId = draftFilters.courseId;
+        if (draftFilters.classId) params.classId = draftFilters.classId;
+        if (draftFilters.status) params.status = draftFilters.status;
 
         setQ(params);
     };
 
     const changeFilter = (name, value) => {
-        const params = Object.fromEntries(q);
-
-        if (value) params[name] = value;
-        else delete params[name];
-
-        if (name === "courseId") delete params.classId;
-
-        params.page = "1";
-        setQ(params);
+        const resetKeys = name === "courseId" ? ["classId"] : [];
+        setDraftFilter(name, value, resetKeys);
     };
 
     const clearFilters = () => {
         setKw("");
+        resetDraftFilters();
         setQ({ page: "1" });
     };
 
@@ -122,13 +135,20 @@ const Enrollments = () => {
     };
 
     const openAddModal = () => {
-        setForm({ studentId: "", classId: "" });
+        setForm({ studentId: "", courseId: "", classId: "" });
+        setModalClasses([]);
         setShowModal(true);
     };
 
     const closeModal = () => {
         setShowModal(false);
-        setForm({ studentId: "", classId: "" });
+        setForm({ studentId: "", courseId: "", classId: "" });
+        setModalClasses([]);
+    };
+
+    const changeModalCourse = async selectedCourseId => {
+        setForm(current => ({ ...current, courseId: selectedCourseId, classId: "" }));
+        await loadClassOptions(selectedCourseId, "modal", true);
     };
 
     const saveEnrollment = async e => {
@@ -212,14 +232,6 @@ const Enrollments = () => {
         </Badge>;
     };
 
-    const filteredClasses = courseId
-        ? classes.filter(c => String(getClassCourseId(c)) === String(courseId))
-        : classes;
-
-    const availableClasses = classes.filter(c =>
-        !["COMPLETED", "CANCELED"].includes(c.status)
-    );
-
     return (
         <>
             <div className="d-flex justify-content-between align-items-center mb-4">
@@ -255,7 +267,7 @@ const Enrollments = () => {
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={courseId}
+                                <Form.Select value={draftFilters.courseId}
                                     onChange={e => changeFilter("courseId", e.target.value)}>
                                     <option value="">Tất cả khóa học</option>
 
@@ -268,11 +280,11 @@ const Enrollments = () => {
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={classId}
+                                <Form.Select value={draftFilters.classId} disabled={!courseId || filterClassesLoading}
                                     onChange={e => changeFilter("classId", e.target.value)}>
-                                    <option value="">Tất cả lớp</option>
+                                    <option value="">{courseId ? (filterClassesLoading ? "Đang tải lớp..." : "Tất cả lớp") : "Chọn khóa học trước"}</option>
 
-                                    {filteredClasses.map(c => (
+                                    {filterClasses.map(c => (
                                         <option key={getClassId(c)} value={getClassId(c)}>
                                             {c.name}
                                         </option>
@@ -281,7 +293,7 @@ const Enrollments = () => {
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={status}
+                                <Form.Select value={draftFilters.status}
                                     onChange={e => changeFilter("status", e.target.value)}>
                                     <option value="">Tất cả trạng thái</option>
                                     <option value="PENDING_PAYMENT">Chờ thanh toán</option>
@@ -392,35 +404,31 @@ const Enrollments = () => {
 
                     <Modal.Body>
                         <Form.Group className="mb-3">
-                            <Form.Label>Học viên</Form.Label>
+                            <Form.Label>Khóa học</Form.Label>
+                            <Form.Select value={form.courseId} onChange={e => changeModalCourse(e.target.value)} required>
+                                <option value="">-- Chọn khóa học --</option>
+                                {courses.map(c => (
+                                    <option key={getCourseId(c)} value={getCourseId(c)}>{c.name}</option>
+                                ))}
+                            </Form.Select>
+                        </Form.Group>
 
-                            <Form.Select value={form.studentId}
-                                onChange={e => setForm({ ...form, studentId: e.target.value })}
-                                required>
-                                <option value="">-- Chọn học viên --</option>
-
-                                {students.map(s => (
-                                    <option key={getStudentId(s)} value={getStudentId(s)}>
-                                        {s.fullName} ({s.username})
-                                    </option>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Lớp học</Form.Label>
+                            <Form.Select value={form.classId} disabled={!form.courseId || modalClassesLoading}
+                                onChange={e => setForm({ ...form, classId: e.target.value })} required>
+                                <option value="">{form.courseId ? (modalClassesLoading ? "Đang tải lớp..." : "-- Chọn lớp học --") : "-- Chọn khóa học trước --"}</option>
+                                {modalClasses.map(c => (
+                                    <option key={getClassId(c)} value={getClassId(c)}>{c.name}</option>
                                 ))}
                             </Form.Select>
                         </Form.Group>
 
                         <Form.Group>
-                            <Form.Label>Lớp học</Form.Label>
-
-                            <Form.Select value={form.classId}
-                                onChange={e => setForm({ ...form, classId: e.target.value })}
-                                required>
-                                <option value="">-- Chọn lớp học --</option>
-
-                                {availableClasses.map(c => (
-                                    <option key={getClassId(c)} value={getClassId(c)}>
-                                        {c.name}
-                                    </option>
-                                ))}
-                            </Form.Select>
+                            <Form.Label>Học viên</Form.Label>
+                            <AsyncUserSelect endpoint={endpoints.adminStudentOptions} value={form.studentId}
+                                onChange={student => setForm(current => ({ ...current, studentId: student?.id || "" }))}
+                                placeholder="Gõ tên, username hoặc email học viên..." required />
                         </Form.Group>
 
                         <Form.Text className="text-muted">

@@ -1,6 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 import { Alert, Badge, Button, Card, Col, Form, Pagination, Row, Table } from "react-bootstrap";
 import { useSearchParams } from "react-router-dom";
+import useExplicitSearchFilters from "../../hooks/useExplicitSearchFilters";
 import { authApis, endpoints } from "../../configs/Apis";
 import { MyUserContext } from "../../configs/Contexts";
 import MySpinner from "../../components/MySpinner";
@@ -8,6 +9,7 @@ import MySpinner from "../../components/MySpinner";
 const Users = () => {
     const [currentUser] = useContext(MyUserContext);
     const [q, setQ] = useSearchParams();
+    const { draft: draftFilters, setFilter: setDraftFilter, resetFilters: resetDraftFilters } = useExplicitSearchFilters(q, ["role", "status"]);
 
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -55,24 +57,19 @@ const Users = () => {
 
         const params = { page: "1" };
         if (kw.trim()) params.kw = kw.trim();
-        if (role) params.role = role;
-        if (status) params.status = status;
+        if (draftFilters.role) params.role = draftFilters.role;
+        if (draftFilters.status) params.status = draftFilters.status;
 
         setQ(params);
     };
 
     const changeFilter = (name, value) => {
-        const params = Object.fromEntries(q);
-
-        if (value) params[name] = value;
-        else delete params[name];
-
-        params.page = "1";
-        setQ(params);
+        setDraftFilter(name, value);
     };
 
     const clearFilters = () => {
         setKw("");
+        resetDraftFilters();
         setQ({ page: "1" });
     };
 
@@ -167,7 +164,7 @@ const Users = () => {
                             </Col>
 
                             <Col lg={2} md={4}>
-                                <Form.Select value={role} onChange={e => changeFilter("role", e.target.value)}>
+                                <Form.Select value={draftFilters.role} onChange={e => changeFilter("role", e.target.value)}>
                                     <option value="">Tất cả vai trò</option>
                                     <option value="ADMIN">Quản trị viên</option>
                                     <option value="MANAGER">Quản lý</option>
@@ -178,7 +175,7 @@ const Users = () => {
                             </Col>
 
                             <Col lg={2} md={4}>
-                                <Form.Select value={status} onChange={e => changeFilter("status", e.target.value)}>
+                                <Form.Select value={draftFilters.status} onChange={e => changeFilter("status", e.target.value)}>
                                     <option value="">Tất cả trạng thái</option>
                                     <option value="ACTIVE">Hoạt động</option>
                                     <option value="INACTIVE">Không hoạt động</option>

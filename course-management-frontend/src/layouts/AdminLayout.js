@@ -21,6 +21,7 @@ const AdminLayout = () => {
         "/admin/attendances": "Điểm danh",
         "/admin/enrollments": "Đăng ký khóa học",
         "/admin/payments": "Thanh toán",
+        "/admin/parent-links": "Liên kết phụ huynh",
         "/admin/learning-paths": "Lộ trình học",
         "/admin/learning-path-details": "Chi tiết lộ trình",
         "/admin/student-learning-paths": "Lộ trình học viên",

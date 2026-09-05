@@ -35,10 +35,8 @@ const Questions = () => {
         orderNumber:""
     });
 
-
     const page = Number(q.get("page")) || 1;
     const assignmentId = q.get("assignmentId") || "";
-
 
     const loadQuestions = async () => {
         try {
@@ -50,12 +48,10 @@ const Questions = () => {
             if(assignmentId)
                 params.assignmentId = assignmentId;
 
-
             const res = await authApis().get(
                 endpoints.adminQuestions,
                 {params}
             );
-
 
             const data = res.data;
 
@@ -78,7 +74,6 @@ const Questions = () => {
         }
     };
 
-
     const loadAssignments = async () => {
         try {
     
@@ -97,21 +92,16 @@ const Questions = () => {
             );
     
         } catch(ex){
-            console.log(ex);
         }
     };
-
 
     useEffect(()=>{
         loadAssignments();
     },[]);
 
-
     useEffect(()=>{
         loadQuestions();
     },[q]);
-
-
 
     const openAdd = () => {
 
@@ -128,7 +118,6 @@ const Questions = () => {
         setShowModal(true);
     };
 
-
     const openEdit = item => {
 
         setEditing(item);
@@ -144,26 +133,20 @@ const Questions = () => {
         setShowModal(true);
     };
 
-
     const saveQuestion = async e => {
 
         e.preventDefault();
 
-
         if(!form.content.trim())
             return setErr("Vui lòng nhập nội dung câu hỏi!");
 
-
         if(!form.assignmentId)
             return setErr("Vui lòng chọn bài tập!");
-
-
 
         try {
 
             setSaving(true);
             setErr("");
-
 
             const body = {
                 assignmentId:Number(form.assignmentId),
@@ -172,7 +155,6 @@ const Questions = () => {
                 score:Number(form.score),
                 orderNumber:Number(form.orderNumber)
             };
-
 
             if(editing)
 
@@ -188,17 +170,14 @@ const Questions = () => {
                     body
                 );
 
-
             setSuccess(
                 editing
                 ? "Cập nhật câu hỏi thành công!"
                 : "Thêm câu hỏi thành công!"
             );
 
-
             setShowModal(false);
             loadQuestions();
-
 
         } catch(ex){
 
@@ -215,21 +194,16 @@ const Questions = () => {
 
     };
 
-
-
     const assignmentName = item => {
 
         const id =
             item.assignmentId ??
             item.assignment?.id;
 
-
         return assignments.find(
             a=>String(a.id)===String(id)
         )?.name || "-";
     };
-
-
 
     const changePage = p => {
 
@@ -239,8 +213,6 @@ const Questions = () => {
 
         setQ(params);
     };
-
-
 
     return (
         <>
@@ -253,7 +225,6 @@ const Questions = () => {
             >
                 ← Quay lại
             </Button>
-
 
             <div className="d-flex justify-content-between align-items-center mb-4">
 
@@ -269,14 +240,11 @@ const Questions = () => {
 
                 </div>
 
-
                 <Button onClick={openAdd}>
                     + Thêm câu hỏi
                 </Button>
 
             </div>
-
-
 
             {success &&
                 <Alert variant="success" dismissible onClose={()=>setSuccess("")}>
@@ -284,14 +252,11 @@ const Questions = () => {
                 </Alert>
             }
 
-
             {err &&
                 <Alert variant="danger" dismissible onClose={()=>setErr("")}>
                     {err}
                 </Alert>
             }
-
-
 
             <Card className="border-0 shadow-sm">
 
@@ -322,7 +287,6 @@ const Questions = () => {
 
                             </thead>
 
-
                             <tbody>
 
                                 {
@@ -332,31 +296,25 @@ const Questions = () => {
 
                                             <td>{item.id}</td>
 
-
                                             <td className="fw-semibold">
                                                 {item.content}
                                             </td>
-
 
                                             <td>
                                                 {assignmentName(item)}
                                             </td>
 
-
                                             <td>
                                                 {item.type}
                                             </td>
-
 
                                             <td>
                                                 {item.score}
                                             </td>
 
-
                                             <td>
                                                 {item.orderNumber}
                                             </td>
-
 
                                             <td>
 
@@ -375,7 +333,6 @@ const Questions = () => {
                                                     </Button>
                                                 }
 
-
                                                 <Button
                                                     size="sm"
                                                     variant="outline-primary"
@@ -391,7 +348,6 @@ const Questions = () => {
                                     ))
                                 }
 
-
                             </tbody>
 
                         </Table>
@@ -401,8 +357,6 @@ const Questions = () => {
                 </Card.Body>
 
             </Card>
-
-
 
             {
                 totalPages > 1 &&
@@ -416,12 +370,10 @@ const Questions = () => {
                             onClick={()=>changePage(1)}
                         />
 
-
                         <Pagination.Prev
                             disabled={page===1}
                             onClick={()=>changePage(page-1)}
                         />
-
 
                         {
                             Array.from(
@@ -440,12 +392,10 @@ const Questions = () => {
                             )
                         }
 
-
                         <Pagination.Next
                             disabled={page===totalPages}
                             onClick={()=>changePage(page+1)}
                         />
-
 
                         <Pagination.Last
                             disabled={page===totalPages}
@@ -456,9 +406,6 @@ const Questions = () => {
 
                 </div>
             }
-
-
-
 
             <QuestionModal
                 show={showModal}
@@ -472,8 +419,6 @@ const Questions = () => {
                 assignmentId={assignmentId}
             />
 
-
-
             <AnswerModal
                 show={showAnswer}
                 question={selectedQuestion}
@@ -482,7 +427,6 @@ const Questions = () => {
                     setSelectedQuestion(null);
                 }}
             />
-
 
         </>
     );

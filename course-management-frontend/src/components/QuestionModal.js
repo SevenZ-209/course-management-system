@@ -33,9 +33,7 @@ const QuestionModal = ({
 
                 </Modal.Header>
 
-
                 <Modal.Body>
-
 
                     {
                         !assignmentId && (
@@ -45,7 +43,6 @@ const QuestionModal = ({
                                 <Form.Label>
                                     Bài tập
                                 </Form.Label>
-
 
                                 <Form.Select
                                     value={form.assignmentId}
@@ -60,7 +57,6 @@ const QuestionModal = ({
                                     <option value="">
                                         -- Chọn bài tập --
                                     </option>
-
 
                                     {
                                         assignments.map(a=>(
@@ -82,14 +78,11 @@ const QuestionModal = ({
                         )
                     }
 
-
-
                     <Form.Group className="mb-3">
 
                         <Form.Label>
                             Nội dung câu hỏi
                         </Form.Label>
-
 
                         <Form.Control
                             as="textarea"
@@ -106,14 +99,11 @@ const QuestionModal = ({
 
                     </Form.Group>
 
-
-
                     <Form.Group className="mb-3">
 
                         <Form.Label>
                             Loại câu hỏi
                         </Form.Label>
-
 
                         <Form.Select
                             value={form.type}
@@ -129,25 +119,19 @@ const QuestionModal = ({
                                 Trắc nghiệm
                             </option>
 
-
                             <option value="ESSAY">
                                 Tự luận
                             </option>
 
-
                         </Form.Select>
 
                     </Form.Group>
-
-
-
 
                     <Form.Group className="mb-3">
 
                         <Form.Label>
                             Điểm
                         </Form.Label>
-
 
                         <Form.Control
                             type="number"
@@ -163,14 +147,11 @@ const QuestionModal = ({
 
                     </Form.Group>
 
-
-
                     <Form.Group>
 
                         <Form.Label>
                             Thứ tự
                         </Form.Label>
-
 
                         <Form.Control
                             type="number"
@@ -186,10 +167,7 @@ const QuestionModal = ({
 
                     </Form.Group>
 
-
                 </Modal.Body>
-
-
 
                 <Modal.Footer>
 
@@ -200,7 +178,6 @@ const QuestionModal = ({
                     >
                         Hủy
                     </Button>
-
 
                     <Button
                         type="submit"
@@ -213,15 +190,12 @@ const QuestionModal = ({
                         }
                     </Button>
 
-
                 </Modal.Footer>
-
 
             </Form>
 
         </Modal>
     );
 };
-
 
 export default QuestionModal;

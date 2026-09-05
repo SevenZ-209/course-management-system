@@ -13,26 +13,31 @@ const Dashboard = () => {
     const [dashboard, setDashboard] = useState(null);
     const [courses, setCourses] = useState([]);
     const [parentLink, setParentLink] = useState(null);
+    const [linkedParents, setLinkedParents] = useState([]);
     const [linking, setLinking] = useState(false);
     const [unlinking, setUnlinking] = useState(false);
+    const [unlinkingParentId, setUnlinkingParentId] = useState(null);
     const [copied, setCopied] = useState(false);
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState("");
+    const [success, setSuccess] = useState("");
 
     const loadDashboard = async () => {
         try {
             setLoading(true);
             setErr("");
     
-            const [dashboardRes, coursesRes, linkRes] = await Promise.all([
+            const [dashboardRes, coursesRes, linkRes, linkedParentsRes] = await Promise.all([
                 authApis().get(endpoints.studentDashboard),
                 authApis().get(endpoints.studentCourses),
-                authApis().get(endpoints.studentCurrentParentLink)
+                authApis().get(endpoints.studentCurrentParentLink),
+                authApis().get(endpoints.studentLinkedParents)
             ]);
     
             setDashboard(dashboardRes.data);
             setCourses(Array.isArray(coursesRes.data) ? coursesRes.data.slice(0, 3) : []);
             setParentLink(linkRes.data?.linkId ? linkRes.data : null);
+            setLinkedParents(Array.isArray(linkedParentsRes.data) ? linkedParentsRes.data : []);
         } catch (ex) {
             console.error("Student dashboard error:", ex);
             setErr(ex.response?.data?.message || "Không thể tải tổng quan học tập!");
@@ -59,6 +64,7 @@ const Dashboard = () => {
         try {
             setLinking(true);
             setErr("");
+            setSuccess("");
     
             const res = await authApis().post(endpoints.studentParentLinks);
             setParentLink(res.data);
@@ -76,9 +82,11 @@ const Dashboard = () => {
         try {
             setUnlinking(true);
             setErr("");
+            setSuccess("");
     
             await authApis().delete(endpoints.studentParentLink(parentLink.linkId));
             setParentLink(null);
+            setSuccess("Đã hủy mã liên kết.");
         } catch (ex) {
             setErr(ex.response?.data?.message || "Không thể hủy mã liên kết!");
         } finally {
@@ -86,6 +94,24 @@ const Dashboard = () => {
         }
     };
     
+    const unlinkLinkedParent = async parent => {
+        if (!window.confirm(`Hủy quyền theo dõi của ${parent.fullName}?`)) return;
+
+        try {
+            setUnlinkingParentId(parent.linkId);
+            setErr("");
+            setSuccess("");
+
+            const res = await authApis().delete(endpoints.studentUnlinkParent(parent.linkId));
+            setLinkedParents(current => current.filter(item => item.linkId !== parent.linkId));
+            setSuccess(res.data?.message || `Đã hủy liên kết với ${parent.fullName}.`);
+        } catch (ex) {
+            setErr(ex.response?.data?.message || "Không thể hủy liên kết phụ huynh!");
+        } finally {
+            setUnlinkingParentId(null);
+        }
+    };
+
     const copyParentLink = async () => {
         try {
             await navigator.clipboard.writeText(parentLink.verificationCode);
@@ -147,7 +173,8 @@ const Dashboard = () => {
                     <Button onClick={() => nav("/student/courses")}>Khóa học của tôi</Button>
                 </section>
 
-                {err && <Alert variant="danger">{err}</Alert>}
+                {err && <Alert variant="danger" dismissible onClose={() => setErr("")}>{err}</Alert>}
+                {success && <Alert variant="success" dismissible onClose={() => setSuccess("")}>{success}</Alert>}
 
                 <Row className="g-4 cm-student-stats">
                     {stats.map(item => (
@@ -260,15 +287,43 @@ const Dashboard = () => {
                         </div>
                     </div>
 
+                    {linkedParents.length > 0 && (
+                        <div className="d-flex flex-column gap-3 mb-3">
+                            {linkedParents.map(parent => (
+                                <div className="cm-continue-card" key={parent.linkId}>
+                                    <div className="cm-continue-left">
+                                        <div className="cm-continue-icon">
+                                            {(parent.fullName || "P").trim().charAt(0).toUpperCase()}
+                                        </div>
+
+                                        <div>
+                                            <span className="cm-portal-label">PHỤ HUYNH ĐANG LIÊN KẾT</span>
+                                            <h3>{parent.fullName}</h3>
+                                            <p>
+                                                @{parent.username} · Liên kết từ {formatDateTime(parent.linkedAt)}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <Button variant="outline-danger"
+                                        disabled={unlinkingParentId === parent.linkId}
+                                        onClick={() => unlinkLinkedParent(parent)}>
+                                        {unlinkingParentId === parent.linkId ? "Đang hủy..." : "Hủy liên kết"}
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
                     {parentLink ? (
                         <div className="cm-continue-card">
                             <div>
-                                <span className="cm-portal-label">MÃ LIÊN KẾT</span>
+                                <span className="cm-portal-label">MÃ LIÊN KẾT MỚI</span>
                                 <h2 className="fw-bold mt-2 mb-1" style={{ letterSpacing: 3 }}>
                                     {parentLink.verificationCode}
                                 </h2>
                                 <p className="mb-0">
-                                    Có hiệu lực đến {formatDateTime(parentLink.expiresAt)}
+                                    Có hiệu lực đến {formatDateTime(parentLink.expiresAt)} · Mỗi mã chỉ dùng một lần.
                                 </p>
                             </div>
 
@@ -285,8 +340,10 @@ const Dashboard = () => {
                     ) : (
                         <div className="cm-student-empty-card">
                             <div>
-                                <h5>Tạo mã liên kết cho phụ huynh</h5>
-                                <p>Phụ huynh nhập mã này để liên kết và theo dõi tình hình học tập của bạn.</p>
+                                <h5>{linkedParents.length ? "Liên kết thêm phụ huynh" : "Tạo mã liên kết cho phụ huynh"}</h5>
+                                <p>
+                                    Mỗi mã chỉ dùng được một lần. Muốn thêm phụ huynh hoặc người giám hộ khác, hãy tạo một mã mới.
+                                </p>
                             </div>
 
                             <div>
@@ -295,7 +352,7 @@ const Dashboard = () => {
                                 </p>
 
                                 <Button disabled={linking} onClick={createParentLink}>
-                                    {linking ? "Đang tạo..." : "Tạo mã liên kết"}
+                                    {linking ? "Đang tạo..." : linkedParents.length ? "+ Tạo mã mới" : "Tạo mã liên kết"}
                                 </Button>
                             </div>
                         </div>

@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
 import { Alert, Badge, Button, Card, Col, Form, Modal, Pagination, Row, Table } from "react-bootstrap";
 import { useSearchParams } from "react-router-dom";
+import useExplicitSearchFilters from "../../hooks/useExplicitSearchFilters";
 import { authApis, endpoints } from "../../configs/Apis";
 import MySpinner from "../../components/MySpinner";
+import AsyncEnrollmentSelect from "../../components/AsyncEnrollmentSelect";
 
 const Payments = () => {
     const [q, setQ] = useSearchParams();
+    const { draft: draftFilters, setFilter: setDraftFilter, resetFilters: resetDraftFilters } = useExplicitSearchFilters(q, ["courseId", "status", "date"]);
 
     const [payments, setPayments] = useState([]);
     const [courses, setCourses] = useState([]);
-    const [enrollments, setEnrollments] = useState([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState("");
@@ -31,7 +33,6 @@ const Payments = () => {
 
     const getPaymentId = p => p.id ?? p.transactionId;
     const getCourseId = c => c.id ?? c.courseId;
-    const getEnrollmentId = e => e.id ?? e.enrollmentId;
 
     const loadPayments = async () => {
         try {
@@ -60,21 +61,14 @@ const Payments = () => {
 
     const loadOptions = async () => {
         try {
-            const [courseRes, enrollmentRes] = await Promise.all([
-                authApis().get(endpoints.adminCourseOptions),
-                authApis().get(endpoints.adminPendingEnrollmentOptions)
-            ]);
-
+            const courseRes = await authApis().get(endpoints.adminCourseOptions);
             setCourses(Array.isArray(courseRes.data) ? courseRes.data : []);
-            setEnrollments(Array.isArray(enrollmentRes.data) ? enrollmentRes.data : []);
         } catch (ex) {
             console.error("Load payment options error:", ex);
         }
     };
 
-    useEffect(() => {
-        loadOptions();
-    }, []);
+    useEffect(() => { loadOptions(); }, []);
 
     useEffect(() => {
         loadPayments();
@@ -85,25 +79,20 @@ const Payments = () => {
 
         const params = { page: "1" };
         if (kw.trim()) params.kw = kw.trim();
-        if (courseId) params.courseId = courseId;
-        if (status) params.status = status;
-        if (date) params.date = date;
+        if (draftFilters.courseId) params.courseId = draftFilters.courseId;
+        if (draftFilters.status) params.status = draftFilters.status;
+        if (draftFilters.date) params.date = draftFilters.date;
 
         setQ(params);
     };
 
     const changeFilter = (name, value) => {
-        const params = Object.fromEntries(q);
-
-        if (value) params[name] = value;
-        else delete params[name];
-
-        params.page = "1";
-        setQ(params);
+        setDraftFilter(name, value);
     };
 
     const clearFilters = () => {
         setKw("");
+        resetDraftFilters();
         setQ({ page: "1" });
     };
 
@@ -120,16 +109,8 @@ const Payments = () => {
         });
     };
 
-    const openAddModal = async () => {
+    const openAddModal = () => {
         resetForm();
-
-        try {
-            const res = await authApis().get(endpoints.adminPendingEnrollmentOptions);
-            setEnrollments(Array.isArray(res.data) ? res.data : []);
-        } catch (ex) {
-            console.error("Load pending enrollment options error:", ex);
-        }
-
         setShowModal(true);
     };
 
@@ -138,20 +119,11 @@ const Payments = () => {
         resetForm();
     };
 
-    const selectEnrollment = value => {
-        const enrollment = enrollments.find(e =>
-            String(getEnrollmentId(e)) === String(value)
-        );
-
-        const tuitionFee =
-            enrollment?.tuitionFee ??
-            enrollment?.courseTuitionFee ??
-            enrollment?.amount ??
-            "";
-
+    const selectEnrollment = enrollment => {
+        const tuitionFee = enrollment?.tuitionFee ?? "";
         setForm(prev => ({
             ...prev,
-            enrollmentId: value,
+            enrollmentId: enrollment?.enrollmentId || "",
             amount: tuitionFee
         }));
     };
@@ -227,14 +199,6 @@ const Payments = () => {
         p.enrollment?.courseClass?.name ||
         "-";
 
-    const enrollmentLabel = e => {
-        const student = e.studentName || e.studentFullName || e.student?.fullName || "Học viên";
-        const course = e.courseName || e.course?.name || e.courseClass?.course?.name || "";
-        const classLabel = e.className || e.courseClassName || e.courseClass?.name || "";
-
-        return `${student}${course ? ` - ${course}` : ""}${classLabel ? ` (${classLabel})` : ""}`;
-    };
-
     const statusBadge = value => {
         const config = {
             PENDING: ["warning", "Chờ xử lý"],
@@ -287,7 +251,7 @@ const Payments = () => {
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={courseId}
+                                <Form.Select value={draftFilters.courseId}
                                     onChange={e => changeFilter("courseId", e.target.value)}>
                                     <option value="">Tất cả khóa học</option>
 
@@ -300,7 +264,7 @@ const Payments = () => {
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={status}
+                                <Form.Select value={draftFilters.status}
                                     onChange={e => changeFilter("status", e.target.value)}>
                                     <option value="">Tất cả trạng thái</option>
                                     <option value="PENDING">Chờ xử lý</option>
@@ -310,7 +274,7 @@ const Payments = () => {
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Control type="date" value={date}
+                                <Form.Control type="date" value={draftFilters.date}
                                     onChange={e => changeFilter("date", e.target.value)} />
                             </Col>
 
@@ -423,23 +387,9 @@ const Payments = () => {
                         <Form.Group className="mb-3">
                             <Form.Label>Đăng ký lớp học</Form.Label>
 
-                            <Form.Select value={form.enrollmentId}
-                                onChange={e => selectEnrollment(e.target.value)}
-                                required>
-                                <option value="">-- Chọn đăng ký --</option>
-
-                                {enrollments.map(e => (
-                                    <option key={getEnrollmentId(e)} value={getEnrollmentId(e)}>
-                                        {enrollmentLabel(e)}
-                                    </option>
-                                ))}
-                            </Form.Select>
-
-                            {enrollments.length === 0 && (
-                                <Form.Text className="text-muted">
-                                    Không có đăng ký đang chờ thanh toán.
-                                </Form.Text>
-                            )}
+                            <AsyncEnrollmentSelect endpoint={endpoints.adminPendingEnrollmentOptions}
+                                value={form.enrollmentId} onChange={selectEnrollment}
+                                placeholder="Tìm học viên, lớp hoặc khóa học..." />
                         </Form.Group>
 
                         <Form.Group className="mb-3">
@@ -489,7 +439,7 @@ const Payments = () => {
                             Hủy
                         </Button>
 
-                        <Button type="submit" disabled={saving || !enrollments.length}>
+                        <Button type="submit" disabled={saving || !form.enrollmentId}>
                             {saving ? "Đang lưu..." : "Lưu giao dịch"}
                         </Button>
                     </Modal.Footer>

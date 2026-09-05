@@ -1,14 +1,17 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Alert, Badge, Button, Card, Form, InputGroup } from "react-bootstrap";
 import { useLocation, useNavigate } from "react-router-dom";
 import { authApis, endpoints } from "../../configs/Apis";
 import MySpinner from "../../components/MySpinner";
+import { MyUserContext } from "../../configs/Contexts";
 import "../../styles/Portal.css";
 import "../../styles/TeacherGrading.css";
 
 const Grading = () => {
     const nav = useNavigate();
     const location = useLocation();
+    const [user] = useContext(MyUserContext);
+    const gradingBasePath = user?.role === "MANAGER" ? "/manager/grading" : "/teacher/grading";
 
     const [attempts, setAttempts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -183,7 +186,7 @@ const Grading = () => {
                                     <div className="d-flex align-items-center gap-3 flex-shrink-0">
                                         <Badge bg="warning" text="dark">Chờ chấm</Badge>
 
-                                        <Button onClick={() => nav(`/teacher/grading/${item.attemptId}`)}>
+                                        <Button onClick={() => nav(`${gradingBasePath}/${item.attemptId}`)}>
                                             Chấm bài
                                         </Button>
                                     </div>

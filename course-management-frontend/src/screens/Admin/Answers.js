@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { Alert, Badge, Button, Card, Col, Form, Modal, Pagination, Row, Table } from "react-bootstrap";
 import { useSearchParams } from "react-router-dom";
+import useExplicitSearchFilters from "../../hooks/useExplicitSearchFilters";
 import { authApis, endpoints } from "../../configs/Apis";
 import MySpinner from "../../components/MySpinner";
 
 const Answers = () => {
     const [q, setQ] = useSearchParams();
+    const { draft: draftFilters, setFilter: setDraftFilter, resetFilters: resetDraftFilters } = useExplicitSearchFilters(q, ["courseId", "assignmentId", "questionId", "type", "correct"]);
     const [answers, setAnswers] = useState([]);
     const [courses, setCourses] = useState([]);
     const [assignments, setAssignments] = useState([]);
@@ -114,43 +116,31 @@ const Answers = () => {
 
     useEffect(() => { loadCourses(); }, []);
     useEffect(() => { loadAnswers(); }, [q]);
-    useEffect(() => { loadAssignments(courseId); }, [courseId]);
-    useEffect(() => { loadQuestions(assignmentId); }, [assignmentId]);
+    useEffect(() => { loadAssignments(draftFilters.courseId); }, [draftFilters.courseId]);
+    useEffect(() => { loadQuestions(draftFilters.assignmentId); }, [draftFilters.assignmentId]);
 
     const search = e => {
         e.preventDefault();
 
         const params = { page: "1" };
         if (kw.trim()) params.kw = kw.trim();
-        if (courseId) params.courseId = courseId;
-        if (assignmentId) params.assignmentId = assignmentId;
-        if (questionId) params.questionId = questionId;
-        if (type) params.type = type;
-        if (correct !== "") params.correct = correct;
+        if (draftFilters.courseId) params.courseId = draftFilters.courseId;
+        if (draftFilters.assignmentId) params.assignmentId = draftFilters.assignmentId;
+        if (draftFilters.questionId) params.questionId = draftFilters.questionId;
+        if (draftFilters.type) params.type = draftFilters.type;
+        if (draftFilters.correct !== "") params.correct = draftFilters.correct;
 
         setQ(params);
     };
 
     const changeFilter = (name, value) => {
-        const params = Object.fromEntries(q);
-
-        if (value !== "") params[name] = value;
-        else delete params[name];
-
-        if (name === "courseId") {
-            delete params.assignmentId;
-            delete params.questionId;
-        }
-
-        if (name === "assignmentId")
-            delete params.questionId;
-
-        params.page = "1";
-        setQ(params);
+        const resetKeys = name === "courseId" ? ["assignmentId", "questionId"] : name === "assignmentId" ? ["questionId"] : [];
+        setDraftFilter(name, value, resetKeys);
     };
 
     const clearFilters = () => {
         setKw("");
+        resetDraftFilters();
         setAssignments([]);
         setQuestions([]);
         setQ({ page: "1" });
@@ -349,7 +339,7 @@ const Answers = () => {
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={courseId}
+                                <Form.Select value={draftFilters.courseId}
                                     onChange={e => changeFilter("courseId", e.target.value)}>
                                     <option value="">Tất cả khóa học</option>
                                     {courses.map(c => (
@@ -361,7 +351,7 @@ const Answers = () => {
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={assignmentId} disabled={!courseId}
+                                <Form.Select value={draftFilters.assignmentId} disabled={!draftFilters.courseId}
                                     onChange={e => changeFilter("assignmentId", e.target.value)}>
                                     <option value="">Tất cả bài tập</option>
                                     {assignments.map(a => (
@@ -373,7 +363,7 @@ const Answers = () => {
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={questionId} disabled={!assignmentId}
+                                <Form.Select value={draftFilters.questionId} disabled={!draftFilters.assignmentId}
                                     onChange={e => changeFilter("questionId", e.target.value)}>
                                     <option value="">Tất cả câu hỏi</option>
                                     {questions.map(x => (
@@ -385,7 +375,7 @@ const Answers = () => {
                             </Col>
 
                             <Col lg={1}>
-                                <Form.Select value={type}
+                                <Form.Select value={draftFilters.type}
                                     onChange={e => changeFilter("type", e.target.value)}>
                                     <option value="">Loại</option>
                                     <option value="MULTIPLE_CHOICE">TN</option>
@@ -395,7 +385,7 @@ const Answers = () => {
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={correct}
+                                <Form.Select value={draftFilters.correct}
                                     onChange={e => changeFilter("correct", e.target.value)}>
                                     <option value="">Tất cả đáp án</option>
                                     <option value="true">Đúng</option>
@@ -427,7 +417,6 @@ const Answers = () => {
                             <Table hover className="align-middle mb-0">
                                 <thead className="table-light">
                                     <tr>
-                                        <th>ID</th>
                                         <th>Khóa học</th>
                                         <th>Bài tập</th>
                                         <th>Câu hỏi</th>
@@ -442,7 +431,6 @@ const Answers = () => {
                                 <tbody>
                                     {answers.map(answer => (
                                         <tr key={getAnswerId(answer)}>
-                                            <td>{getAnswerId(answer)}</td>
                                             <td>{courseName(answer)}</td>
                                             <td>{assignmentName(answer)}</td>
                                             <td style={{ maxWidth: "250px" }}>

@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { Alert, Badge, Button, Card, Col, Form, Modal, Pagination, Row, Table } from "react-bootstrap";
 import { useSearchParams } from "react-router-dom";
+import useExplicitSearchFilters from "../../hooks/useExplicitSearchFilters";
 import { authApis, endpoints } from "../../configs/Apis";
 import MySpinner from "../../components/MySpinner";
 
 const Categories = () => {
     const [q, setQ] = useSearchParams();
+    const { draft: draftFilters, setFilter: setDraftFilter, resetFilters: resetDraftFilters } = useExplicitSearchFilters(q, ["status"]);
 
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -57,23 +59,18 @@ const Categories = () => {
 
         const params = { page: "1" };
         if (kw.trim()) params.kw = kw.trim();
-        if (status) params.status = status;
+        if (draftFilters.status) params.status = draftFilters.status;
 
         setQ(params);
     };
 
     const changeFilter = value => {
-        const params = Object.fromEntries(q);
-
-        if (value) params.status = value;
-        else delete params.status;
-
-        params.page = "1";
-        setQ(params);
+        setDraftFilter("status", value);
     };
 
     const clearFilters = () => {
         setKw("");
+        resetDraftFilters();
         setQ({ page: "1" });
     };
 
@@ -205,7 +202,7 @@ const Categories = () => {
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={status} onChange={e => changeFilter(e.target.value)}>
+                                <Form.Select value={draftFilters.status} onChange={e => changeFilter(e.target.value)}>
                                     <option value="">Tất cả trạng thái</option>
                                     <option value="ACTIVE">Hoạt động</option>
                                     <option value="INACTIVE">Không hoạt động</option>

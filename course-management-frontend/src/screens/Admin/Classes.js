@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
 import { Alert, Badge, Button, Card, Col, Form, Modal, Pagination, Row, Table } from "react-bootstrap";
 import { useSearchParams } from "react-router-dom";
+import useExplicitSearchFilters from "../../hooks/useExplicitSearchFilters";
 import { authApis, endpoints } from "../../configs/Apis";
 import MySpinner from "../../components/MySpinner";
+import AsyncUserSelect from "../../components/AsyncUserSelect";
 
 const Classes = () => {
     const [q, setQ] = useSearchParams();
+    const { draft: draftFilters, setFilter: setDraftFilter, resetFilters: resetDraftFilters } = useExplicitSearchFilters(q, ["courseId", "teacherId", "status"]);
 
     const [classes, setClasses] = useState([]);
     const [courses, setCourses] = useState([]);
-    const [teachers, setTeachers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState("");
@@ -62,13 +64,8 @@ const Classes = () => {
 
     const loadOptions = async () => {
         try {
-            const [courseRes, teacherRes] = await Promise.all([
-                authApis().get(endpoints.adminCourseOptions),
-                authApis().get(endpoints.adminTeacherOptions)
-            ]);
-
+            const courseRes = await authApis().get(endpoints.adminCourseOptions);
             setCourses(Array.isArray(courseRes.data) ? courseRes.data : []);
-            setTeachers(Array.isArray(teacherRes.data) ? teacherRes.data : []);
         } catch (ex) {
             console.error("Load class options error:", ex);
         }
@@ -87,25 +84,20 @@ const Classes = () => {
 
         const params = { page: "1" };
         if (kw.trim()) params.kw = kw.trim();
-        if (courseId) params.courseId = courseId;
-        if (teacherId) params.teacherId = teacherId;
-        if (status) params.status = status;
+        if (draftFilters.courseId) params.courseId = draftFilters.courseId;
+        if (draftFilters.teacherId) params.teacherId = draftFilters.teacherId;
+        if (draftFilters.status) params.status = draftFilters.status;
 
         setQ(params);
     };
 
     const changeFilter = (name, value) => {
-        const params = Object.fromEntries(q);
-
-        if (value) params[name] = value;
-        else delete params[name];
-
-        params.page = "1";
-        setQ(params);
+        setDraftFilter(name, value);
     };
 
     const clearFilters = () => {
         setKw("");
+        resetDraftFilters();
         setQ({ page: "1" });
     };
 
@@ -224,14 +216,7 @@ const Classes = () => {
         if (item.teacherFullName) return item.teacherFullName;
         if (item.teacher) return getTeacherName(item.teacher);
 
-        const id = item.teacherId;
-        if (!id) return "Chưa phân công";
-
-        const teacher = teachers.find(t =>
-            String(getTeacherId(t)) === String(id)
-        );
-
-        return teacher ? getTeacherName(teacher) : "-";
+        return item.teacherId ? `ID ${item.teacherId}` : "Chưa phân công";
     };
 
     const statusBadge = value => {
@@ -280,7 +265,7 @@ const Classes = () => {
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={courseId}
+                                <Form.Select value={draftFilters.courseId}
                                     onChange={e => changeFilter("courseId", e.target.value)}>
                                     <option value="">Tất cả khóa học</option>
 
@@ -293,20 +278,13 @@ const Classes = () => {
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={teacherId}
-                                    onChange={e => changeFilter("teacherId", e.target.value)}>
-                                    <option value="">Tất cả giáo viên</option>
-
-                                    {teachers.map(t => (
-                                        <option key={getTeacherId(t)} value={getTeacherId(t)}>
-                                            {getTeacherName(t)}
-                                        </option>
-                                    ))}
-                                </Form.Select>
+                                <AsyncUserSelect endpoint={endpoints.adminTeacherOptions} value={draftFilters.teacherId}
+                                    onChange={option => changeFilter("teacherId", option?.id || "")}
+                                    placeholder="Tìm giáo viên..." />
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={status}
+                                <Form.Select value={draftFilters.status}
                                     onChange={e => changeFilter("status", e.target.value)}>
                                     <option value="">Tất cả trạng thái</option>
                                     <option value="UPCOMING">Sắp diễn ra</option>
@@ -463,16 +441,9 @@ const Classes = () => {
                                 <Form.Group className="mb-3">
                                     <Form.Label>Giáo viên</Form.Label>
 
-                                    <Form.Select value={form.teacherId}
-                                        onChange={e => setForm({ ...form, teacherId: e.target.value })}>
-                                        <option value="">-- Chưa phân công --</option>
-
-                                        {teachers.map(t => (
-                                            <option key={getTeacherId(t)} value={getTeacherId(t)}>
-                                                {getTeacherName(t)}
-                                            </option>
-                                        ))}
-                                    </Form.Select>
+                                    <AsyncUserSelect endpoint={endpoints.adminTeacherOptions} value={form.teacherId}
+                                        onChange={option => setForm({ ...form, teacherId: option?.id || "" })}
+                                        placeholder="Tìm giáo viên để phân công..." required />
                                 </Form.Group>
                             </Col>
                         </Row>

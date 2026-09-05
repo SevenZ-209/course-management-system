@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { Alert, Badge, Button, Card, Col, Form, Modal, Pagination, Row, Table } from "react-bootstrap";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import useExplicitSearchFilters from "../../hooks/useExplicitSearchFilters";
 import { authApis, endpoints } from "../../configs/Apis";
 import MySpinner from "../../components/MySpinner";
 
 const Assignments = () => {
     const [q, setQ] = useSearchParams();
+    const { draft: draftFilters, setFilter: setDraftFilter, resetFilters: resetDraftFilters } = useExplicitSearchFilters(q, ["courseId", "type", "status"]);
     const nav = useNavigate();
     const [assignments, setAssignments] = useState([]);
     const [courses, setCourses] = useState([]);
@@ -39,15 +41,10 @@ const Assignments = () => {
 
     const loadLessons = async (courseId) => {
         try {
-            const res = await authApis().get(
-                `${endpoints.adminLessons}?courseId=${courseId}`
-            );
-    
-            setLessons(
-                Array.isArray(res.data)
-                    ? res.data
-                    : res.data.lessons || []
-            );
+            const res = await authApis().get(endpoints.adminLessonOptions, {
+                params: { courseId }
+            });
+            setLessons(Array.isArray(res.data) ? res.data : []);
     
         } catch (ex) {
             console.error(ex);
@@ -101,25 +98,20 @@ const Assignments = () => {
 
         const params = { page: "1" };
         if (kw.trim()) params.kw = kw.trim();
-        if (courseId) params.courseId = courseId;
-        if (type) params.type = type;
-        if (status) params.status = status;
+        if (draftFilters.courseId) params.courseId = draftFilters.courseId;
+        if (draftFilters.type) params.type = draftFilters.type;
+        if (draftFilters.status) params.status = draftFilters.status;
 
         setQ(params);
     };
 
     const changeFilter = (name, value) => {
-        const params = Object.fromEntries(q);
-
-        if (value) params[name] = value;
-        else delete params[name];
-
-        params.page = "1";
-        setQ(params);
+        setDraftFilter(name, value);
     };
 
     const clearFilters = () => {
         setKw("");
+        resetDraftFilters();
         setQ({ page: "1" });
     };
 
@@ -159,8 +151,7 @@ const Assignments = () => {
             durationMinutes: assignment.durationMinutes ?? ""
         });
         
-        if (assignment.courseId)
-            loadLessons(assignment.courseId);
+        setLessons([]);
         setShowModal(true);
     };
 
@@ -301,7 +292,7 @@ const Assignments = () => {
                             </Col>
 
                             <Col lg={3}>
-                                <Form.Select value={courseId}
+                                <Form.Select value={draftFilters.courseId}
                                     onChange={e => changeFilter("courseId", e.target.value)}>
                                     <option value="">Tất cả khóa học</option>
 
@@ -314,7 +305,7 @@ const Assignments = () => {
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={type}
+                                <Form.Select value={draftFilters.type}
                                     onChange={e => changeFilter("type", e.target.value)}>
                                     <option value="">Tất cả loại</option>
                                     <option value="PRACTICE">Bài luyện tập</option>
@@ -323,7 +314,7 @@ const Assignments = () => {
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={status}
+                                <Form.Select value={draftFilters.status}
                                     onChange={e => changeFilter("status", e.target.value)}>
                                     <option value="">Tất cả trạng thái</option>
                                     <option value="ACTIVE">Hoạt động</option>
@@ -406,7 +397,6 @@ const Assignments = () => {
                                                     >
                                                         Câu hỏi
                                                     </Button>
-
 
                                                     <Button
                                                         size="sm"
@@ -508,26 +498,31 @@ const Assignments = () => {
                         <Form.Group className="mb-3">
                             <Form.Label>Bài học</Form.Label>
 
-                            <Form.Select
-                                value={form.lessonId}
-                                onChange={e =>
-                                    setForm({
-                                        ...form,
-                                        lessonId:e.target.value
-                                    })
-                                }
-                                required
-                            >
-                                <option value="">
-                                    -- Chọn bài học --
-                                </option>
+                            {editingAssignment ? (
+                                <>
+                                    <Form.Control
+                                        value={editingAssignment.lessonName || ""}
+                                        disabled
+                                    />
+                                    <Form.Text className="text-muted">
+                                        Không thể thay đổi bài học sau khi tạo bài.
+                                    </Form.Text>
+                                </>
+                            ) : (
+                                <Form.Select
+                                    value={form.lessonId}
+                                    onChange={e => setForm({ ...form, lessonId: e.target.value })}
+                                    required
+                                >
+                                    <option value="">-- Chọn bài học --</option>
 
-                                {lessons.map(l => (
-                                    <option key={l.id} value={l.id}>
-                                        {l.name}
-                                    </option>
-                                ))}
-                            </Form.Select>
+                                    {lessons.map(l => (
+                                        <option key={l.id} value={l.id}>
+                                            {l.name}
+                                        </option>
+                                    ))}
+                                </Form.Select>
+                            )}
                         </Form.Group>
 
                         <Row>

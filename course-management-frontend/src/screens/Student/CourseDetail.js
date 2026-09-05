@@ -77,7 +77,6 @@ const CourseDetail = () => {
         }
     };
 
-
     useEffect(() => {
         loadCourse();
     }, [enrollmentId]);

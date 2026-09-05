@@ -1,15 +1,19 @@
 import { useEffect, useState } from "react";
 import { Alert, Button, Card, Col, Form, Modal, Pagination, Row, Table } from "react-bootstrap";
 import { useSearchParams } from "react-router-dom";
+import useExplicitSearchFilters from "../../hooks/useExplicitSearchFilters";
 import { authApis, endpoints } from "../../configs/Apis";
 import MySpinner from "../../components/MySpinner";
+import AsyncUserSelect from "../../components/AsyncUserSelect";
 
 const OnlineSessions = () => {
     const [q, setQ] = useSearchParams();
+    const { draft: draftFilters, setFilter: setDraftFilter, resetFilters: resetDraftFilters } = useExplicitSearchFilters(q, ["courseId", "classId", "teacherId", "date"]);
 
     const [sessions, setSessions] = useState([]);
-    const [classes, setClasses] = useState([]);
-    const [teachers, setTeachers] = useState([]);
+    const [courses, setCourses] = useState([]);
+    const [filterClasses, setFilterClasses] = useState([]);
+    const [formClasses, setFormClasses] = useState([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState("");
@@ -21,11 +25,12 @@ const OnlineSessions = () => {
     const [showModal, setShowModal] = useState(false);
     const [editingSession, setEditingSession] = useState(null);
     const [form, setForm] = useState({
-        title: "", classId: "", teacherId: "",
+        title: "", courseId: "", classId: "", teacherId: "",
         startTime: "", endTime: "", meetingUrl: ""
     });
 
     const page = Number(q.get("page")) || 1;
+    const courseId = q.get("courseId") || "";
     const classId = q.get("classId") || "";
     const teacherId = q.get("teacherId") || "";
     const date = q.get("date") || "";
@@ -42,6 +47,7 @@ const OnlineSessions = () => {
 
             const params = { page };
             if (q.get("kw")) params.kw = q.get("kw");
+            if (courseId) params.courseId = courseId;
             if (classId) params.classId = classId;
             if (teacherId) params.teacherId = teacherId;
             if (date) params.date = date;
@@ -60,23 +66,34 @@ const OnlineSessions = () => {
         }
     };
 
-    const loadOptions = async () => {
+    const loadCourses = async () => {
         try {
-            const [classRes, teacherRes] = await Promise.all([
-                authApis().get(endpoints.adminClassOptions),
-                authApis().get(endpoints.adminTeacherOptions)
-            ]);
-
-            setClasses(Array.isArray(classRes.data) ? classRes.data : []);
-            setTeachers(Array.isArray(teacherRes.data) ? teacherRes.data : []);
+            const res = await authApis().get(endpoints.adminCourseOptions);
+            setCourses(Array.isArray(res.data) ? res.data : []);
         } catch (ex) {
-            console.error("Load session options error:", ex);
+            console.error("Load course options error:", ex);
         }
     };
 
-    useEffect(() => {
-        loadOptions();
-    }, []);
+    const loadClassOptions = async (selectedCourseId, target = "filter") => {
+        if (!selectedCourseId) {
+            target === "filter" ? setFilterClasses([]) : setFormClasses([]);
+            return;
+        }
+
+        try {
+            const res = await authApis().get(endpoints.adminClassOptions, {
+                params: { courseId: selectedCourseId }
+            });
+            const data = Array.isArray(res.data) ? res.data : [];
+            target === "filter" ? setFilterClasses(data) : setFormClasses(data);
+        } catch (ex) {
+            target === "filter" ? setFilterClasses([]) : setFormClasses([]);
+        }
+    };
+
+    useEffect(() => { loadCourses(); }, []);
+    useEffect(() => { loadClassOptions(draftFilters.courseId, "filter"); }, [draftFilters.courseId]);
 
     useEffect(() => {
         loadSessions();
@@ -87,25 +104,22 @@ const OnlineSessions = () => {
 
         const params = { page: "1" };
         if (kw.trim()) params.kw = kw.trim();
-        if (classId) params.classId = classId;
-        if (teacherId) params.teacherId = teacherId;
-        if (date) params.date = date;
+        if (draftFilters.courseId) params.courseId = draftFilters.courseId;
+        if (draftFilters.classId) params.classId = draftFilters.classId;
+        if (draftFilters.teacherId) params.teacherId = draftFilters.teacherId;
+        if (draftFilters.date) params.date = draftFilters.date;
 
         setQ(params);
     };
 
     const changeFilter = (name, value) => {
-        const params = Object.fromEntries(q);
-
-        if (value) params[name] = value;
-        else delete params[name];
-
-        params.page = "1";
-        setQ(params);
+        const resetKeys = name === "courseId" ? ["classId"] : [];
+        setDraftFilter(name, value, resetKeys);
     };
 
     const clearFilters = () => {
         setKw("");
+        resetDraftFilters();
         setQ({ page: "1" });
     };
 
@@ -118,9 +132,10 @@ const OnlineSessions = () => {
     const openAddModal = () => {
         setEditingSession(null);
         setForm({
-            title: "", classId: "", teacherId: "",
+            title: "", courseId: "", classId: "", teacherId: "",
             startTime: "", endTime: "", meetingUrl: ""
         });
+        setFormClasses([]);
         setShowModal(true);
     };
 
@@ -131,14 +146,17 @@ const OnlineSessions = () => {
 
     const openEditModal = session => {
         setEditingSession(session);
+        const selectedCourseId = session.courseId ?? session.courseClass?.course?.id ?? "";
         setForm({
             title: session.title || "",
+            courseId: selectedCourseId,
             classId: session.classId ?? session.courseClass?.id ?? "",
             teacherId: session.teacherId ?? session.teacher?.id ?? "",
             startTime: toDateTimeInput(session.startTime),
             endTime: toDateTimeInput(session.endTime),
             meetingUrl: session.meetingUrl || ""
         });
+        loadClassOptions(selectedCourseId, "form");
         setShowModal(true);
     };
 
@@ -201,25 +219,12 @@ const OnlineSessions = () => {
     };
 
     const className = session =>
-        session.className ||
-        session.courseClassName ||
-        session.courseClass?.name ||
-        classes.find(c =>
-            String(getClassId(c)) === String(session.classId ?? session.courseClass?.id)
-        )?.name ||
-        "-";
+        session.className || session.courseClassName || session.courseClass?.name ||
+        (session.classId ? `ID ${session.classId}` : "-");
 
-    const teacherName = session => {
-        if (session.teacherName) return session.teacherName;
-        if (session.teacherFullName) return session.teacherFullName;
-        if (session.teacher) return getTeacherName(session.teacher);
-
-        const teacher = teachers.find(t =>
-            String(getTeacherId(t)) === String(session.teacherId)
-        );
-
-        return teacher ? getTeacherName(teacher) : "-";
-    };
+    const teacherName = session =>
+        session.teacherName || session.teacherFullName ||
+        (session.teacher ? getTeacherName(session.teacher) : session.teacherId ? `ID ${session.teacherId}` : "-");
 
     const formatDateTime = value => value
         ? new Date(value).toLocaleString("vi-VN", {
@@ -257,41 +262,43 @@ const OnlineSessions = () => {
                 <Card.Body>
                     <Form onSubmit={search}>
                         <Row className="g-3">
-                            <Col lg={3}>
+                            <Col lg={2}>
                                 <Form.Control placeholder="Tìm buổi học..."
                                     value={kw} onChange={e => setKw(e.target.value)} />
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={classId}
+                                <Form.Select value={draftFilters.courseId}
+                                    onChange={e => changeFilter("courseId", e.target.value)}>
+                                    <option value="">Tất cả khóa học</option>
+                                    {courses.map(c => (
+                                        <option key={c.id ?? c.courseId} value={c.id ?? c.courseId}>{c.name}</option>
+                                    ))}
+                                </Form.Select>
+                            </Col>
+
+                            <Col lg={2}>
+                                <Form.Select value={draftFilters.classId} disabled={!draftFilters.courseId}
                                     onChange={e => changeFilter("classId", e.target.value)}>
-                                    <option value="">Tất cả lớp học</option>
-                                    {classes.map(c => (
-                                        <option key={getClassId(c)} value={getClassId(c)}>
-                                            {c.name}
-                                        </option>
+                                    <option value="">{courseId ? "Tất cả lớp của khóa học" : "Chọn khóa học trước"}</option>
+                                    {filterClasses.map(c => (
+                                        <option key={getClassId(c)} value={getClassId(c)}>{c.name}</option>
                                     ))}
                                 </Form.Select>
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={teacherId}
-                                    onChange={e => changeFilter("teacherId", e.target.value)}>
-                                    <option value="">Tất cả giáo viên</option>
-                                    {teachers.map(t => (
-                                        <option key={getTeacherId(t)} value={getTeacherId(t)}>
-                                            {getTeacherName(t)}
-                                        </option>
-                                    ))}
-                                </Form.Select>
+                                <AsyncUserSelect endpoint={endpoints.adminTeacherOptions} value={draftFilters.teacherId}
+                                    onChange={option => changeFilter("teacherId", option?.id || "")}
+                                    placeholder="Tìm giáo viên..." />
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Control type="date" value={date}
+                                <Form.Control type="date" value={draftFilters.date}
                                     onChange={e => changeFilter("date", e.target.value)} />
                             </Col>
 
-                            <Col lg={3} className="d-flex gap-2">
+                            <Col lg={2} className="d-flex gap-2">
                                 <Button type="submit" className="flex-grow-1">Tìm kiếm</Button>
                                 <Button variant="outline-secondary" onClick={clearFilters}>Xóa lọc</Button>
                             </Col>
@@ -396,39 +403,41 @@ const OnlineSessions = () => {
                         </Form.Group>
 
                         <Row>
-                            <Col md={6}>
+                            <Col md={4}>
                                 <Form.Group className="mb-3">
-                                    <Form.Label>Lớp học</Form.Label>
-
-                                    <Form.Select value={form.classId}
-                                        onChange={e => setForm({ ...form, classId: e.target.value })}
-                                        required>
-                                        <option value="">-- Chọn lớp học --</option>
-
-                                        {classes.map(c => (
-                                            <option key={getClassId(c)} value={getClassId(c)}>
-                                                {c.name}
-                                            </option>
+                                    <Form.Label>Khóa học</Form.Label>
+                                    <Form.Select value={form.courseId} onChange={e => {
+                                        const value = e.target.value;
+                                        setForm({ ...form, courseId: value, classId: "" });
+                                        loadClassOptions(value, "form");
+                                    }} required>
+                                        <option value="">-- Chọn khóa học --</option>
+                                        {courses.map(c => (
+                                            <option key={c.id ?? c.courseId} value={c.id ?? c.courseId}>{c.name}</option>
                                         ))}
                                     </Form.Select>
                                 </Form.Group>
                             </Col>
 
-                            <Col md={6}>
+                            <Col md={4}>
                                 <Form.Group className="mb-3">
-                                    <Form.Label>Giáo viên</Form.Label>
-
-                                    <Form.Select value={form.teacherId}
-                                        onChange={e => setForm({ ...form, teacherId: e.target.value })}
-                                        required>
-                                        <option value="">-- Chọn giáo viên --</option>
-
-                                        {teachers.map(t => (
-                                            <option key={getTeacherId(t)} value={getTeacherId(t)}>
-                                                {getTeacherName(t)}
-                                            </option>
+                                    <Form.Label>Lớp học</Form.Label>
+                                    <Form.Select value={form.classId} disabled={!form.courseId}
+                                        onChange={e => setForm({ ...form, classId: e.target.value })} required>
+                                        <option value="">{form.courseId ? "-- Chọn lớp học --" : "-- Chọn khóa học trước --"}</option>
+                                        {formClasses.map(c => (
+                                            <option key={getClassId(c)} value={getClassId(c)}>{c.name}</option>
                                         ))}
                                     </Form.Select>
+                                </Form.Group>
+                            </Col>
+
+                            <Col md={4}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Giáo viên</Form.Label>
+                                    <AsyncUserSelect endpoint={endpoints.adminTeacherOptions} value={form.teacherId}
+                                        onChange={option => setForm({ ...form, teacherId: option?.id || "" })}
+                                        placeholder="Tìm giáo viên..." required />
                                 </Form.Group>
                             </Col>
 

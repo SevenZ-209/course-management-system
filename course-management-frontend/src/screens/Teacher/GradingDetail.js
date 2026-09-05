@@ -1,14 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { Alert, Badge, Button, Card, Col, Form, Modal, ProgressBar, Row } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
 import { authApis, endpoints } from "../../configs/Apis";
 import MySpinner from "../../components/MySpinner";
+import { MyUserContext } from "../../configs/Contexts";
 import "../../styles/Portal.css";
 import "../../styles/TeacherGrading.css";
 
 const GradingDetail = () => {
     const { attemptId } = useParams();
     const nav = useNavigate();
+    const [user] = useContext(MyUserContext);
+    const gradingBasePath = user?.role === "MANAGER" ? "/manager/grading" : "/teacher/grading";
 
     const [detail, setDetail] = useState(null);
     const [grades, setGrades] = useState({});
@@ -165,7 +168,7 @@ const GradingDetail = () => {
                 { comment: comment.trim() || null }
             );
 
-            nav("/teacher/grading", {
+            nav(gradingBasePath, {
                 state: {
                     message: `Đã hoàn tất chấm bài ${detail.assignmentName} của ${detail.studentName}. Tổng điểm: ${res.data.totalScore}/${detail.maximumScore}.`
                 }
@@ -199,7 +202,7 @@ const GradingDetail = () => {
             <div className="cm-portal-page">
                 <div className="cm-portal-container">
                     <Alert variant="danger">{err || "Không tìm thấy bài cần chấm."}</Alert>
-                    <Button variant="outline-secondary" onClick={() => nav("/teacher/grading")}>
+                    <Button variant="outline-secondary" onClick={() => nav(gradingBasePath)}>
                         ← Danh sách chờ chấm
                     </Button>
                 </div>
@@ -210,7 +213,7 @@ const GradingDetail = () => {
         <div className="cm-portal-page">
             <div className="cm-portal-container cm-grading-detail-page">
                 <Button variant="outline-secondary" size="sm" className="cm-portal-back"
-                    onClick={() => nav("/teacher/grading")}>
+                    onClick={() => nav(gradingBasePath)}>
                     ← Bài chờ chấm
                 </Button>
 

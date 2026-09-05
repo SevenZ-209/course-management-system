@@ -15,7 +15,7 @@ export const endpoints = {
     adminUsers: "/admin/users",
     adminTeacherOptions: "/admin/users/teacher-options",
     adminStudentOptions: "/admin/users/student-options",
-    
+    adminParentOptions: "/admin/users/parent-options",
 
     adminCategories: "/admin/categories",
     adminCategoryOptions: "/admin/categories/options",
@@ -27,6 +27,7 @@ export const endpoints = {
     adminCourseModuleOptions: "/admin/course-modules/options",
 
     adminLessons: "/admin/lessons",
+    adminLessonOptions: "/admin/lessons/options",
 
     adminClasses: "/admin/classes",
     adminClassOptions: "/admin/classes/options",
@@ -40,6 +41,8 @@ export const endpoints = {
     adminPendingEnrollmentOptions: "/admin/enrollments/pending-options",
 
     adminPayments: "/admin/payment-transactions",
+    adminParentLinks: "/admin/parent-links",
+    adminReports: "/admin/reports",
 
     adminLearningPaths: "/admin/learning-paths",
     adminLearningPathOptions: "/admin/learning-paths/options",
@@ -75,11 +78,29 @@ export const endpoints = {
     studentParentLinks: "/student/parent-links",
     studentCurrentParentLink: "/student/parent-links/current",
     studentParentLink: linkId => `/student/parent-links/${linkId}`,
+    studentLinkedParents: "/student/parent-links/linked-parents",
+    studentUnlinkParent: linkId => `/student/parent-links/linked-parents/${linkId}`,
 
     studentClassAttendance: classId => `/student/classes/${classId}/attendance`,
     studentClassOnlineSessions: classId => `/student/classes/${classId}/online-sessions`,
 
     paymentTransactions: "/payment-transactions",
+
+    managerDashboard: "/manager/dashboard",
+    managerPayments: "/manager/payment-transactions",
+    managerCourses: "/manager/courses",
+    managerClasses: "/manager/classes",
+    managerEnrollments: "/manager/enrollments",
+    managerOnlineSessions: "/manager/online-sessions",
+    managerOnlineSessionOptions: "/manager/online-sessions/options",
+    managerAttendances: "/manager/attendances",
+    managerProgress: "/manager/progress",
+    managerReports: "/manager/reports",
+    managerCategoryOptions: "/manager/options/categories",
+    managerCourseOptions: "/manager/options/courses",
+    managerClassOptions: "/manager/options/classes",
+    managerTeacherOptions: "/manager/options/teachers",
+    managerStudentOptions: "/manager/options/students",
 
     teacherClasses: "/teacher/classes",
     teacherGrading: "/teacher/grading",

@@ -10,6 +10,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminLayout from "./layouts/AdminLayout";
+import ManagerLayout from "./layouts/ManagerLayout";
 
 import Login from "./screens/Auth/Login";
 import Register from "./screens/Auth/Register";
@@ -27,6 +28,7 @@ import AdminOnlineSessions from "./screens/Admin/OnlineSessions";
 import AdminAttendances from "./screens/Admin/Attendances";
 import AdminEnrollments from "./screens/Admin/Enrollments";
 import AdminPayments from "./screens/Admin/Payments";
+import AdminParentLinks from "./screens/Admin/ParentLinks";
 import AdminLearningPaths from "./screens/Admin/LearningPaths";
 import AdminLearningPathDetails from "./screens/Admin/LearningPathDetails";
 import AdminStudentLearningPaths from "./screens/Admin/StudentLearningPaths";
@@ -34,6 +36,17 @@ import AdminAssignments from "./screens/Admin/Assignments";
 import AdminQuestions from "./screens/Admin/Questions";
 import AdminAnswers from "./screens/Admin/Answers";
 import AdminAssignedAssignments from "./screens/Admin/AssignedAssignments";
+import AdminReports from "./screens/Admin/Reports";
+
+import ManagerDashboard from "./screens/Manager/Dashboard";
+import ManagerPayments from "./screens/Manager/Payments";
+import ManagerCourses from "./screens/Manager/Courses";
+import ManagerClasses from "./screens/Manager/Classes";
+import ManagerEnrollments from "./screens/Manager/Enrollments";
+import ManagerOnlineSessions from "./screens/Manager/OnlineSessions";
+import ManagerAttendances from "./screens/Manager/Attendances";
+import ManagerProgress from "./screens/Manager/Progress";
+import ManagerReports from "./screens/Manager/Reports";
 
 import StudentDashboard from "./screens/Student/Dashboard";
 import StudentCourses from "./screens/Student/Courses";
@@ -86,6 +99,7 @@ const App = () => {
                             <Route path="attendances" element={<AdminAttendances />} />
                             <Route path="enrollments" element={<AdminEnrollments />} />
                             <Route path="payments" element={<AdminPayments />} />
+                            <Route path="parent-links" element={<AdminParentLinks />} />
                             <Route path="learning-paths" element={<AdminLearningPaths />} />
                             <Route path="learning-path-details" element={<AdminLearningPathDetails />} />
                             <Route path="student-learning-paths" element={<AdminStudentLearningPaths />} />
@@ -93,6 +107,25 @@ const App = () => {
                             <Route path="questions" element={<AdminQuestions />} />
                             <Route path="answers" element={<AdminAnswers />} />
                             <Route path="assigned-assignments" element={<AdminAssignedAssignments />} />
+                            <Route path="reports" element={<AdminReports />} />
+                        </Route>
+
+                        <Route path="/manager" element={
+                            <ProtectedRoute roles={["MANAGER"]}>
+                                <ManagerLayout />
+                            </ProtectedRoute>
+                        }>
+                            <Route index element={<ManagerDashboard />} />
+                            <Route path="courses" element={<ManagerCourses />} />
+                            <Route path="classes" element={<ManagerClasses />} />
+                            <Route path="enrollments" element={<ManagerEnrollments />} />
+                            <Route path="online-sessions" element={<ManagerOnlineSessions />} />
+                            <Route path="attendances" element={<ManagerAttendances />} />
+                            <Route path="progress" element={<ManagerProgress />} />
+                            <Route path="reports" element={<ManagerReports />} />
+                            <Route path="payments" element={<ManagerPayments />} />
+                            <Route path="grading" element={<TeacherGrading />} />
+                            <Route path="grading/:attemptId" element={<TeacherGradingDetail />} />
                         </Route>
 
                         <Route path="/student" element={

@@ -51,7 +51,6 @@ const Payment = () => {
         loadData();
     }, [enrollmentId]);
 
-
     const submitPayment = async e => {
         e.preventDefault();
 
@@ -85,14 +84,11 @@ const Payment = () => {
         }
     };
 
-
     const money = value =>
         `${Number(value || 0).toLocaleString("vi-VN")} VNĐ`;
 
-
     if(loading)
         return <div className="text-center py-5"><MySpinner /></div>;
-
 
     if(err && !enrollment)
         return (
@@ -107,7 +103,6 @@ const Payment = () => {
                 </Button>
             </div>
         );
-
 
     if(transaction)
         return (
@@ -132,7 +127,6 @@ const Payment = () => {
                             Giao dịch của bạn đã hoàn tất.
                         </p>
 
-
                         <div className="cm-transaction-box">
 
                             <div>
@@ -143,7 +137,6 @@ const Payment = () => {
                                 </strong>
                             </div>
 
-
                             <div>
                                 <span>Số tiền</span>
                                 <strong>
@@ -152,7 +145,6 @@ const Payment = () => {
                             </div>
 
                         </div>
-
 
                         <Button onClick={() => nav("/student/courses")}>
                             Khóa học của tôi
@@ -163,7 +155,6 @@ const Payment = () => {
                 </div>
             </div>
         );
-
 
     return (
         <div className="cm-payment-page">
@@ -179,7 +170,6 @@ const Payment = () => {
                     ← Quay lại
                 </Button>
 
-
                 <div className="cm-payment-heading">
                     <span>THANH TOÁN</span>
 
@@ -192,7 +182,6 @@ const Payment = () => {
                     </p>
                 </div>
 
-
                 {err && (
                     <Alert
                         variant="danger"
@@ -203,9 +192,7 @@ const Payment = () => {
                     </Alert>
                 )}
 
-
                 <Row className="g-4">
-
 
                     <Col lg={7}>
 
@@ -217,7 +204,6 @@ const Payment = () => {
                                     Thông tin khóa học
                                 </h5>
 
-
                                 <div className="cm-payment-course">
 
                                     <img
@@ -228,18 +214,15 @@ const Payment = () => {
                                         alt={course?.name}
                                     />
 
-
                                     <div>
 
                                         <small>
                                             {course?.categoryName}
                                         </small>
 
-
                                         <h3>
                                             {enrollment?.courseName}
                                         </h3>
-
 
                                         <p>
                                             Lớp:
@@ -253,8 +236,6 @@ const Payment = () => {
 
                                 </div>
 
-
-
                                 <div className="cm-payment-info">
 
                                     <div>
@@ -266,7 +247,6 @@ const Payment = () => {
                                             #{enrollment?.enrollmentId}
                                         </strong>
                                     </div>
-
 
                                     <div>
                                         <span>
@@ -286,8 +266,6 @@ const Payment = () => {
 
                     </Col>
 
-
-
                     <Col lg={5}>
 
                         <Card className="cm-payment-card">
@@ -297,7 +275,6 @@ const Payment = () => {
                                 <h5>
                                     Thanh toán
                                 </h5>
-
 
                                 <div className="cm-payment-total">
 
@@ -311,7 +288,6 @@ const Payment = () => {
 
                                 </div>
 
-
                                 <Form
                                     onSubmit={submitPayment}
                                     className="mt-4"
@@ -322,7 +298,6 @@ const Payment = () => {
                                         <Form.Label>
                                             Phương thức thanh toán
                                         </Form.Label>
-
 
                                         <Form.Select
                                             value={paymentMethod}
@@ -343,14 +318,11 @@ const Payment = () => {
 
                                     </Form.Group>
 
-
-
                                     <Form.Group className="mb-4">
 
                                         <Form.Label>
                                             Mã giao dịch
                                         </Form.Label>
-
 
                                         <Form.Control
                                             value={transactionCode}
@@ -360,10 +332,7 @@ const Payment = () => {
                                             placeholder="Có thể để trống"
                                         />
 
-
                                     </Form.Group>
-
-
 
                                     <Button
                                         type="submit"

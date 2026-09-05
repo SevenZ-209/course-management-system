@@ -13,7 +13,8 @@ const AdminSidebar = () => {
         {
             title: "TỔNG QUAN",
             items: [
-                { path: "/admin", icon: "⌂", label: "Tổng quan", exact: true }
+                { path: "/admin", icon: "⌂", label: "Tổng quan", exact: true },
+                { path: "/admin/reports", icon: "▥", label: "Báo cáo hệ thống" }
             ]
         },
         {
@@ -33,7 +34,8 @@ const AdminSidebar = () => {
             items: [
                 { path: "/admin/users", icon: "♙", label: "Người dùng" },
                 { path: "/admin/enrollments", icon: "＋", label: "Đăng ký khóa học" },
-                { path: "/admin/payments", icon: "₫", label: "Thanh toán" }
+                { path: "/admin/payments", icon: "₫", label: "Thanh toán" },
+                { path: "/admin/parent-links", icon: "⇄", label: "Liên kết phụ huynh" }
             ]
         },
         {

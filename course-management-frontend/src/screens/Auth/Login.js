@@ -25,7 +25,6 @@ const Login = () => {
     const [q] = useSearchParams();
     const nav = useNavigate();
 
-
     const validate = () => {
         if(!user.username.trim()) {
             setErr("Vui lòng nhập tên đăng nhập!");
@@ -40,7 +39,6 @@ const Login = () => {
         setErr("");
         return true;
     };
-
 
     const login = async e => {
         e.preventDefault();
@@ -74,7 +72,6 @@ const Login = () => {
                 payload: currentUser
             });
 
-
             const next = q.get("next");
 
             if(next) {
@@ -86,6 +83,7 @@ const Login = () => {
                     (currentUser.role === "STUDENT" && next.startsWith("/student")) ||
                     (currentUser.role === "TEACHER" && next.startsWith("/teacher")) ||
                     (currentUser.role === "ADMIN" && next.startsWith("/admin")) ||
+                    (currentUser.role === "MANAGER" && next.startsWith("/manager")) ||
                     (currentUser.role === "PARENT" && next.startsWith("/parent"));
             
                 if(isPublicNext || isRoleNext) {
@@ -94,12 +92,15 @@ const Login = () => {
                 }
             }
 
-
             switch(currentUser.role) {
                 case "ADMIN":
                     nav("/admin");
                     break;
             
+                case "MANAGER":
+                    nav("/manager");
+                    break;
+
                 case "STUDENT":
                     nav("/student");
                     break;
@@ -129,7 +130,6 @@ const Login = () => {
         }
     };
 
-
     return (
         <Container className="d-flex justify-content-center align-items-center mt-5 mb-5">
             <Card
@@ -146,13 +146,11 @@ const Login = () => {
                     </p>
                 </div>
 
-
                 {err && (
                     <Alert variant="danger" className="rounded-3">
                         {err}
                     </Alert>
                 )}
-
 
                 <Form onSubmit={login}>
                     {userInfo.map(u => (
@@ -178,7 +176,6 @@ const Login = () => {
                         </Form.Group>
                     ))}
 
-
                     {loading ? (
                         <div className="text-center">
                             <MySpinner />
@@ -193,7 +190,6 @@ const Login = () => {
                         </Button>
                     )}
                 </Form>
-
 
                 <div className="text-center mt-4">
                     <span className="text-muted">

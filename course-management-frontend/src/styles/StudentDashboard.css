@@ -11,8 +11,6 @@
     margin: 0 auto;
 }
 
-/* WELCOME */
-
 .cm-student-welcome {
     display: flex;
     justify-content: space-between;
@@ -41,8 +39,6 @@
     color: var(--cm-text-soft);
     font-size: 14px;
 }
-
-/* KPI */
 
 .cm-student-stats {
     margin-bottom: 55px;
@@ -107,8 +103,6 @@
     font-size: 10px;
 }
 
-/* SECTIONS */
-
 .cm-student-section {
     margin-bottom: 60px;
 }
@@ -133,8 +127,6 @@
     font-size: 12px;
     font-weight: 700;
 }
-
-/* CONTINUE */
 
 .cm-continue-card {
     display: flex;
@@ -187,8 +179,6 @@
     color: var(--cm-text-soft);
     font-size: 12px;
 }
-
-/* MY COURSES */
 
 .cm-my-course-card {
     height: 100%;
@@ -243,8 +233,6 @@
     font-size: 11px;
 }
 
-/* EMPTY */
-
 .cm-student-empty-card {
     display: flex;
     align-items: center;
@@ -282,8 +270,6 @@
     color: var(--cm-text-soft);
     font-size: 11px;
 }
-
-/* QUICK LINKS */
 
 .cm-student-quick-grid {
     display: grid;
@@ -339,8 +325,6 @@
 .cm-student-quick-grid b {
     color: var(--cm-primary);
 }
-
-/* RESPONSIVE */
 
 @media (max-width: 767px) {
     .cm-student-dashboard {

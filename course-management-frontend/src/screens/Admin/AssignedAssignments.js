@@ -1,16 +1,20 @@
 import { useEffect, useState } from "react";
 import { Alert, Badge, Button, Card, Col, Form, Modal, Pagination, Row, Table } from "react-bootstrap";
 import { useSearchParams } from "react-router-dom";
+import useExplicitSearchFilters from "../../hooks/useExplicitSearchFilters";
 import { authApis, endpoints } from "../../configs/Apis";
 import MySpinner from "../../components/MySpinner";
+import AsyncUserSelect from "../../components/AsyncUserSelect";
 
 const AssignedAssignments = () => {
     const [q, setQ] = useSearchParams();
+    const { draft: draftFilters, setFilter: setDraftFilter, resetFilters: resetDraftFilters } = useExplicitSearchFilters(q, ["courseId", "learningPathId", "status", "date"]);
 
     const [items, setItems] = useState([]);
     const [courses, setCourses] = useState([]);
     const [paths, setPaths] = useState([]);
-    const [students, setStudents] = useState([]);
+    const [manualStudent, setManualStudent] = useState(null);
+    const [releaseStudent, setReleaseStudent] = useState(null);
     const [progressOptions, setProgressOptions] = useState([]);
     const [availableAssignments, setAvailableAssignments] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -39,10 +43,8 @@ const AssignedAssignments = () => {
     const getId = x => x.id ?? x.assignedAssignmentId;
     const getCourseId = x => x.id ?? x.courseId;
     const getPathId = x => x.id ?? x.learningPathId;
-    const getStudentId = x => x.id ?? x.studentId ?? x.userId;
     const getProgressId = x => x.id ?? x.studentLearningPathId;
     const getAssignmentId = x => x.id ?? x.assignmentId;
-    const getPathCourseId = x => x.courseId ?? x.course?.id;
 
     const loadItems = async () => {
         try {
@@ -72,29 +74,34 @@ const AssignedAssignments = () => {
 
     const loadOptions = async () => {
         try {
-            const [courseRes, pathRes, studentRes, progressRes] = await Promise.all([
-                authApis().get(endpoints.adminCourseOptions),
-                authApis().get(endpoints.adminLearningPathOptions),
-                authApis().get(endpoints.adminStudentOptions),
-                authApis().get(endpoints.adminInProgressStudentLearningPaths)
-            ]);
-
+            const courseRes = await authApis().get(endpoints.adminCourseOptions);
             setCourses(Array.isArray(courseRes.data) ? courseRes.data : []);
-            setPaths(Array.isArray(pathRes.data) ? pathRes.data : []);
-            setStudents(
-                Array.isArray(studentRes.data)
-                    ? studentRes.data.filter(s => s.status === "ACTIVE")
-                    : []
-            );
-            setProgressOptions(Array.isArray(progressRes.data) ? progressRes.data : []);
         } catch (ex) {
             console.error("Load assigned assignment options error:", ex);
+        }
+    };
+
+    const loadFilterPaths = async selectedCourseId => {
+        setPaths([]);
+        if (!selectedCourseId) return;
+
+        try {
+            const res = await authApis().get(endpoints.adminLearningPathOptions, {
+                params: { courseId: selectedCourseId }
+            });
+            setPaths(Array.isArray(res.data) ? res.data : []);
+        } catch (ex) {
+            console.error("Load learning path options error:", ex);
         }
     };
 
     useEffect(() => {
         loadOptions();
     }, []);
+
+    useEffect(() => {
+        loadFilterPaths(draftFilters.courseId);
+    }, [draftFilters.courseId]);
 
     useEffect(() => {
         loadItems();
@@ -105,28 +112,22 @@ const AssignedAssignments = () => {
 
         const params = { page: "1" };
         if (kw.trim()) params.kw = kw.trim();
-        if (courseId) params.courseId = courseId;
-        if (learningPathId) params.learningPathId = learningPathId;
-        if (status) params.status = status;
-        if (date) params.date = date;
+        if (draftFilters.courseId) params.courseId = draftFilters.courseId;
+        if (draftFilters.learningPathId) params.learningPathId = draftFilters.learningPathId;
+        if (draftFilters.status) params.status = draftFilters.status;
+        if (draftFilters.date) params.date = draftFilters.date;
 
         setQ(params);
     };
 
     const changeFilter = (name, value) => {
-        const params = Object.fromEntries(q);
-
-        if (value) params[name] = value;
-        else delete params[name];
-
-        if (name === "courseId") delete params.learningPathId;
-
-        params.page = "1";
-        setQ(params);
+        const resetKeys = name === "courseId" ? ["learningPathId"] : [];
+        setDraftFilter(name, value, resetKeys);
     };
 
     const clearFilters = () => {
         setKw("");
+        resetDraftFilters();
         setQ({ page: "1" });
     };
 
@@ -152,6 +153,7 @@ const AssignedAssignments = () => {
 
     const openManualModal = () => {
         setAvailableAssignments([]);
+        setManualStudent(null);
         resetManualForm();
         setShowManual(true);
     };
@@ -159,29 +161,27 @@ const AssignedAssignments = () => {
     const closeManualModal = () => {
         setShowManual(false);
         setAvailableAssignments([]);
+        setManualStudent(null);
         resetManualForm();
     };
 
-    const openReleaseModal = async () => {
+    const openReleaseModal = () => {
         resetReleaseForm();
-
-        try {
-            const res = await authApis().get(endpoints.adminInProgressStudentLearningPaths);
-            setProgressOptions(Array.isArray(res.data) ? res.data : []);
-        } catch (ex) {
-            console.error("Load progress options error:", ex);
-            setProgressOptions([]);
-        }
-
+        setReleaseStudent(null);
+        setProgressOptions([]);
         setShowRelease(true);
     };
 
     const closeReleaseModal = () => {
         setShowRelease(false);
+        setReleaseStudent(null);
+        setProgressOptions([]);
         resetReleaseForm();
     };
 
-    const changeStudent = async studentId => {
+    const changeStudent = async student => {
+        const studentId = student?.id || "";
+        setManualStudent(student || null);
         setManualForm(prev => ({
             ...prev,
             studentId,
@@ -201,6 +201,25 @@ const AssignedAssignments = () => {
         } catch (ex) {
             console.error("Load available assignments error:", ex);
             setErr(ex.response?.data?.message || "Không thể tải bài tập phù hợp!");
+        }
+    };
+
+    const changeReleaseStudent = async student => {
+        const studentId = student?.id || "";
+        setReleaseStudent(student || null);
+        setProgressOptions([]);
+        setReleaseForm(prev => ({ ...prev, studentLearningPathId: "" }));
+
+        if (!studentId) return;
+
+        try {
+            const res = await authApis().get(endpoints.adminInProgressStudentLearningPaths, {
+                params: { studentId }
+            });
+            setProgressOptions(Array.isArray(res.data) ? res.data : []);
+        } catch (ex) {
+            console.error("Load progress options error:", ex);
+            setErr(ex.response?.data?.message || "Không thể tải tiến độ học!");
         }
     };
 
@@ -275,7 +294,7 @@ const AssignedAssignments = () => {
 
             setSuccess(res.data?.message || "Phát bài theo lộ trình thành công!");
             closeReleaseModal();
-            await Promise.all([loadItems(), loadOptions()]);
+            await loadItems();
         } catch (ex) {
             console.error("Release current error:", ex);
             setErr(ex.response?.data?.message || "Phát bài thất bại!");
@@ -343,10 +362,6 @@ const AssignedAssignments = () => {
 
     const formatDateTime = value =>
         value ? new Date(value).toLocaleString("vi-VN") : "-";
-
-    const filteredPaths = courseId
-        ? paths.filter(p => String(getPathCourseId(p)) === String(courseId))
-        : paths;
 
     const progressLabel = x => {
         const student =
@@ -417,7 +432,7 @@ const AssignedAssignments = () => {
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={courseId}
+                                <Form.Select value={draftFilters.courseId}
                                     onChange={e => changeFilter("courseId", e.target.value)}>
                                     <option value="">Tất cả khóa học</option>
 
@@ -430,11 +445,12 @@ const AssignedAssignments = () => {
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={learningPathId}
+                                <Form.Select value={draftFilters.learningPathId}
+                                    disabled={!draftFilters.courseId}
                                     onChange={e => changeFilter("learningPathId", e.target.value)}>
-                                    <option value="">Tất cả lộ trình</option>
+                                    <option value="">{draftFilters.courseId ? "Tất cả lộ trình" : "Chọn khóa học trước"}</option>
 
-                                    {filteredPaths.map(p => (
+                                    {paths.map(p => (
                                         <option key={getPathId(p)} value={getPathId(p)}>
                                             {p.name}
                                         </option>
@@ -443,7 +459,7 @@ const AssignedAssignments = () => {
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={status}
+                                <Form.Select value={draftFilters.status}
                                     onChange={e => changeFilter("status", e.target.value)}>
                                     <option value="">Tất cả trạng thái</option>
                                     <option value="LOCKED">Đã khóa</option>
@@ -453,7 +469,7 @@ const AssignedAssignments = () => {
                             </Col>
 
                             <Col lg={1}>
-                                <Form.Control type="date" value={date}
+                                <Form.Control type="date" value={draftFilters.date}
                                     onChange={e => changeFilter("date", e.target.value)} />
                             </Col>
 
@@ -567,17 +583,10 @@ const AssignedAssignments = () => {
                         <Form.Group className="mb-3">
                             <Form.Label>Học viên</Form.Label>
 
-                            <Form.Select value={manualForm.studentId}
-                                onChange={e => changeStudent(e.target.value)}
-                                required>
-                                <option value="">-- Chọn học viên --</option>
-
-                                {students.map(s => (
-                                    <option key={getStudentId(s)} value={getStudentId(s)}>
-                                        {s.fullName} ({s.username})
-                                    </option>
-                                ))}
-                            </Form.Select>
+                            <AsyncUserSelect endpoint={endpoints.adminStudentOptions}
+                                value={manualStudent}
+                                onChange={changeStudent}
+                                placeholder="Tìm tên, username hoặc email..." required />
                         </Form.Group>
 
                         <Form.Group className="mb-3">
@@ -659,9 +668,18 @@ const AssignedAssignments = () => {
 
                     <Modal.Body>
                         <Form.Group className="mb-3">
+                            <Form.Label>Học viên</Form.Label>
+                            <AsyncUserSelect endpoint={endpoints.adminStudentOptions}
+                                value={releaseStudent}
+                                onChange={changeReleaseStudent}
+                                placeholder="Tìm tên, username hoặc email..." required />
+                        </Form.Group>
+
+                        <Form.Group className="mb-3">
                             <Form.Label>Tiến độ học</Form.Label>
 
                             <Form.Select value={releaseForm.studentLearningPathId}
+                                disabled={!releaseStudent}
                                 onChange={e => setReleaseForm(prev => ({
                                     ...prev,
                                     studentLearningPathId: e.target.value
@@ -676,9 +694,9 @@ const AssignedAssignments = () => {
                                 ))}
                             </Form.Select>
 
-                            {progressOptions.length === 0 && (
+                            {releaseStudent && progressOptions.length === 0 && (
                                 <Form.Text className="text-muted">
-                                    Không có lộ trình học viên đang IN_PROGRESS.
+                                    Học viên không có lộ trình đang IN_PROGRESS.
                                 </Form.Text>
                             )}
                         </Form.Group>

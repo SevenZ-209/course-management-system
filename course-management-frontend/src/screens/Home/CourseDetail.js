@@ -142,7 +142,6 @@ const CourseDetail = () => {
 
             </div>
 
-
             <div id="classes" className="cm-class-section">
 
                 <h2>Lớp đang mở</h2>
@@ -151,20 +150,17 @@ const CourseDetail = () => {
                     Chọn lớp phù hợp với lịch học của bạn
                 </p>
 
-
                 {success && (
                     <Alert variant="success">
                         {success}
                     </Alert>
                 )}
 
-
                 {err && (
                     <Alert variant="danger" dismissible onClose={() => setErr("")}>
                         {err}
                     </Alert>
                 )}
-
 
                 <Row className="g-4">
 
@@ -180,7 +176,6 @@ const CourseDetail = () => {
                                         <h3>{c.name}</h3>
                                         {classStatus(c.status)}
                                     </div>
-
 
                                     <p>
                                         Bắt đầu: <strong>{c.startDate || "Đang cập nhật"}</strong>
@@ -200,7 +195,6 @@ const CourseDetail = () => {
                                             {c.currentStudents}/{c.maxStudents}
                                         </strong>
                                     </p>
-
 
                                     <Button
                                         disabled={c.currentStudents >= c.maxStudents}

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Báo cáo hệ thống</title>
+    <th:block th:replace="~{base :: css}"></th:block>
+    <style>
+        .report-filter-card,.report-scope,.report-kpi,.report-chart,.report-dist{background:#fff;border:1px solid var(--cm-border);border-radius:14px;box-shadow:var(--cm-shadow)}
+        .report-filter-card{padding:16px}.report-scope{padding:12px 16px;background:#ecf9f6;border-color:#e0f2ee;font-size:13px}
+        .report-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.report-kpi{padding:18px}.report-kpi small{color:var(--cm-muted)}.report-kpi strong{display:block;margin:7px 0 4px;font-size:22px;color:#0d1513}
+        .report-chart{padding:18px;margin-top:16px}.report-chart-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.report-chart-title{font-size:18px;font-weight:800}.report-chip{padding:5px 10px;border-radius:999px;background:var(--cm-primary-soft);color:var(--cm-primary-dark);font-size:11px;font-weight:800}
+        #revenueChart{width:100%;height:320px;display:block;margin-top:10px}.chart-grid{stroke:#e5eeeb;stroke-width:1}.chart-line{fill:none;stroke:var(--cm-primary);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}.chart-dot{fill:var(--cm-primary);stroke:#fff;stroke-width:2}.chart-label{fill:#73817d;font-size:11px}.chart-axis{fill:#73817d;font-size:11px}
+        .report-distributions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:16px}.report-dist{padding:18px}.report-dist h5{font-size:17px;font-weight:800;margin-bottom:2px}.report-dist>small{color:var(--cm-muted)}.dist-row{margin-top:18px}.dist-head{display:flex;justify-content:space-between;gap:12px;font-size:13px}.dist-track{height:6px;background:#e8eeec;border-radius:99px;overflow:hidden;margin-top:7px}.dist-fill{height:100%;border-radius:99px}.fill-green{background:#1c9a63}.fill-blue{background:#1676e8}.fill-yellow{background:#f0ad00}.fill-red{background:#e54757}.fill-gray{background:#6e7976}.dist-rate{text-align:right;color:#899590;font-size:10px;margin-top:3px}
+        @media(max-width:992px){.report-kpis,.report-distributions{grid-template-columns:1fr 1fr}}@media(max-width:680px){.report-kpis,.report-distributions{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+<div th:replace="~{base :: header}"></div>
+<div class="container mt-4">
+    <div class="mb-4"><h3 class="mb-1">Báo cáo hệ thống</h3><span class="text-muted">Tổng hợp thanh toán, đăng ký học và tiến độ toàn hệ thống theo khoảng thời gian.</span></div>
+
+    <form class="report-filter-card mb-3" method="get" th:action="@{/admin/reports}"><div class="row g-3 align-items-end">
+        <div class="col-lg-3"><label class="form-label">Phạm vi</label><select class="form-select" name="courseId"><option value="">Toàn hệ thống</option><option th:each="course : ${courses}" th:value="${course.id}" th:text="${course.name}" th:selected="${courseId != null and courseId == course.id}"></option></select></div>
+        <div class="col-lg-3"><label class="form-label">Khoảng thời gian</label><select class="form-select" id="reportRange" name="range"><option value="TODAY" th:selected="${range == 'TODAY'}">Hôm nay</option><option value="LAST_7_DAYS" th:selected="${range == 'LAST_7_DAYS'}">7 ngày gần nhất</option><option value="LAST_30_DAYS" th:selected="${range == 'LAST_30_DAYS'}">30 ngày gần nhất</option><option value="MONTH" th:selected="${range == 'MONTH'}">Tháng này</option><option value="QUARTER" th:selected="${range == 'QUARTER'}">Quý này</option><option value="YEAR" th:selected="${range == 'YEAR'}">Năm nay</option><option value="PREVIOUS_QUARTER" th:selected="${range == 'PREVIOUS_QUARTER'}">Quý trước</option><option value="PREVIOUS_YEAR" th:selected="${range == 'PREVIOUS_YEAR'}">Năm trước</option><option value="CUSTOM" th:selected="${range == 'CUSTOM'}">Tùy chỉnh</option></select></div>
+        <div class="col-lg-2"><label class="form-label">Từ ngày</label><input type="date" id="fromDate" class="form-control" name="fromDate" th:value="${fromDate}"></div>
+        <div class="col-lg-2"><label class="form-label">Đến ngày</label><input type="date" id="toDate" class="form-control" name="toDate" th:value="${toDate}"></div>
+        <div class="col-lg-2"><button class="btn btn-outline-secondary w-100" type="submit">Áp dụng</button></div>
+    </div></form>
+
+    <div class="report-scope mb-3">Phạm vi: <strong th:text="${scopeName}">Toàn hệ thống</strong> &nbsp;·&nbsp; Thời gian: <strong th:text="${#temporals.format(fromDate,'dd/MM/yyyy') + ' - ' + #temporals.format(toDate,'dd/MM/yyyy')}"></strong></div>
+
+    <div class="report-kpis">
+        <div class="report-kpi"><small>Doanh thu thành công</small><strong th:text="${#numbers.formatDecimal(report.successfulRevenue(),0,'POINT',0,'COMMA') + ' VNĐ'}">0 VNĐ</strong><small><span th:text="${report.successfulPayments()}">0</span> giao dịch thành công</small></div>
+        <div class="report-kpi"><small>Tỷ lệ thanh toán thành công</small><strong th:text="${paymentSuccessRate + '%'}">0%</strong><small><span th:text="${paymentTotal}">0</span> giao dịch trong kỳ</small></div>
+        <div class="report-kpi"><small>Enrollment đang hoạt động</small><strong th:text="${report.activeEnrollments()}">0</strong><small><span th:text="${enrollmentTotal}">0</span> đăng ký trong kỳ</small></div>
+        <div class="report-kpi"><small>Hoàn thành lộ trình</small><strong th:text="${report.completedCount()}">0</strong><small><span th:text="${completedRate}">0</span>% enrollment active</small></div>
+    </div>
+
+    <div class="report-chart">
+        <div class="report-chart-head"><div><div class="report-chart-title">Doanh thu theo thời gian</div><small class="text-muted">Chỉ tính giao dịch SUCCESS trong khoảng đã chọn.</small></div><span class="report-chip" th:text="${report.revenueGranularity() == 'MONTH' ? 'Theo tháng' : 'Theo ngày'}">Theo ngày</span></div>
+        <div id="revenuePoints" hidden><span class="revenue-point" th:each="point : ${report.revenueTrend()}" th:data-label="${point.label()}" th:data-value="${point.amount()}"></span></div>
+        <svg id="revenueChart" viewBox="0 0 1000 320" preserveAspectRatio="none" aria-label="Biểu đồ doanh thu"></svg>
+    </div>
+
+    <div class="report-distributions">
+        <div class="report-dist"><h5>Thanh toán</h5><small>Phân bổ trạng thái giao dịch trong kỳ.</small>
+            <div class="dist-row"><div class="dist-head"><span>Thành công</span><strong th:text="${report.successfulPayments()}"></strong></div><div class="dist-track"><div class="dist-fill fill-green" th:style="'width:' + ${paymentSuccessRate} + '%'"></div></div><div class="dist-rate" th:text="${paymentSuccessRate + '%'}"></div></div>
+            <div class="dist-row"><div class="dist-head"><span>Chờ xử lý</span><strong th:text="${report.pendingPayments()}"></strong></div><div class="dist-track"><div class="dist-fill fill-yellow" th:style="'width:' + ${paymentPendingRate} + '%'"></div></div><div class="dist-rate" th:text="${paymentPendingRate + '%'}"></div></div>
+            <div class="dist-row"><div class="dist-head"><span>Thất bại</span><strong th:text="${report.failedPayments()}"></strong></div><div class="dist-track"><div class="dist-fill fill-red" th:style="'width:' + ${paymentFailedRate} + '%'"></div></div><div class="dist-rate" th:text="${paymentFailedRate + '%'}"></div></div>
+        </div>
+        <div class="report-dist"><h5>Đăng ký học</h5><small>Tình trạng enrollment được tạo trong kỳ.</small>
+            <div class="dist-row"><div class="dist-head"><span>Đang học</span><strong th:text="${report.activeEnrollments()}"></strong></div><div class="dist-track"><div class="dist-fill fill-blue" th:style="'width:' + ${activeEnrollmentRate} + '%'"></div></div><div class="dist-rate" th:text="${activeEnrollmentRate + '%'}"></div></div>
+            <div class="dist-row"><div class="dist-head"><span>Chờ thanh toán</span><strong th:text="${report.pendingEnrollments()}"></strong></div><div class="dist-track"><div class="dist-fill fill-yellow" th:style="'width:' + ${pendingEnrollmentRate} + '%'"></div></div><div class="dist-rate" th:text="${pendingEnrollmentRate + '%'}"></div></div>
+            <div class="dist-row"><div class="dist-head"><span>Đã hủy</span><strong th:text="${report.canceledEnrollments()}"></strong></div><div class="dist-track"><div class="dist-fill fill-gray" th:style="'width:' + ${canceledEnrollmentRate} + '%'"></div></div><div class="dist-rate" th:text="${canceledEnrollmentRate + '%'}"></div></div>
+        </div>
+        <div class="report-dist"><h5>Tiến độ học tập</h5><small>Trạng thái hiện tại của enrollment ACTIVE trong kỳ.</small>
+            <div class="dist-row"><div class="dist-head"><span>Đang học</span><strong th:text="${report.inProgressCount()}"></strong></div><div class="dist-track"><div class="dist-fill fill-blue" th:style="'width:' + ${inProgressRate} + '%'"></div></div><div class="dist-rate" th:text="${inProgressRate + '%'}"></div></div>
+            <div class="dist-row"><div class="dist-head"><span>Tạm dừng</span><strong th:text="${report.pausedCount()}"></strong></div><div class="dist-track"><div class="dist-fill fill-yellow" th:style="'width:' + ${pausedRate} + '%'"></div></div><div class="dist-rate" th:text="${pausedRate + '%'}"></div></div>
+            <div class="dist-row"><div class="dist-head"><span>Hoàn thành</span><strong th:text="${report.completedCount()}"></strong></div><div class="dist-track"><div class="dist-fill fill-green" th:style="'width:' + ${completedProgressRate} + '%'"></div></div><div class="dist-rate" th:text="${completedProgressRate + '%'}"></div></div>
+            <div class="dist-row"><div class="dist-head"><span>Chưa có lộ trình</span><strong th:text="${report.noPathCount()}"></strong></div><div class="dist-track"><div class="dist-fill fill-gray" th:style="'width:' + ${noPathRate} + '%'"></div></div><div class="dist-rate" th:text="${noPathRate + '%'}"></div></div>
+        </div>
+    </div>
+</div>
+<div th:replace="~{base :: footer}"></div>
+<script>
+(() => {
+    const points = [...document.querySelectorAll('.revenue-point')].map(el => ({label: el.dataset.label, value: Number(el.dataset.value || 0)}));
+    const svg = document.getElementById('revenueChart');
+    const NS='http://www.w3.org/2000/svg', W=1000,H=320,L=65,R=25,T=28,B=46, innerW=W-L-R, innerH=H-T-B;
+    const max=Math.max(...points.map(p=>p.value),0), top=max===0?1:max;
+    const fmt=v=>v>=1e9?(v/1e9).toFixed(v%1e9===0?0:1)+'B':v>=1e6?(v/1e6).toFixed(v%1e6===0?0:1)+'M':v>=1e3?(v/1e3).toFixed(v%1e3===0?0:1)+'K':String(Math.round(v));
+    for(let i=0;i<5;i++){const y=T+innerH*i/4,val=top*(4-i)/4;const line=document.createElementNS(NS,'line');line.setAttribute('x1',L);line.setAttribute('x2',W-R);line.setAttribute('y1',y);line.setAttribute('y2',y);line.setAttribute('class','chart-grid');svg.appendChild(line);const text=document.createElementNS(NS,'text');text.setAttribute('x',L-12);text.setAttribute('y',y+4);text.setAttribute('text-anchor','end');text.setAttribute('class','chart-axis');text.textContent=fmt(val);svg.appendChild(text);}
+    if(points.length===0){const t=document.createElementNS(NS,'text');t.setAttribute('x',W/2);t.setAttribute('y',H/2);t.setAttribute('text-anchor','middle');t.setAttribute('class','chart-label');t.textContent='Không có doanh thu SUCCESS trong kỳ.';svg.appendChild(t);return;}
+    const coords=points.map((p,i)=>({x:points.length===1?L+innerW/2:L+innerW*i/(points.length-1),y:T+innerH-(p.value/top)*innerH,...p}));
+    if(coords.length>1){const path=document.createElementNS(NS,'polyline');path.setAttribute('points',coords.map(p=>`${p.x},${p.y}`).join(' '));path.setAttribute('class','chart-line');svg.appendChild(path);}
+    const labelStep=Math.max(1,Math.ceil(points.length/8));coords.forEach((p,i)=>{const c=document.createElementNS(NS,'circle');c.setAttribute('cx',p.x);c.setAttribute('cy',p.y);c.setAttribute('r',5);c.setAttribute('class','chart-dot');svg.appendChild(c);if(i%labelStep===0||i===coords.length-1){const t=document.createElementNS(NS,'text');t.setAttribute('x',p.x);t.setAttribute('y',H-15);t.setAttribute('text-anchor','middle');t.setAttribute('class','chart-label');t.textContent=p.label;svg.appendChild(t);}});
+})();
+const range=document.getElementById('reportRange'),from=document.getElementById('fromDate'),to=document.getElementById('toDate');function toggleDates(){const custom=range.value==='CUSTOM';from.readOnly=!custom;to.readOnly=!custom;}range.addEventListener('change',toggleDates);toggleDates();
+</script>
+</body></html>

@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 import Apis, { endpoints } from "../../configs/Apis";
 import "../../styles/Home.css";
 
-
 const Home = () => {
     const [courses, setCourses] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -20,7 +19,6 @@ const Home = () => {
 
     const nav = useNavigate();
 
-
     const loadCategories = async () => {
         try {
             const res = await Apis.get(endpoints.publicCategories);
@@ -29,7 +27,6 @@ const Home = () => {
             console.error(e);
         }
     };
-
 
     const loadCourses = useCallback(async () => {
         try {
@@ -53,22 +50,18 @@ const Home = () => {
         }
     }, [page, keyword, categoryId, minPrice, maxPrice, sort]);
 
-
     useEffect(() => {
         loadCategories();
     }, []);
-
 
     useEffect(() => {
         loadCourses();
     }, [loadCourses]);
 
-
     const search = e => {
         e.preventDefault();
         setPage(1);
     };
-
 
     const changePrice = value => {
         if(value === "free") {
@@ -91,12 +84,10 @@ const Home = () => {
         setPage(1);
     };
 
-
     const formatPrice = price =>
         price
             ? `${price.toLocaleString("vi-VN")}đ`
             : "Miễn phí";
-
 
     return (
         <div className="cm-page">
@@ -107,7 +98,6 @@ const Home = () => {
                     <h1>Khóa học</h1>
                     <p>Tìm kiếm khóa học phù hợp</p>
                 </div>
-
 
                 <Form className="cm-home-search" onSubmit={search}>
 
@@ -125,7 +115,6 @@ const Home = () => {
                     </Button>
 
                 </Form>
-
 
                 <div className="cm-filter-box">
 
@@ -147,7 +136,6 @@ const Home = () => {
                         ))}
 
                     </Form.Select>
-
 
                     <Form.Select
                         value={sort}
@@ -173,7 +161,6 @@ const Home = () => {
                         </option>
 
                     </Form.Select>
-
 
                     <Form.Select onChange={e => changePrice(e.target.value)}>
 
@@ -205,7 +192,6 @@ const Home = () => {
                     Tìm thấy {totalRecords} khóa học
                 </p>
 
-
                 <Row className="g-4">
 
                     {courses.length > 0 ? 
@@ -224,7 +210,6 @@ const Home = () => {
                                     className="cm-home-image"
                                 />
 
-
                                 <Card.Body>
 
                                     <span className="cm-course-tag">
@@ -236,23 +221,19 @@ const Home = () => {
                                         }
                                     </span>
 
-
                                     <h3>
                                         {course.name}
                                     </h3>
 
-
                                     <p>
                                         {course.description}
                                     </p>
-
 
                                     <div className="cm-course-footer">
 
                                         <strong>
                                             {formatPrice(course.tuitionFee)}
                                         </strong>
-
 
                                         <Button
                                             onClick={() =>
@@ -280,7 +261,6 @@ const Home = () => {
 
                 </Row>
 
-
                 <Pagination className="cm-home-pagination">
 
                     {[...Array(totalPages)].map((_, i) => (
@@ -300,6 +280,5 @@ const Home = () => {
         </div>
     );
 };
-
 
 export default Home;

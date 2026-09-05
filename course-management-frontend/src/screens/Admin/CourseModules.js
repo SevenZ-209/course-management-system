@@ -25,7 +25,6 @@ const CourseModules = () => {
         orderNumber: ""
     });
 
-
     const loadData = async () => {
         try {
             setLoading(true);
@@ -61,11 +60,9 @@ const CourseModules = () => {
         }
     };
 
-
     useEffect(() => {
         loadData();
     }, [page]);
-
 
     const openAdd = () => {
         setEditingModule(null);
@@ -77,7 +74,6 @@ const CourseModules = () => {
         setShowModal(true);
     };
 
-
     const openEdit = m => {
         setEditingModule(m);
         setForm({
@@ -88,7 +84,6 @@ const CourseModules = () => {
         setShowModal(true);
     };
 
-
     const saveModule = async e => {
         e.preventDefault();
 
@@ -97,7 +92,6 @@ const CourseModules = () => {
 
         if(!form.courseId)
             return setErr("Vui lòng chọn khóa học!");
-
 
         try {
             setSaving(true);
@@ -123,7 +117,6 @@ const CourseModules = () => {
                     body
                 );
 
-
             setSuccess(
                 res.data?.message ||
                 (
@@ -147,7 +140,6 @@ const CourseModules = () => {
         }
     };
 
-
     const courseName = m => {
         if(m.courseName)
             return m.courseName;
@@ -162,7 +154,6 @@ const CourseModules = () => {
     const changePage = p => {
         setPage(p);
     };
-
 
     return (
         <>
@@ -184,7 +175,6 @@ const CourseModules = () => {
 
             </div>
 
-
             {success && (
                 <Alert
                     variant="success"
@@ -195,7 +185,6 @@ const CourseModules = () => {
                 </Alert>
             )}
 
-
             {err && (
                 <Alert
                     variant="danger"
@@ -205,7 +194,6 @@ const CourseModules = () => {
                     {err}
                 </Alert>
             )}
-
 
             <Card className="border-0 shadow-sm">
 
@@ -236,7 +224,6 @@ const CourseModules = () => {
 
                                 </thead>
 
-
                                 <tbody>
 
                                     {
@@ -260,7 +247,6 @@ const CourseModules = () => {
                                                     {m.orderNumber}
                                                 </td>
 
-
                                                 <td>
 
                                                     <Button
@@ -274,7 +260,6 @@ const CourseModules = () => {
                                                     >
                                                         Bài học
                                                     </Button>
-
 
                                                     <Button
                                                         size="sm"
@@ -321,7 +306,6 @@ const CourseModules = () => {
                                 onClick={() => changePage(page - 1)}
                             />
 
-
                             {
                                 Array.from(
                                     {length: totalPages},
@@ -339,18 +323,15 @@ const CourseModules = () => {
                                 ))
                             }
 
-
                             <Pagination.Next
                                 disabled={page === totalPages}
                                 onClick={() => changePage(page + 1)}
                             />
 
-
                             <Pagination.Last
                                 disabled={page === totalPages}
                                 onClick={() => changePage(totalPages)}
                             />
-
 
                         </Pagination>
 
@@ -358,8 +339,6 @@ const CourseModules = () => {
 
                 )
             }
-
-
 
             <Modal
                 show={showModal}
@@ -381,9 +360,7 @@ const CourseModules = () => {
 
                     </Modal.Header>
 
-
                     <Modal.Body>
-
 
                         <Form.Group className="mb-3">
 
@@ -402,7 +379,6 @@ const CourseModules = () => {
                             />
 
                         </Form.Group>
-
 
                         <Form.Group className="mb-3">
 
@@ -439,7 +415,6 @@ const CourseModules = () => {
 
                         </Form.Group>
 
-
                         <Form.Group>
 
                             <Form.Label>
@@ -460,9 +435,7 @@ const CourseModules = () => {
 
                         </Form.Group>
 
-
                     </Modal.Body>
-
 
                     <Modal.Footer>
 

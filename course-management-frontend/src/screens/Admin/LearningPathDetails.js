@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
 import { Alert, Button, Card, Col, Form, Modal, Pagination, Row, Table } from "react-bootstrap";
 import { useSearchParams } from "react-router-dom";
+import useExplicitSearchFilters from "../../hooks/useExplicitSearchFilters";
 import { authApis, endpoints } from "../../configs/Apis";
 import MySpinner from "../../components/MySpinner";
 
 const LearningPathDetails = () => {
     const [q, setQ] = useSearchParams();
+    const { draft: draftFilters, setFilter: setDraftFilter, resetFilters: resetDraftFilters } = useExplicitSearchFilters(q, ["courseId", "learningPathId"]);
 
     const [details, setDetails] = useState([]);
     const [courses, setCourses] = useState([]);
-    const [paths, setPaths] = useState([]);
+    const [filterPaths, setFilterPaths] = useState([]);
+    const [formPaths, setFormPaths] = useState([]);
     const [assignments, setAssignments] = useState([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -22,7 +25,7 @@ const LearningPathDetails = () => {
     const [showModal, setShowModal] = useState(false);
     const [editingDetail, setEditingDetail] = useState(null);
     const [form, setForm] = useState({
-        learningPathId: "", assignmentId: "",
+        courseId: "", learningPathId: "", assignmentId: "",
         orderNumber: "", minimumScore: "", maxAttempts: ""
     });
 
@@ -60,17 +63,27 @@ const LearningPathDetails = () => {
         }
     };
 
-    const loadOptions = async () => {
+    const loadCourses = async () => {
         try {
-            const [courseRes, pathRes] = await Promise.all([
-                authApis().get(endpoints.adminCourseOptions),
-                authApis().get(endpoints.adminLearningPathOptions)
-            ]);
-
+            const courseRes = await authApis().get(endpoints.adminCourseOptions);
             setCourses(Array.isArray(courseRes.data) ? courseRes.data : []);
-            setPaths(Array.isArray(pathRes.data) ? pathRes.data : []);
         } catch (ex) {
-            console.error("Load options error:", ex);
+            console.error("Load course options error:", ex);
+        }
+    };
+
+    const loadPaths = async (selectedCourseId, target = "filter") => {
+        if (!selectedCourseId) {
+            target === "filter" ? setFilterPaths([]) : setFormPaths([]);
+            return;
+        }
+
+        try {
+            const res = await authApis().get(endpoints.adminLearningPathOptions, { params: { courseId: selectedCourseId } });
+            const data = Array.isArray(res.data) ? res.data : [];
+            target === "filter" ? setFilterPaths(data) : setFormPaths(data);
+        } catch (ex) {
+            target === "filter" ? setFilterPaths([]) : setFormPaths([]);
         }
     };
 
@@ -93,9 +106,8 @@ const LearningPathDetails = () => {
         }
     };
 
-    useEffect(() => {
-        loadOptions();
-    }, []);
+    useEffect(() => { loadCourses(); }, []);
+    useEffect(() => { loadPaths(draftFilters.courseId, "filter"); }, [draftFilters.courseId]);
 
     useEffect(() => {
         loadDetails();
@@ -106,26 +118,20 @@ const LearningPathDetails = () => {
 
         const params = { page: "1" };
         if (kw.trim()) params.kw = kw.trim();
-        if (courseId) params.courseId = courseId;
-        if (learningPathId) params.learningPathId = learningPathId;
+        if (draftFilters.courseId) params.courseId = draftFilters.courseId;
+        if (draftFilters.learningPathId) params.learningPathId = draftFilters.learningPathId;
 
         setQ(params);
     };
 
     const changeFilter = (name, value) => {
-        const params = Object.fromEntries(q);
-
-        if (value) params[name] = value;
-        else delete params[name];
-
-        if (name === "courseId") delete params.learningPathId;
-
-        params.page = "1";
-        setQ(params);
+        const resetKeys = name === "courseId" ? ["learningPathId"] : [];
+        setDraftFilter(name, value, resetKeys);
     };
 
     const clearFilters = () => {
         setKw("");
+        resetDraftFilters();
         setQ({ page: "1" });
     };
 
@@ -137,7 +143,7 @@ const LearningPathDetails = () => {
 
     const resetForm = () => {
         setForm({
-            learningPathId: "", assignmentId: "",
+            courseId: "", learningPathId: "", assignmentId: "",
             orderNumber: "", minimumScore: "", maxAttempts: ""
         });
     };
@@ -145,15 +151,18 @@ const LearningPathDetails = () => {
     const openAddModal = () => {
         setEditingDetail(null);
         setAssignments([]);
+        setFormPaths([]);
         resetForm();
         setShowModal(true);
     };
 
     const openEditModal = async detail => {
         const pathId = detail.learningPathId ?? detail.learningPath?.id ?? "";
+        const selectedCourseId = detail.courseId ?? detail.learningPath?.course?.id ?? "";
 
         setEditingDetail(detail);
         setForm({
+            courseId: selectedCourseId,
             learningPathId: pathId,
             assignmentId: detail.assignmentId ?? detail.assignment?.id ?? "",
             orderNumber: detail.orderNumber ?? "",
@@ -161,6 +170,7 @@ const LearningPathDetails = () => {
             maxAttempts: detail.maxAttempts ?? ""
         });
 
+        await loadPaths(selectedCourseId, "form");
         await loadAssignments(pathId);
         setShowModal(true);
     };
@@ -264,19 +274,12 @@ const LearningPathDetails = () => {
     const pathName = d =>
         d.learningPathName ||
         d.learningPath?.name ||
-        paths.find(p =>
-            String(getPathId(p)) === String(d.learningPathId ?? d.learningPath?.id)
-        )?.name ||
         "-";
 
     const assignmentName = d =>
         d.assignmentName ||
         d.assignment?.name ||
         "-";
-
-    const filteredPaths = courseId
-        ? paths.filter(p => String(getPathCourseId(p)) === String(courseId))
-        : paths;
 
     return (
         <>
@@ -313,7 +316,7 @@ const LearningPathDetails = () => {
                             </Col>
 
                             <Col lg={2}>
-                                <Form.Select value={courseId}
+                                <Form.Select value={draftFilters.courseId}
                                     onChange={e => changeFilter("courseId", e.target.value)}>
                                     <option value="">Tất cả khóa học</option>
 
@@ -326,11 +329,11 @@ const LearningPathDetails = () => {
                             </Col>
 
                             <Col lg={3}>
-                                <Form.Select value={learningPathId}
+                                <Form.Select value={draftFilters.learningPathId}
                                     onChange={e => changeFilter("learningPathId", e.target.value)}>
                                     <option value="">Tất cả lộ trình</option>
 
-                                    {filteredPaths.map(p => (
+                                    {filterPaths.map(p => (
                                         <option key={getPathId(p)} value={getPathId(p)}>
                                             {p.name}
                                         </option>
@@ -435,15 +438,30 @@ const LearningPathDetails = () => {
 
                     <Modal.Body>
                         <Form.Group className="mb-3">
+                            <Form.Label>Khóa học</Form.Label>
+                            <Form.Select value={form.courseId} onChange={e => {
+                                const value = e.target.value;
+                                setForm({ ...form, courseId: value, learningPathId: "", assignmentId: "" });
+                                setAssignments([]);
+                                loadPaths(value, "form");
+                            }} disabled={!!editingDetail} required>
+                                <option value="">-- Chọn khóa học --</option>
+                                {courses.map(c => (
+                                    <option key={getCourseId(c)} value={getCourseId(c)}>{c.name}</option>
+                                ))}
+                            </Form.Select>
+                        </Form.Group>
+
+                        <Form.Group className="mb-3">
                             <Form.Label>Lộ trình</Form.Label>
 
                             <Form.Select value={form.learningPathId}
+                                disabled={!form.courseId || !!editingDetail}
                                 onChange={e => changePath(e.target.value)}
-                                disabled={!!editingDetail}
                                 required>
                                 <option value="">-- Chọn lộ trình --</option>
 
-                                {paths.map(p => (
+                                {formPaths.map(p => (
                                     <option key={getPathId(p)} value={getPathId(p)}>
                                         {p.name}
                                     </option>

@@ -4,15 +4,18 @@ import {
     Pagination, Row, Table
 } from "react-bootstrap";
 import { useSearchParams } from "react-router-dom";
+import useExplicitSearchFilters from "../../hooks/useExplicitSearchFilters";
 import { authApis, endpoints } from "../../configs/Apis";
 import MySpinner from "../../components/MySpinner";
 
 const Lessons = () => {
     const [q, setQ] = useSearchParams();
+    const { draft: draftFilters, setFilter: setDraftFilter, resetFilters: resetDraftFilters } = useExplicitSearchFilters(q, ["courseId", "moduleId"]);
 
     const [lessons, setLessons] = useState([]);
     const [courses, setCourses] = useState([]);
-    const [modules, setModules] = useState([]);
+    const [filterModules, setFilterModules] = useState([]);
+    const [formModules, setFormModules] = useState([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState("");
@@ -23,7 +26,7 @@ const Lessons = () => {
 
     const [showModal, setShowModal] = useState(false);
     const [editingLesson, setEditingLesson] = useState(null);
-    const [form, setForm] = useState({ name: "", moduleId: "", orderNumber: "" });
+    const [form, setForm] = useState({ name: "", courseId: "", moduleId: "", orderNumber: "" });
     const fileRef = useRef();
 
     const page = Number(q.get("page")) || 1;
@@ -59,23 +62,32 @@ const Lessons = () => {
         }
     };
 
-    const loadOptions = async () => {
+    const loadCourses = async () => {
         try {
-            const [courseRes, moduleRes] = await Promise.all([
-                authApis().get(endpoints.adminCourseOptions),
-                authApis().get(endpoints.adminCourseModuleOptions)
-            ]);
-
-            setCourses(Array.isArray(courseRes.data) ? courseRes.data : []);
-            setModules(Array.isArray(moduleRes.data) ? moduleRes.data : []);
+            const res = await authApis().get(endpoints.adminCourseOptions);
+            setCourses(Array.isArray(res.data) ? res.data : []);
         } catch (ex) {
-            console.error("Load lesson options error:", ex);
+            console.error("Load course options error:", ex);
         }
     };
 
-    useEffect(() => {
-        loadOptions();
-    }, []);
+    const loadModules = async (selectedCourseId, target = "filter") => {
+        if (!selectedCourseId) {
+            target === "filter" ? setFilterModules([]) : setFormModules([]);
+            return;
+        }
+
+        try {
+            const res = await authApis().get(endpoints.adminCourseModuleOptions, { params: { courseId: selectedCourseId } });
+            const data = Array.isArray(res.data) ? res.data : [];
+            target === "filter" ? setFilterModules(data) : setFormModules(data);
+        } catch (ex) {
+            target === "filter" ? setFilterModules([]) : setFormModules([]);
+        }
+    };
+
+    useEffect(() => { loadCourses(); }, []);
+    useEffect(() => { loadModules(draftFilters.courseId, "filter"); }, [draftFilters.courseId]);
 
     useEffect(() => {
         loadLessons();
@@ -86,26 +98,20 @@ const Lessons = () => {
 
         const params = { page: "1" };
         if (kw.trim()) params.kw = kw.trim();
-        if (courseId) params.courseId = courseId;
-        if (moduleId) params.moduleId = moduleId;
+        if (draftFilters.courseId) params.courseId = draftFilters.courseId;
+        if (draftFilters.moduleId) params.moduleId = draftFilters.moduleId;
 
         setQ(params);
     };
 
     const changeFilter = (name, value) => {
-        const params = Object.fromEntries(q);
-
-        if (value) params[name] = value;
-        else delete params[name];
-
-        if (name === "courseId") delete params.moduleId;
-
-        params.page = "1";
-        setQ(params);
+        const resetKeys = name === "courseId" ? ["moduleId"] : [];
+        setDraftFilter(name, value, resetKeys);
     };
 
     const clearFilters = () => {
         setKw("");
+        resetDraftFilters();
         setQ({ page: "1" });
     };
 
@@ -117,17 +123,21 @@ const Lessons = () => {
 
     const openAddModal = () => {
         setEditingLesson(null);
-        setForm({ name: "", moduleId: "", orderNumber: "" });
+        setForm({ name: "", courseId: "", moduleId: "", orderNumber: "" });
+        setFormModules([]);
         setShowModal(true);
     };
 
     const openEditModal = lesson => {
+        const selectedCourseId = lesson.courseId ?? lesson.courseModule?.course?.id ?? "";
         setEditingLesson(lesson);
         setForm({
             name: lesson.name || "",
+            courseId: selectedCourseId,
             moduleId: lesson.moduleId ?? lesson.courseModule?.id ?? "",
             orderNumber: lesson.orderNumber ?? ""
         });
+        loadModules(selectedCourseId, "form");
         setShowModal(true);
     };
 
@@ -187,27 +197,8 @@ const Lessons = () => {
         }
     };
 
-    const getModuleName = lesson => {
-        if (lesson.moduleName) return lesson.moduleName;
-        if (lesson.courseModule?.name) return lesson.courseModule.name;
-
-        const id = lesson.moduleId ?? lesson.courseModule?.id;
-        return modules.find(m => getModuleId(m) === id)?.name || "-";
-    };
-
-    const getCourseName = lesson => {
-        if (lesson.courseName) return lesson.courseName;
-
-        const mId = lesson.moduleId ?? lesson.courseModule?.id;
-        const module = modules.find(m => getModuleId(m) === mId);
-        const cId = getModuleCourseId(module || {});
-
-        return courses.find(c => getCourseId(c) === cId)?.name || "-";
-    };
-
-    const filterModules = courseId
-        ? modules.filter(m => String(getModuleCourseId(m)) === String(courseId))
-        : modules;
+    const getModuleName = lesson => lesson.moduleName || lesson.courseModule?.name || "-";
+    const getCourseName = lesson => lesson.courseName || lesson.courseModule?.course?.name || "-";
 
     return (
         <>
@@ -248,7 +239,7 @@ const Lessons = () => {
 
                             <Col lg={2}>
                                 <Form.Select
-                                    value={courseId}
+                                    value={draftFilters.courseId}
                                     onChange={e => changeFilter("courseId", e.target.value)}
                                 >
                                     <option value="">Tất cả khóa học</option>
@@ -262,10 +253,11 @@ const Lessons = () => {
 
                             <Col lg={3}>
                                 <Form.Select
-                                    value={moduleId}
+                                    value={draftFilters.moduleId}
+                                    disabled={!draftFilters.courseId}
                                     onChange={e => changeFilter("moduleId", e.target.value)}
                                 >
-                                    <option value="">Tất cả module</option>
+                                    <option value="">{courseId ? "Tất cả module" : "Chọn khóa học trước"}</option>
                                     {filterModules.map(m => (
                                         <option key={getModuleId(m)} value={getModuleId(m)}>
                                             {m.name}
@@ -391,18 +383,26 @@ const Lessons = () => {
                         </Form.Group>
 
                         <Form.Group className="mb-3">
-                            <Form.Label>Module</Form.Label>
-                            <Form.Select
-                                value={form.moduleId}
-                                onChange={e => setForm({ ...form, moduleId: e.target.value })}
-                                required
-                            >
-                                <option value="">-- Chọn module --</option>
+                            <Form.Label>Khóa học</Form.Label>
+                            <Form.Select value={form.courseId} onChange={e => {
+                                const value = e.target.value;
+                                setForm({ ...form, courseId: value, moduleId: "" });
+                                loadModules(value, "form");
+                            }} required>
+                                <option value="">-- Chọn khóa học --</option>
+                                {courses.map(c => (
+                                    <option key={getCourseId(c)} value={getCourseId(c)}>{c.name}</option>
+                                ))}
+                            </Form.Select>
+                        </Form.Group>
 
-                                {modules.map(m => (
-                                    <option key={getModuleId(m)} value={getModuleId(m)}>
-                                        {m.name}
-                                    </option>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Module</Form.Label>
+                            <Form.Select value={form.moduleId} disabled={!form.courseId}
+                                onChange={e => setForm({ ...form, moduleId: e.target.value })} required>
+                                <option value="">{form.courseId ? "-- Chọn module --" : "-- Chọn khóa học trước --"}</option>
+                                {formModules.map(m => (
+                                    <option key={getModuleId(m)} value={getModuleId(m)}>{m.name}</option>
                                 ))}
                             </Form.Select>
                         </Form.Group>

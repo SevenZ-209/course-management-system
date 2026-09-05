@@ -141,6 +141,12 @@ const Header = () => {
                 </Button>
             )}
 
+            {user.role === "MANAGER" && (
+                <Button variant="outline-primary" onClick={() => nav("/manager")}>
+                    Quản lý vận hành
+                </Button>
+            )}
+
             {user.role === "PARENT" && (
                 <Button variant="outline-primary" onClick={() => nav("/parent")}>
                     Theo dõi học tập

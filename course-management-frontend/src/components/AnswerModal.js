@@ -35,12 +35,10 @@ const AnswerModal = ({show, onHide, question}) => {
         }
     };
 
-
     useEffect(()=>{
         if(show)
             loadAnswers();
     },[show,question]);
-
 
     const addAnswer = () => {
 
@@ -55,7 +53,6 @@ const AnswerModal = ({show, onHide, question}) => {
 
     };
 
-
     const changeAnswer = (index,value) => {
 
         const list=[...answers];
@@ -65,7 +62,6 @@ const AnswerModal = ({show, onHide, question}) => {
         setAnswers(list);
 
     };
-
 
     const selectCorrect = index => {
 
@@ -77,7 +73,6 @@ const AnswerModal = ({show, onHide, question}) => {
         );
 
     };
-
 
     const removeAnswer = index => {
 
@@ -92,18 +87,15 @@ const AnswerModal = ({show, onHide, question}) => {
 
     };
 
-
     const save = async()=>{
 
         const correctCount =
             answers.filter(a=>a.correct).length;
 
-
         if(correctCount !== 1)
             return setErr(
                 "Câu hỏi trắc nghiệm phải có đúng 1 đáp án đúng!"
             );
-
 
         if(
             answers.some(a=>!a.content.trim())
@@ -111,7 +103,6 @@ const AnswerModal = ({show, onHide, question}) => {
             return setErr(
                 "Nội dung đáp án không được để trống!"
             );
-
 
         try{
 
@@ -130,7 +121,6 @@ const AnswerModal = ({show, onHide, question}) => {
                 }
             );
 
-
             onHide();
 
         }catch(ex){
@@ -148,7 +138,6 @@ const AnswerModal = ({show, onHide, question}) => {
 
     };
 
-
     return (
 
         <Modal
@@ -165,13 +154,11 @@ const AnswerModal = ({show, onHide, question}) => {
 
             </Modal.Header>
 
-
             <Modal.Body>
 
                 <p className="fw-semibold">
                     {question?.content}
                 </p>
-
 
                 {err && (
                     <Alert
@@ -182,8 +169,6 @@ const AnswerModal = ({show, onHide, question}) => {
                         {err}
                     </Alert>
                 )}
-
-
 
                 {
                     loading ?
@@ -207,7 +192,6 @@ const AnswerModal = ({show, onHide, question}) => {
                                 onChange={()=>selectCorrect(index)}
                             />
 
-
                             <Form.Control
                                 value={a.content}
                                 placeholder={`Đáp án ${index+1}`}
@@ -219,7 +203,6 @@ const AnswerModal = ({show, onHide, question}) => {
                                 }
                             />
 
-
                             <Button
                                 variant="outline-danger"
                                 size="sm"
@@ -230,13 +213,11 @@ const AnswerModal = ({show, onHide, question}) => {
                                 X
                             </Button>
 
-
                         </div>
 
                     ))
 
                 }
-
 
                 <Button
                     variant="outline-success"
@@ -245,9 +226,7 @@ const AnswerModal = ({show, onHide, question}) => {
                     + Thêm đáp án
                 </Button>
 
-
             </Modal.Body>
-
 
             <Modal.Footer>
 
@@ -257,7 +236,6 @@ const AnswerModal = ({show, onHide, question}) => {
                 >
                     Đóng
                 </Button>
-
 
                 <Button
                     disabled={saving}
@@ -270,15 +248,12 @@ const AnswerModal = ({show, onHide, question}) => {
                     }
                 </Button>
 
-
             </Modal.Footer>
-
 
         </Modal>
 
     );
 
 };
-
 
 export default AnswerModal;

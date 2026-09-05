@@ -13,5 +13,4 @@ const MyUserReducer = (current, action) => {
     }
 };
 
-
 export default MyUserReducer;

@@ -17,7 +17,6 @@
     margin: 0;
 }
 
-
 .cm-home-search {
     display: flex;
     gap: 12px;
@@ -61,20 +60,17 @@
     border-radius: 10px;
 }
 
-
 .cm-filter-group span {
     display: block;
     font-weight: 600;
     margin-bottom: 10px;
 }
 
-
 .cm-filter-buttons {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
 }
-
 
 .cm-filter-buttons button {
     border: 1px solid #ddd;
@@ -86,11 +82,9 @@
     transition: 0.2s;
 }
 
-
 .cm-filter-buttons button:hover {
     border-color: #0d6efd;
 }
-
 
 .cm-filter-buttons button.active {
     background: #0d6efd;
@@ -98,21 +92,16 @@
     border-color: #0d6efd;
 }
 
-
 .cm-filter-select {
     display: flex;
     gap: 10px;
 }
-
 
 .cm-filter-select select {
     width: 200px;
     height: 42px;
     border-radius: 10px;
 }
-
-
-/* CARD */
 
 .cm-home-card {
     border: 1px solid #eee;
@@ -121,11 +110,9 @@
     transition: 0.2s;
 }
 
-
 .cm-home-card:hover {
     transform: translateY(-2px);
 }
-
 
 .cm-home-image {
     width: 100%;
@@ -133,11 +120,9 @@
     object-fit: cover;
 }
 
-
 .cm-home-card .card-body {
     padding: 20px;
 }
-
 
 .cm-course-tag {
     display: inline-block;
@@ -149,20 +134,17 @@
     margin-bottom: 12px;
 }
 
-
 .cm-home-card h3 {
     font-size: 20px;
     font-weight: 700;
     margin-bottom: 10px;
 }
 
-
 .cm-home-card p {
     color: #666;
     font-size: 14px;
     min-height: 45px;
 }
-
 
 .cm-course-footer {
     margin-top: 20px;
@@ -171,28 +153,20 @@
     align-items: center;
 }
 
-
 .cm-course-footer strong {
     font-size: 18px;
     color: #111;
 }
-
 
 .cm-course-footer .btn {
     border-radius: 10px;
     font-size: 14px;
 }
 
-
-/* PAGINATION */
-
 .cm-home-pagination {
     margin-top: 35px;
     justify-content: center;
 }
-
-
-/* EMPTY */
 
 .cm-empty {
     text-align: center;
@@ -200,26 +174,20 @@
     color: #777;
 }
 
-
-/* MOBILE */
-
 @media(max-width:768px) {
 
     .cm-home-search {
         flex-direction: column;
     }
 
-
     .cm-filter-box {
         flex-direction: column;
         align-items: stretch;
     }
 
-
     .cm-filter-select {
         flex-direction: column;
     }
-
 
     .cm-filter-select select {
         width: 100%;
