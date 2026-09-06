@@ -485,55 +485,6 @@ course-management-system/
 
 ---
 
-## 🎥 Demo
-
-> Thêm screenshot vào thư mục `docs/screenshots/` rồi bỏ comment các dòng ảnh bên dưới để hiển thị trên GitHub.
-
-### 1. Xác thực
-
-**Đăng nhập và đăng ký tài khoản với JWT Authentication**
-
-<!-- ![Đăng nhập](docs/screenshots/login.png) -->
-
-<!-- ![Đăng ký](docs/screenshots/register.png) -->
-
-### 2. Giao diện Student
-
-**Dashboard và danh sách khóa học**
-
-<!-- ![Student Dashboard](docs/screenshots/student-dashboard.png) -->
-
-<!-- ![Khóa học của tôi](docs/screenshots/student-courses.png) -->
-
-**Chi tiết bài học và bài tập**
-
-<!-- ![Chi tiết bài học](docs/screenshots/lesson-detail.png) -->
-
-<!-- ![Làm bài tập](docs/screenshots/assignment-attempt.png) -->
-
-### 3. Giao diện Teacher
-
-**Quản lý lớp, điểm danh và chấm bài**
-
-<!-- ![Teacher Classes](docs/screenshots/teacher-classes.png) -->
-
-<!-- ![Teacher Grading](docs/screenshots/teacher-grading.png) -->
-
-### 4. Giao diện Parent
-
-**Theo dõi tiến độ học tập của học viên**
-
-<!-- ![Parent Dashboard](docs/screenshots/parent-dashboard.png) -->
-
-### 5. Giao diện Manager & Admin
-
-**Dashboard, vận hành và quản trị hệ thống**
-
-<!-- ![Manager Dashboard](docs/screenshots/manager-dashboard.png) -->
-
-<!-- ![Admin Dashboard](docs/screenshots/admin-dashboard.png) -->
-
----
 
 ## ⚙️ Tính năng nổi bật
 
